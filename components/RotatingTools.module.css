@@ -1,0 +1,42 @@
+.wrap {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.chipInner {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.fadeIn {
+  animation: toolSlideIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.fadeOut {
+  animation: toolSlideOut 0.42s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
+@keyframes toolSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toolSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.94);
+  }
+}
