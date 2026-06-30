@@ -53,6 +53,10 @@ export default async function WorkflowsPage() {
     (r: { activity_id: string; status: string }) => r.status === "completed"
   ).length;
 
+  const inProgressCount = (progressRows ?? []).filter(
+    (r: { activity_id: string; status: string }) => r.status === "in_progress"
+  ).length;
+
   const functionThumbnails: Record<string, string> = {};
   const functionDescriptions: Record<string, string> = {};
   for (const row of functionRows ?? []) {
@@ -70,6 +74,7 @@ export default async function WorkflowsPage() {
       completedIds={completedIds}
       totalAvailable={totalAvailable}
       completedCount={completedCount}
+      inProgressCount={inProgressCount}
       modules={(modules ?? []) as any}
       functionThumbnails={functionThumbnails}
       functionDescriptions={functionDescriptions}

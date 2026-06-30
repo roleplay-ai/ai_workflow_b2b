@@ -223,12 +223,13 @@ type Props = {
   completedIds: Set<string>;
   totalAvailable: number;
   completedCount: number;
+  inProgressCount: number;
   modules: FoundationModule[];
   functionThumbnails: Record<string, string>;
   functionDescriptions: Record<string, string>;
 };
 
-export default function WorkflowsClient({ activities, toolLogos, viewCounts, completedIds, totalAvailable, completedCount, modules, functionThumbnails, functionDescriptions }: Props) {
+export default function WorkflowsClient({ activities, toolLogos, viewCounts, completedIds, totalAvailable, completedCount, inProgressCount, modules, functionThumbnails, functionDescriptions }: Props) {
   const [selectedTab, setSelectedTab] = useState<FilterTab>(null);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
@@ -272,13 +273,6 @@ export default function WorkflowsClient({ activities, toolLogos, viewCounts, com
 
   useEffect(() => { setExtraRows(0); }, [selectedTab, selectedTool, selectedFunction, searchQuery]);
 
-  const timeSavedMins = useMemo(() =>
-    activities.filter(a => completedIds.has(a.id)).reduce((s, a) => s + ((a as any).time_estimate_minutes ?? 0), 0),
-    [activities, completedIds],
-  );
-  const timeSavedLabel = timeSavedMins >= 60
-    ? `${Math.floor(timeSavedMins / 60)}h ${timeSavedMins % 60 > 0 ? `${timeSavedMins % 60}m` : ""}`.trim()
-    : timeSavedMins > 0 ? `${timeSavedMins}m` : "0m";
   const completionPct = totalAvailable > 0 ? Math.round((completedCount / totalAvailable) * 100) : 0;
 
   function handleTabToggle(tab: Exclude<FilterTab, null>) {
@@ -324,8 +318,8 @@ export default function WorkflowsClient({ activities, toolLogos, viewCounts, com
           {/* Stats */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 18 }}>
             <StatCard label="Available" value={String(totalAvailable)} />
-            <StatCard label="My Completed" value={String(completedCount)} delta={completedCount > 0 ? "Keep going!" : "Start your first workflow"} />
-            <StatCard label="Time Saved" value={timeSavedLabel} delta={timeSavedMins > 0 ? `From ${completedCount} workflow${completedCount !== 1 ? "s" : ""}` : "Complete workflows to track"} />
+            <StatCard label="Completed" value={String(completedCount)} delta={completedCount > 0 ? "Keep going!" : "Start your first workflow"} />
+            <StatCard label="In Progress" value={String(inProgressCount)} delta={inProgressCount > 0 ? "Pick up where you left off" : "Start a workflow to track"} />
             <StatCard label="My Progress" value={`${completionPct}%`} delta={`${completedCount} of ${totalAvailable} done`} dark />
           </div>
 
