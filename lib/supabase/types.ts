@@ -47,6 +47,9 @@ export type ActivityTag = {
   id: string;
   name: string;
   icon_url: string | null;
+  is_featured: boolean;
+  featured_description: string | null;
+  featured_position: number;
   created_at: string;
 };
 

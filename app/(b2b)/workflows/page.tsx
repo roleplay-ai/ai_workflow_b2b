@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { rowsToToolLogoMap } from "@/lib/toolLogos";
+import { rowsToToolLogoMap, rowsToTagLogoMap, type ToolLogoMap } from "@/lib/toolLogos";
 import WorkflowsClient from "./WorkflowsClient";
 
 export const dynamic = "force-dynamic";
@@ -15,10 +16,11 @@ export default async function WorkflowsPage() {
     { data: progressRows },
     { data: modules },
     { data: functionRows },
+    { data: tagRows },
   ] = await Promise.all([
     supabase
       .from("activities")
-      .select("id, title, description, tools, functions, time_estimate_minutes, is_locked, is_featured, published, position, created_at, thumbnail_url")
+      .select("id, title, description, tools, functions, tags, time_estimate_minutes, is_locked, is_featured, published, position, created_at, thumbnail_url")
       .eq("published", true)
       .order("position"),
     supabase.from("tool_logos").select("tool, logo_url"),
@@ -34,6 +36,9 @@ export default async function WorkflowsPage() {
     supabase
       .from("activity_functions")
       .select("name, thumbnail_url, description"),
+    supabase
+      .from("activity_tags")
+      .select("name, icon_url"),
   ]);
 
   const viewCounts: Record<string, number> = {};
@@ -67,17 +72,20 @@ export default async function WorkflowsPage() {
   }
 
   return (
-    <WorkflowsClient
-      activities={(activities ?? []) as any}
-      toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
-      viewCounts={viewCounts}
-      completedIds={completedIds}
-      totalAvailable={totalAvailable}
-      completedCount={completedCount}
-      inProgressCount={inProgressCount}
-      modules={(modules ?? []) as any}
-      functionThumbnails={functionThumbnails}
-      functionDescriptions={functionDescriptions}
-    />
+    <Suspense fallback={null}>
+      <WorkflowsClient
+        activities={(activities ?? []) as any}
+        toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
+        tagLogos={rowsToTagLogoMap(tagRows ?? [])}
+        viewCounts={viewCounts}
+        completedIds={completedIds}
+        totalAvailable={totalAvailable}
+        completedCount={completedCount}
+        inProgressCount={inProgressCount}
+        modules={(modules ?? []) as any}
+        functionThumbnails={functionThumbnails}
+        functionDescriptions={functionDescriptions}
+      />
+    </Suspense>
   );
 }

@@ -3,11 +3,22 @@ import { DEFAULT_TOOLS, formatToolLabel, normalizeToolSlug, sortToolSlugs } from
 export type ToolLogoRow = { tool: string; logo_url: string };
 
 export type ToolLogoMap = Record<string, string>;
+export type TagLogoMap = Record<string, string>;
 
 export function rowsToToolLogoMap(rows: ToolLogoRow[] | null | undefined): ToolLogoMap {
   const map: ToolLogoMap = {};
   for (const row of rows ?? []) {
     map[row.tool.toLowerCase()] = row.logo_url;
+  }
+  return map;
+}
+
+export type TagLogoRow = { name: string; icon_url: string | null };
+
+export function rowsToTagLogoMap(rows: TagLogoRow[] | null | undefined): TagLogoMap {
+  const map: TagLogoMap = {};
+  for (const row of rows ?? []) {
+    if (row.icon_url) map[row.name.toLowerCase()] = row.icon_url;
   }
   return map;
 }

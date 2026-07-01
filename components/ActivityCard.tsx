@@ -90,16 +90,61 @@ function formatViewCount(n: number): string {
   return String(n);
 }
 
+const MAX_VISIBLE_TAGS = 5;
+
+function resolveTagLogoUrl(tag: string, tagLogos: Record<string, string>): string | null {
+  return tagLogos[tag.toLowerCase()] ?? null;
+}
+
+function TagLogosRow({
+  tags,
+  tagLogos,
+}: {
+  tags: string[];
+  tagLogos: Record<string, string>;
+}) {
+  if (tags.length === 0) return null;
+
+  const visible = tags.slice(0, MAX_VISIBLE_TAGS);
+  const overflow = tags.length - MAX_VISIBLE_TAGS;
+
+  return (
+    <div className="card-tag-row" aria-label={`${tags.length} tag${tags.length !== 1 ? "s" : ""}`}>
+      {visible.map(tag => {
+        const url = resolveTagLogoUrl(tag, tagLogos);
+        return url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={tag}
+            className="card-tag-logo"
+            src={url}
+            alt={tag}
+            title={tag}
+          />
+        ) : (
+          <span key={tag} className="card-tag-fallback" title={tag}>
+            {tag.slice(0, 1).toUpperCase()}
+          </span>
+        );
+      })}
+      {overflow > 0 && (
+        <span className="card-tag-overflow">+{overflow}</span>
+      )}
+    </div>
+  );
+}
+
 // ── ActivityCard ───────────────────────────────────────────────────────────
 
 type Props = {
   activity: Activity;
   toolLogos: ToolLogoMap;
+  tagLogos?: Record<string, string>;
   viewCount?: number;
   isCompleted?: boolean;
 };
 
-export default function ActivityCard({ activity, toolLogos, viewCount = 0, isCompleted = false }: Props) {
+export default function ActivityCard({ activity, toolLogos, tagLogos = {}, viewCount = 0, isCompleted = false }: Props) {
   const theme = getTheme(activity.id);
   const tools = normalizeActivityTools(activity.tools);
   const [navigating, setNavigating] = useState(false);
@@ -159,6 +204,7 @@ export default function ActivityCard({ activity, toolLogos, viewCount = 0, isCom
         </div>
         <h3 className="card-title">{activity.title}</h3>
         {activity.description && <p className="card-desc">{activity.description}</p>}
+        <TagLogosRow tags={activity.tags ?? []} tagLogos={tagLogos} />
       </div>
 
       {navigating && (

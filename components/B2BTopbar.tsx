@@ -1,7 +1,9 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
+import { createClient } from "@/lib/supabase/client";
 
 const LABELS: Record<string, string> = {
   "/workflows": "Workflows",
@@ -25,31 +27,63 @@ type NewActivity = {
   description?: string | null;
 };
 
+type FeaturedTag = {
+  id: string;
+  name: string;
+  icon_url: string | null;
+  featured_description: string | null;
+};
+
 type Props = {
   searchQuery?: string;
   onSearch?: (q: string) => void;
   newActivities?: NewActivity[];
+  activeTag?: string | null;
 };
 
-export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = [] }: Props) {
+export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = [], activeTag = null }: Props) {
   const pathname = usePathname();
   const [localQ, setLocalQ] = useState(searchQuery);
   const [notifOpen, setNotifOpen] = useState(false);
-  const notifRef = useRef<HTMLDivElement>(null);
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const [featuredTags, setFeaturedTags] = useState<FeaturedTag[]>([]);
+  const topbarActionsRef = useRef<HTMLDivElement>(null);
   const pageLabel = LABELS[pathname] ?? "AI Practice Lab";
   const hasNew = newActivities.length > 0;
+  const hasFeaturedTags = featuredTags.length > 0;
 
   function submit() { onSearch?.(localQ.trim()); }
 
   useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("activity_tags")
+      .select("id, name, icon_url, featured_description")
+      .eq("is_featured", true)
+      .order("featured_position")
+      .order("name")
+      .then(({ data }) => {
+        if (data) setFeaturedTags(data as FeaturedTag[]);
+      });
+  }, []);
+
+  useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+      if (topbarActionsRef.current && !topbarActionsRef.current.contains(e.target as Node)) {
         setNotifOpen(false);
+        setTagsOpen(false);
       }
     }
-    if (notifOpen) document.addEventListener("mousedown", handleClick);
+    if (notifOpen || tagsOpen) document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [notifOpen]);
+  }, [notifOpen, tagsOpen]);
+
+  const panelStyle: React.CSSProperties = {
+    position: "absolute", top: "calc(100% + 8px)", right: 0,
+    width: 340, background: "#fff", border: "1px solid #E9E4DC",
+    borderRadius: 14, boxShadow: "0 16px 48px rgba(28,24,32,.14)",
+    zIndex: 99, overflow: "hidden",
+  };
 
   return (
     <div style={{
@@ -68,7 +102,7 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
         <span style={{ color: "#1C1820", fontWeight: 700 }}>{pageLabel}</span>
       </div>
 
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+      <div ref={topbarActionsRef} style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
         {/* Search */}
         <div style={{
           display: "flex", alignItems: "center", gap: 7,
@@ -94,10 +128,122 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
           />
         </div>
 
-        {/* Notifications */}
-        <div ref={notifRef} style={{ position: "relative" }}>
+        {/* Featured tags */}
+        <div style={{ position: "relative" }}>
           <button
-            onClick={() => setNotifOpen(o => !o)}
+            onClick={() => { setTagsOpen(o => !o); setNotifOpen(false); }}
+            title="Featured tags"
+            style={{
+              width: 34, height: 34, borderRadius: 7,
+              border: `1px solid ${tagsOpen ? "#D8D1C7" : "#E9E4DC"}`,
+              background: tagsOpen ? "#F5F3EF" : "#fff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: "#746F78", position: "relative",
+              padding: 0, fontFamily: "inherit",
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2.5 2.5h4.2L8.5 6.3l2.8-1.1 1.1 2.8-3.8 1.8-1.8 3.8-1.1-2.8-2.8-1.1 1.8-3.8z"/>
+            </svg>
+            {hasFeaturedTags && (
+              <span style={{
+                position: "absolute", top: 7, right: 7,
+                width: 6, height: 6, borderRadius: "50%",
+                background: "#FFCE00", border: "1.5px solid #fff",
+              }} />
+            )}
+          </button>
+
+          {tagsOpen && (
+            <div style={panelStyle}>
+              <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #F0EBE4", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#1C1820", letterSpacing: "-.01em" }}>Featured Tags</div>
+                {hasFeaturedTags && (
+                  <span style={{ fontSize: 10.5, fontWeight: 700, background: "#FFCE00", color: "#1C1820", borderRadius: 999, padding: "2px 8px" }}>
+                    {featuredTags.length}
+                  </span>
+                )}
+              </div>
+
+              {featuredTags.length === 0 ? (
+                <div style={{ padding: "28px 16px", textAlign: "center", color: "#A09AA6", fontSize: 13, fontWeight: 600 }}>
+                  No featured tags yet.
+                </div>
+              ) : (
+                <div style={{ maxHeight: 360, overflowY: "auto" }}>
+                  {featuredTags.map((tag, i) => {
+                    const isActive = activeTag?.toLowerCase() === tag.name.toLowerCase();
+                    return (
+                      <Link
+                        key={tag.id}
+                        href={`/workflows?tag=${encodeURIComponent(tag.name)}`}
+                        onClick={() => setTagsOpen(false)}
+                        style={{
+                          display: "block", padding: "12px 16px",
+                          borderBottom: i < featuredTags.length - 1 ? "1px solid #F5F1EC" : "none",
+                          textDecoration: "none",
+                          background: isActive ? "#FFFBEB" : "transparent",
+                          transition: "background .1s",
+                        }}
+                        onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = "#FAFAF8"; }}
+                        onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                      >
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                          {tag.icon_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={tag.icon_url}
+                              alt={tag.name}
+                              width={28}
+                              height={28}
+                              style={{ objectFit: "contain", borderRadius: 6, border: "1px solid #E9E4DC", flexShrink: 0, marginTop: 1 }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: 28, height: 28, borderRadius: 6, border: "1px solid #E9E4DC",
+                              background: "#F5F3EF", display: "grid", placeItems: "center",
+                              fontSize: 9, fontWeight: 800, color: "#746F78", flexShrink: 0, marginTop: 1,
+                            }}>
+                              {tag.name.slice(0, 3).toUpperCase()}
+                            </div>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#1C1820", lineHeight: 1.3, marginBottom: tag.featured_description ? 4 : 0 }}>
+                              {tag.name}
+                              {isActive && (
+                                <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: "#7A5F00", background: "rgba(255,206,0,.2)", borderRadius: 4, padding: "1px 6px" }}>
+                                  Active
+                                </span>
+                              )}
+                            </div>
+                            {tag.featured_description && (
+                              <div style={{ fontSize: 12, color: "#8C8595", fontWeight: 500, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as React.CSSProperties["WebkitBoxOrient"], overflow: "hidden" }}>
+                                {tag.featured_description}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+
+              {hasFeaturedTags && (
+                <div style={{ padding: "10px 16px", borderTop: "1px solid #F0EBE4", background: "#FAFAF8" }}>
+                  <Link href="/workflows" style={{ fontSize: 12.5, fontWeight: 700, color: "#623CEA", textDecoration: "none" }} onClick={() => setTagsOpen(false)}>
+                    View all workflows →
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Notifications */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => { setNotifOpen(o => !o); setTagsOpen(false); }}
             style={{
               width: 34, height: 34, borderRadius: 7,
               border: `1px solid ${notifOpen ? "#D8D1C7" : "#E9E4DC"}`,
@@ -120,15 +266,8 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
             )}
           </button>
 
-          {/* Notification panel */}
           {notifOpen && (
-            <div style={{
-              position: "absolute", top: "calc(100% + 8px)", right: 0,
-              width: 340, background: "#fff", border: "1px solid #E9E4DC",
-              borderRadius: 14, boxShadow: "0 16px 48px rgba(28,24,32,.14)",
-              zIndex: 99, overflow: "hidden",
-            }}>
-              {/* Panel header */}
+            <div style={panelStyle}>
               <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #F0EBE4", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: "#1C1820", letterSpacing: "-.01em" }}>What&apos;s New</div>
                 {hasNew && (
@@ -138,7 +277,6 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
                 )}
               </div>
 
-              {/* Activity list */}
               {newActivities.length === 0 ? (
                 <div style={{ padding: "28px 16px", textAlign: "center", color: "#A09AA6", fontSize: 13, fontWeight: 600 }}>
                   No new activities yet.
@@ -175,7 +313,7 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
                               {a.title}
                             </div>
                             {a.description && (
-                              <div style={{ fontSize: 12, color: "#8C8595", fontWeight: 500, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any, overflow: "hidden" }}>
+                              <div style={{ fontSize: 12, color: "#8C8595", fontWeight: 500, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as React.CSSProperties["WebkitBoxOrient"], overflow: "hidden" }}>
                                 {a.description}
                               </div>
                             )}
@@ -187,7 +325,6 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
                 </div>
               )}
 
-              {/* Footer */}
               <div style={{ padding: "10px 16px", borderTop: "1px solid #F0EBE4", background: "#FAFAF8" }}>
                 <a href="/workflows" style={{ fontSize: 12.5, fontWeight: 700, color: "#623CEA", textDecoration: "none" }} onClick={() => setNotifOpen(false)}>
                   View all workflows →

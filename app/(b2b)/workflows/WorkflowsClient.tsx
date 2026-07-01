@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Activity } from "@/lib/supabase/types";
 import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 import type { ToolLogoMap } from "@/lib/toolLogos";
@@ -365,9 +366,14 @@ function AIFoundationsSection({ modules }: { modules: FoundationModule[] }) {
 
 // ── Main client component ─────────────────────────────────────────────────
 
+function activityHasTag(activity: Activity, tagName: string): boolean {
+  return (activity.tags ?? []).some(t => t.toLowerCase() === tagName.toLowerCase());
+}
+
 type Props = {
   activities: Activity[];
   toolLogos: ToolLogoMap;
+  tagLogos: Record<string, string>;
   viewCounts: Record<string, number>;
   completedIds: Set<string>;
   totalAvailable: number;
@@ -378,7 +384,10 @@ type Props = {
   functionDescriptions: Record<string, string>;
 };
 
-export default function WorkflowsClient({ activities, toolLogos, viewCounts, completedIds, totalAvailable, completedCount, inProgressCount, modules, functionThumbnails, functionDescriptions }: Props) {
+export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewCounts, completedIds, totalAvailable, completedCount, inProgressCount, modules, functionThumbnails, functionDescriptions }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedTag = searchParams.get("tag");
   const [selectedTab, setSelectedTab] = useState<FilterTab>(null);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
@@ -386,7 +395,11 @@ export default function WorkflowsClient({ activities, toolLogos, viewCounts, com
   const [extraRows, setExtraRows] = useState(0);
   const COLS = 4;
 
-  const showActivities = selectedTab !== null || !!selectedFunction || !!searchQuery.trim() || !!selectedTool;
+  function clearTagFilter() {
+    router.replace("/workflows", { scroll: false });
+  }
+
+  const showActivities = selectedTab !== null || !!selectedFunction || !!searchQuery.trim() || !!selectedTool || !!selectedTag;
 
   const allTools = useMemo(() => {
     const s = new Set<string>();
@@ -407,6 +420,7 @@ export default function WorkflowsClient({ activities, toolLogos, viewCounts, com
     if (selectedTab === "continue") result = result.filter(a => !completedIds.has(a.id));
     if (selectedTool) result = result.filter(a => normalizeActivityTools(a.tools).includes(selectedTool));
     if (selectedFunction) result = result.filter(a => (a.functions ?? []).some(f => f.toLowerCase() === selectedFunction.toLowerCase()));
+    if (selectedTag) result = result.filter(a => activityHasTag(a, selectedTag));
     const q = searchQuery.trim().toLowerCase();
     if (q) result = result.filter(a =>
       a.title.toLowerCase().includes(q) ||
@@ -414,29 +428,40 @@ export default function WorkflowsClient({ activities, toolLogos, viewCounts, com
       normalizeActivityTools(a.tools).some(t => formatToolLabel(t).toLowerCase().includes(q))
     );
     return result;
-  }, [activities, selectedTab, selectedTool, selectedFunction, searchQuery, completedIds]);
+  }, [activities, selectedTab, selectedTool, selectedFunction, selectedTag, searchQuery, completedIds]);
 
   const visibleCount = COLS * (2 + extraRows);
   const visible = filtered.slice(0, visibleCount);
   const hasMore = visibleCount < filtered.length;
 
-  useEffect(() => { setExtraRows(0); }, [selectedTab, selectedTool, selectedFunction, searchQuery]);
+  useEffect(() => { setExtraRows(0); }, [selectedTab, selectedTool, selectedFunction, selectedTag, searchQuery]);
+
+  useEffect(() => {
+    if (!selectedTag) return;
+    const el = document.getElementById("all-workflows");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedTag]);
 
   const completionPct = totalAvailable > 0 ? Math.round((completedCount / totalAvailable) * 100) : 0;
 
   function handleTabToggle(tab: Exclude<FilterTab, null>) {
+    clearTagFilter();
     setSelectedTab(prev => prev === tab ? null : tab);
     setSelectedFunction(null);
   }
 
-  const sectionTitle = selectedFunction
+  const sectionTitle = selectedTag
+    ? selectedTag
+    : selectedFunction
     ? selectedFunction
     : selectedTab === "new" ? "New This Week"
     : selectedTab === "essentials" ? "Start Here"
     : selectedTab === "continue" ? "Continue"
     : "All Workflows";
 
-  const sectionDesc = selectedFunction
+  const sectionDesc = selectedTag
+    ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} tagged with ${selectedTag}`
+    : selectedFunction
     ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} in ${selectedFunction}`
     : selectedTab
     ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} match your filters.`
@@ -446,8 +471,9 @@ export default function WorkflowsClient({ activities, toolLogos, viewCounts, com
     <>
       <B2BTopbar
         searchQuery={searchQuery}
-        onSearch={q => { setSearchQuery(q); setSelectedFunction(null); }}
+        onSearch={q => { clearTagFilter(); setSearchQuery(q); setSelectedFunction(null); }}
         newActivities={activities.filter(a => a.is_featured).slice(0, 8).map(a => ({ id: a.id, title: a.title, tools: a.tools, description: (a as any).description ?? null }))}
+        activeTag={selectedTag}
       />
 
       <div style={{ flex: 1, background: "#F5F3EF" }}>
@@ -484,7 +510,7 @@ export default function WorkflowsClient({ activities, toolLogos, viewCounts, com
                   tool={tool}
                   selected={selectedTool === tool}
                   toolLogos={toolLogos}
-                  onClick={() => { setSelectedTool(selectedTool === tool ? null : tool); setSelectedFunction(null); }}
+                  onClick={() => { clearTagFilter(); setSelectedTool(selectedTool === tool ? null : tool); setSelectedFunction(null); }}
                 />
               ))}
               {completedCount > 0 && (
@@ -496,7 +522,7 @@ export default function WorkflowsClient({ activities, toolLogos, viewCounts, com
               <FunctionDropdown
                 functions={allFunctions}
                 selected={selectedFunction}
-                onChange={fn => { setSelectedFunction(fn); setSelectedTab(null); }}
+                onChange={fn => { clearTagFilter(); setSelectedFunction(fn); setSelectedTab(null); }}
               />
             </div>
           </div>
@@ -518,7 +544,7 @@ export default function WorkflowsClient({ activities, toolLogos, viewCounts, com
               <FunctionsGrid
                 activities={activities}
                 selectedTool={selectedTool}
-                onSelect={fn => { setSelectedFunction(fn); setSelectedTab(null); }}
+                onSelect={fn => { clearTagFilter(); setSelectedFunction(fn); setSelectedTab(null); }}
                 functionThumbnails={functionThumbnails}
                 functionDescriptions={functionDescriptions}
               />
@@ -534,7 +560,15 @@ export default function WorkflowsClient({ activities, toolLogos, viewCounts, com
                   <h2>{sectionTitle}</h2>
                   <p>{sectionDesc}</p>
                 </div>
-                {selectedFunction && (
+                {selectedTag && (
+                  <button
+                    onClick={clearTagFilter}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 700, color: "#7A5F00", background: "rgba(255,206,0,.12)", border: "1px solid rgba(255,206,0,.35)", borderRadius: 7, cursor: "pointer", padding: "7px 13px", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0, marginTop: 4 }}
+                  >
+                    ← Clear tag
+                  </button>
+                )}
+                {selectedFunction && !selectedTag && (
                   <button
                     onClick={() => { setSelectedFunction(null); setSelectedTab(null); }}
                     style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 700, color: "#623CEA", background: "rgba(98,60,234,.07)", border: "1px solid rgba(98,60,234,.18)", borderRadius: 7, cursor: "pointer", padding: "7px 13px", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0, marginTop: 4 }}
@@ -551,7 +585,7 @@ export default function WorkflowsClient({ activities, toolLogos, viewCounts, com
                   <div className="static-grid">
                     {visible.map(a => (
                       <div key={a.id} className="static-grid-slot">
-                        <ActivityCard activity={a} toolLogos={toolLogos} viewCount={viewCounts[a.id] ?? 0} isCompleted={completedIds.has(a.id)} />
+                        <ActivityCard activity={a} toolLogos={toolLogos} tagLogos={tagLogos} viewCount={viewCounts[a.id] ?? 0} isCompleted={completedIds.has(a.id)} />
                       </div>
                     ))}
                   </div>
