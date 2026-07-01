@@ -577,12 +577,12 @@ function DeepDiveModal({ deepDiveId, title, onClose }: { deepDiveId: string; tit
       display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        position: "relative", width: "min(900px,100%)",
+        position: "relative", width: "min(1100px,100%)",
         display: "flex", flexDirection: "column",
       }}>
         <div style={{
           background: "#fff", borderRadius: 20, overflow: "hidden",
-          height: "85vh", boxShadow: "0 24px 80px rgba(0,0,0,.35)",
+          height: "92vh", boxShadow: "0 24px 80px rgba(0,0,0,.35)",
           display: "flex", flexDirection: "column",
         }}>
           <div style={{
