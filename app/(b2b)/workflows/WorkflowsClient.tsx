@@ -6,6 +6,7 @@ import type { ToolLogoMap } from "@/lib/toolLogos";
 import B2BTopbar from "@/components/B2BTopbar";
 import ActivityCard, { getTheme, Scene } from "@/components/ActivityCard";
 import ModuleHtmlModal from "@/components/ModuleHtmlModal";
+import ToolIcon from "@/components/ToolIcon";
 
 // ── Foundation module type ─────────────────────────────────────────────────
 
@@ -53,18 +54,151 @@ function TabChip({ label, icon, active, onClick }: { label: string; icon: string
   );
 }
 
-// ── Tool select ───────────────────────────────────────────────────────────
+// ── Tool chip ─────────────────────────────────────────────────────────────
 
-function ToolSelect({ tools, selected, onChange }: { tools: string[]; selected: string | null; onChange: (t: string | null) => void }) {
+function ToolChip({ tool, selected, toolLogos, onClick }: { tool: string; selected: boolean; toolLogos: ToolLogoMap; onClick: () => void }) {
   return (
-    <select
-      value={selected ?? ""}
-      onChange={e => onChange(e.target.value || null)}
-      style={{ fontSize: 12.5, fontWeight: 700, color: "#1C1820", padding: "6px 11px", border: "1.5px solid #E9E4DC", borderRadius: 7, background: "#fff", cursor: "pointer", outline: "none", fontFamily: "inherit" }}
+    <button
+      type="button"
+      className={`workflows-tool-chip${selected ? " is-active" : ""}`}
+      onClick={onClick}
+      aria-pressed={selected}
+      title={formatToolLabel(tool)}
     >
-      <option value="">All Tools</option>
-      {tools.map(t => <option key={t} value={t}>{formatToolLabel(t)}</option>)}
-    </select>
+      <span className="workflows-tool-chip-icon">
+        <ToolIcon tool={tool} size={28} logos={toolLogos} insetScale={0.88} />
+      </span>
+      <span className="workflows-tool-chip-label">{formatToolLabel(tool)}</span>
+    </button>
+  );
+}
+
+// ── Function dropdown ─────────────────────────────────────────────────────
+
+function FunctionDropdown({ functions, selected, onChange }: {
+  functions: [string, number][];
+  selected: string | null;
+  onChange: (fn: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setOpen(false); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const label = selected ?? "Functions";
+
+  return (
+    <div ref={ref} style={{ position: "relative", flexShrink: 0 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 7,
+          height: 40, padding: "0 14px",
+          borderRadius: 999,
+          border: `1.5px solid ${selected ? "#1C1820" : "#E9E4DC"}`,
+          background: selected ? "#1C1820" : "#fff",
+          color: selected ? "#FFCE00" : "#1C1820",
+          fontSize: 12.5, fontWeight: 800,
+          cursor: "pointer", fontFamily: "inherit",
+          boxShadow: "0 3px 10px rgba(34,29,35,.05)",
+          transition: "all .15s",
+          whiteSpace: "nowrap",
+        }}
+      >
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.65 }}>
+          <rect x="1" y="3" width="14" height="2.5" rx="1.2"/>
+          <rect x="3" y="7.5" width="10" height="2.5" rx="1.2"/>
+          <rect x="5.5" y="12" width="5" height="2.5" rx="1.2"/>
+        </svg>
+        {label}
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8"
+          style={{ transition: "transform .2s", transform: open ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.6 }}>
+          <path d="M2 4l4 4 4-4"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 8px)", right: 0,
+          minWidth: 220, maxHeight: 320,
+          background: "#fff", borderRadius: 14,
+          border: "1px solid #E9E4DC",
+          boxShadow: "0 16px 48px rgba(28,24,32,.14)",
+          zIndex: 99, overflowY: "auto",
+          padding: "6px",
+        }}>
+          {/* All option */}
+          <button
+            type="button"
+            onClick={() => { onChange(null); setOpen(false); }}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              width: "100%", padding: "9px 12px", borderRadius: 8,
+              border: "none", background: selected === null ? "rgba(98,60,234,.08)" : "transparent",
+              color: selected === null ? "#623CEA" : "#1C1820",
+              fontSize: 13, fontWeight: selected === null ? 800 : 600,
+              cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+              transition: "background .1s",
+            }}
+            onMouseEnter={e => { if (selected !== null) (e.currentTarget as HTMLElement).style.background = "#F5F3EF"; }}
+            onMouseLeave={e => { if (selected !== null) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+          >
+            <span>All Functions</span>
+            {selected === null && <span style={{ fontSize: 12, color: "#623CEA" }}>✓</span>}
+          </button>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: "#F0EBE3", margin: "4px 6px" }} />
+
+          {functions.map(([fn, count]) => {
+            const active = selected === fn;
+            return (
+              <button
+                key={fn}
+                type="button"
+                onClick={() => { onChange(fn); setOpen(false); }}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  width: "100%", padding: "9px 12px", borderRadius: 8,
+                  border: "none", background: active ? "rgba(98,60,234,.08)" : "transparent",
+                  color: active ? "#623CEA" : "#1C1820",
+                  fontSize: 13, fontWeight: active ? 800 : 600,
+                  cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                  transition: "background .1s",
+                }}
+                onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "#F5F3EF"; }}
+                onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+              >
+                <span style={{ flex: 1, marginRight: 8 }}>{fn}</span>
+                <span style={{
+                  fontSize: 10.5, fontWeight: 700,
+                  color: active ? "#623CEA" : "#A09AA6",
+                  background: active ? "rgba(98,60,234,.1)" : "#F5F3EF",
+                  borderRadius: 999, padding: "2px 7px", flexShrink: 0,
+                }}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -260,10 +394,10 @@ export default function WorkflowsClient({ activities, toolLogos, viewCounts, com
     return [...s];
   }, [activities]);
 
-  const allFunctions = useMemo(() => {
-    const s = new Set<string>();
-    activities.forEach(a => (a.functions ?? []).forEach(f => { if (f) s.add(f); }));
-    return [...s].sort();
+  const allFunctions = useMemo((): [string, number][] => {
+    const map = new Map<string, number>();
+    activities.forEach(a => (a.functions ?? []).forEach(f => { if (f) map.set(f, (map.get(f) ?? 0) + 1); }));
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
   }, [activities]);
 
   const filtered = useMemo(() => {
@@ -339,24 +473,31 @@ export default function WorkflowsClient({ activities, toolLogos, viewCounts, com
           </div>
 
           {/* Filter bar */}
-          <div className="ndb-root">
-            <div className="workflows-filter-bar">
+          <div className="ndb-root" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Chips — scrollable row */}
+            <div className="workflows-filter-bar" style={{ flex: 1, minWidth: 0 }}>
               <TabChip label="New" icon="🔥" active={selectedTab === "new"} onClick={() => handleTabToggle("new")} />
               <TabChip label="Start Here" icon="🤖" active={selectedTab === "essentials"} onClick={() => handleTabToggle("essentials")} />
+              {allTools.map(tool => (
+                <ToolChip
+                  key={tool}
+                  tool={tool}
+                  selected={selectedTool === tool}
+                  toolLogos={toolLogos}
+                  onClick={() => { setSelectedTool(selectedTool === tool ? null : tool); setSelectedFunction(null); }}
+                />
+              ))}
               {completedCount > 0 && (
                 <TabChip label="Continue" icon="⏩" active={selectedTab === "continue"} onClick={() => handleTabToggle("continue")} />
               )}
-              <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-                <ToolSelect tools={allTools} selected={selectedTool} onChange={t => { setSelectedTool(t); setSelectedFunction(null); }} />
-                <select
-                  value={selectedFunction ?? ""}
-                  onChange={e => { setSelectedFunction(e.target.value || null); setSelectedTab(null); }}
-                  style={{ fontSize: 12.5, fontWeight: 700, color: "#1C1820", padding: "6px 11px", border: "1.5px solid #E9E4DC", borderRadius: 7, background: "#fff", cursor: "pointer", outline: "none", fontFamily: "inherit" }}
-                >
-                  <option value="">All Functions</option>
-                  {allFunctions.map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
-              </div>
+            </div>
+            {/* Functions dropdown — always visible on the right, outside the scroll container */}
+            <div style={{ flexShrink: 0, position: "relative", zIndex: 200 }}>
+              <FunctionDropdown
+                functions={allFunctions}
+                selected={selectedFunction}
+                onChange={fn => { setSelectedFunction(fn); setSelectedTab(null); }}
+              />
             </div>
           </div>
         </div>

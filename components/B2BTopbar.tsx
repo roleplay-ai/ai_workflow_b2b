@@ -57,7 +57,7 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
       borderBottom: "1px solid #E9E4DC",
       display: "flex", alignItems: "center",
       padding: "0 24px", gap: 12,
-      position: "sticky", top: 0, zIndex: 40,
+      position: "sticky", top: 0, zIndex: 300,
     }}>
       {/* Breadcrumb */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#A09AA6" }}>
@@ -197,20 +197,6 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
           )}
         </div>
 
-        {/* Book a Demo — opens mailto */}
-        <a
-          href="mailto:team@nudgeable.ai?subject=Book a Demo — Nudgeable AI Practice Lab&body=Hi Nudgeable team,%0A%0AI'd like to book a demo of the AI Practice Lab for our organisation.%0A%0ACompany:%0ATeam size:%0ABest time to connect:%0A"
-          style={{
-            fontSize: 12.5, fontWeight: 800,
-            background: "#FFCE00", color: "#1C1820",
-            border: "none", borderRadius: 7,
-            padding: "8px 16px", cursor: "pointer",
-            whiteSpace: "nowrap", textDecoration: "none",
-            display: "inline-block",
-          }}
-        >
-          Book a Demo
-        </a>
       </div>
     </div>
   );

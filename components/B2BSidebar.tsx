@@ -184,28 +184,34 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
 
       </nav>
 
-      {/* Upgrade nudge */}
-      <div style={{
-        margin: "0 10px 12px",
-        background: "rgba(255,206,0,.08)",
-        border: "1px solid rgba(255,206,0,.22)",
-        borderRadius: 8, padding: "12px",
-      }}>
-        <div style={{ fontSize: 12, fontWeight: 800, color: "#fff", marginBottom: 4 }}>
-          Unlock all 80+ workflows
+      {/* Free guide card */}
+      <div style={{ margin: "0 10px 12px", background: "#0F0D12", border: "1px solid rgba(255,255,255,.1)", borderRadius: 8, padding: "10px" }}>
+        {/* Label + title row */}
+        <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: ".1em", textTransform: "uppercase", color: "#FFCE00", marginBottom: 3 }}>
+          Free Download
         </div>
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", fontWeight: 600, lineHeight: 1.5, marginBottom: 10 }}>
-          Team plan adds role-based paths, SSO &amp; admin controls.
+        <div style={{ fontSize: 11.5, fontWeight: 900, color: "#fff", lineHeight: 1.3, marginBottom: 6, letterSpacing: "-.01em" }}>
+          Prompt Engineering for AI Agents
         </div>
-        <button style={{
-          display: "block", width: "100%",
-          fontSize: 12, fontWeight: 800,
-          background: "#FFCE00", color: "#1C1820",
-          border: "none", borderRadius: 6,
-          padding: "7px 12px", cursor: "pointer",
-        }}>
-          Upgrade plan →
-        </button>
+
+        {/* Description */}
+        <div style={{ fontSize: 10.5, color: "rgba(255,255,255,.45)", fontWeight: 500, lineHeight: 1.45, marginBottom: 8 }}>
+          30 techniques, 4 modules &amp; a 12-step workflow for writing AI agent prompts that work.
+        </div>
+
+        {/* Download button */}
+        <a
+          href="/prompt-engineering-guide.pdf"
+          download="PromptEngineering_FieldGuide.pdf"
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", padding: "7px 0", background: "#FFCE00", color: "#1C1820", borderRadius: 6, fontSize: 11, fontWeight: 900, textDecoration: "none", boxSizing: "border-box" }}
+        >
+          Download Guide
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </a>
       </div>
 
       {/* User footer */}
