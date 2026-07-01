@@ -3,6 +3,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Activity } from "@/lib/supabase/types";
 import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
+import { formatTopPercentile } from "@/lib/points";
 import type { ToolLogoMap } from "@/lib/toolLogos";
 import B2BTopbar from "@/components/B2BTopbar";
 import ActivityCard, { getTheme, Scene } from "@/components/ActivityCard";
@@ -379,12 +380,16 @@ type Props = {
   totalAvailable: number;
   completedCount: number;
   inProgressCount: number;
+  userTotalPoints: number;
+  companyPercentile: number | null;
+  companySize: number;
+  companyAvgPoints: number;
   modules: FoundationModule[];
   functionThumbnails: Record<string, string>;
   functionDescriptions: Record<string, string>;
 };
 
-export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewCounts, completedIds, totalAvailable, completedCount, inProgressCount, modules, functionThumbnails, functionDescriptions }: Props) {
+export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewCounts, completedIds, totalAvailable, completedCount, inProgressCount, userTotalPoints, companyPercentile, companySize, companyAvgPoints, modules, functionThumbnails, functionDescriptions }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedTag = searchParams.get("tag");
@@ -442,7 +447,10 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewC
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selectedTag]);
 
-  const completionPct = totalAvailable > 0 ? Math.round((completedCount / totalAvailable) * 100) : 0;
+  const topPercentileLabel = formatTopPercentile(companyPercentile, companySize);
+  const percentileDelta = companySize > 0
+    ? `Company avg: ${companyAvgPoints} pts`
+    : "Points rank within your company";
 
   function handleTabToggle(tab: Exclude<FilterTab, null>) {
     clearTagFilter();
@@ -492,10 +500,14 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewC
 
           {/* Stats */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 18 }}>
-            <StatCard label="Available" value={String(totalAvailable)} />
+            <StatCard
+              label="My Points"
+              value={String(userTotalPoints)}
+              delta={userTotalPoints > 0 ? "Earned from completed workflows" : "Complete workflows to earn points"}
+            />
             <StatCard label="Completed" value={String(completedCount)} delta={completedCount > 0 ? "Keep going!" : "Start your first workflow"} />
             <StatCard label="In Progress" value={String(inProgressCount)} delta={inProgressCount > 0 ? "Pick up where you left off" : "Start a workflow to track"} />
-            <StatCard label="My Progress" value={`${completionPct}%`} delta={`${completedCount} of ${totalAvailable} done`} dark />
+            <StatCard label="Company Rank" value={topPercentileLabel} delta={percentileDelta} dark />
           </div>
 
           {/* Filter bar */}
