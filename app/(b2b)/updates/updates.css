@@ -1,5 +1,27 @@
 /* AI Updates page — carousel, questions, section headers */
 
+/* ── Main layout ──────────────────────────────────────────────────────────── */
+
+.upd-main {
+  padding: 28px 28px 60px;
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 1400px) {
+  .upd-main {
+    padding: 32px 44px 72px;
+  }
+}
+
+@media (min-width: 1800px) {
+  .upd-main {
+    padding: 36px 64px 80px;
+  }
+}
+
+/* ── Section title ────────────────────────────────────────────────────────── */
+
 .upd-section-title {
   margin: 0;
   font-size: 26px;
@@ -97,6 +119,12 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
+}
+
+@media (min-width: 1600px) {
+  .upd-question-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .upd-question {
@@ -222,5 +250,231 @@
 @media (max-width: 560px) {
   .upd-arrow-btn {
     display: none !important;
+  }
+}
+
+/* ── Tool product cards ───────────────────────────────────────────────────── */
+
+.upd-product-card::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 6px;
+  background: var(--upd-accent);
+}
+
+.upd-product-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 206, 0, 0.08), rgba(255,255,255,0) 44%);
+  pointer-events: none;
+}
+
+/* ── Tool guide grid ─────────────────────────────────────────────────────── */
+
+.upd-tool-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 1600px) {
+  .upd-tool-guide-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.upd-tool-guide-card {
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 0.5px solid #e0e0e0;
+  background: #ffffff;
+}
+
+.upd-tool-guide-card-header {
+  padding: 16px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.upd-tool-guide-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.upd-tool-guide-logo--img {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.06);
+}
+
+.upd-tool-guide-logo img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.upd-tool-guide-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.upd-tool-guide-by {
+  font-size: 11px;
+  margin-top: 1px;
+}
+
+.upd-tool-guide-body {
+  padding: 12px 14px 14px;
+  background: #ffffff;
+  flex: 1;
+  border-top: 0.5px solid #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.upd-tool-guide-desc {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.upd-tool-guide-strengths {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.upd-tool-guide-str {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.upd-tool-guide-str-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.upd-tool-guide-footer {
+  padding: 10px 14px 12px;
+  background: #ffffff;
+  border-top: 0.5px solid #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upd-tool-guide-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+  width: fit-content;
+  letter-spacing: 0.01em;
+}
+
+.upd-tool-guide-pill-sym { font-size: 11px; }
+.upd-tool-guide-pill-sep { font-weight: 400; opacity: 0.45; font-size: 10px; }
+.upd-tool-guide-pill-date { font-weight: 400; opacity: 0.75; }
+
+.upd-tool-guide-explore {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 7px 12px;
+  width: 100%;
+  border: 1.5px solid transparent;
+  transition: opacity 0.15s;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.upd-tool-guide-explore:hover { opacity: 0.82; }
+
+.upd-tool-guide-explore--disabled {
+  color: #888;
+  cursor: default;
+  opacity: 1;
+}
+
+/* ── Theme: Claude ───────────────────────────────────────────────────────── */
+
+.upd-tool-guide-card--claude .upd-tool-guide-card-header { background: #FAECE7; }
+.upd-tool-guide-card--claude .upd-tool-guide-name { color: #712B13; }
+.upd-tool-guide-card--claude .upd-tool-guide-by { color: #993C1D; }
+.upd-tool-guide-card--claude .upd-tool-guide-logo { background: #F5C4B3; color: #712B13; }
+.upd-tool-guide-card--claude .upd-tool-guide-str-dot { background: #D85A30; }
+.upd-tool-guide-card--claude .upd-tool-guide-pill { background: #D85A30; color: #fff; }
+.upd-tool-guide-card--claude .upd-tool-guide-explore { background: #FAECE7; color: #712B13; border-color: #F0997B; }
+
+/* ── Theme: GPT ──────────────────────────────────────────────────────────── */
+
+.upd-tool-guide-card--gpt .upd-tool-guide-card-header { background: #E1F5EE; }
+.upd-tool-guide-card--gpt .upd-tool-guide-name { color: #085041; }
+.upd-tool-guide-card--gpt .upd-tool-guide-by { color: #0F6E56; }
+.upd-tool-guide-card--gpt .upd-tool-guide-logo { background: #9FE1CB; color: #085041; }
+.upd-tool-guide-card--gpt .upd-tool-guide-str-dot { background: #1D9E75; }
+.upd-tool-guide-card--gpt .upd-tool-guide-pill { background: #1D9E75; color: #fff; }
+.upd-tool-guide-card--gpt .upd-tool-guide-explore { background: #E1F5EE; color: #085041; border-color: #5DCAA5; }
+
+/* ── Theme: Gemini ───────────────────────────────────────────────────────── */
+
+.upd-tool-guide-card--gemini .upd-tool-guide-card-header { background: #EEEDFE; }
+.upd-tool-guide-card--gemini .upd-tool-guide-name { color: #26215C; }
+.upd-tool-guide-card--gemini .upd-tool-guide-by { color: #534AB7; }
+.upd-tool-guide-card--gemini .upd-tool-guide-logo { background: #CECBF6; color: #26215C; }
+.upd-tool-guide-card--gemini .upd-tool-guide-str-dot { background: #7F77DD; }
+.upd-tool-guide-card--gemini .upd-tool-guide-pill { background: #7F77DD; color: #fff; }
+.upd-tool-guide-card--gemini .upd-tool-guide-explore { background: #EEEDFE; color: #26215C; border-color: #AFA9EC; }
+
+/* ── Theme: Copilot ──────────────────────────────────────────────────────── */
+
+.upd-tool-guide-card--copilot .upd-tool-guide-card-header { background: #FAEEDA; }
+.upd-tool-guide-card--copilot .upd-tool-guide-name { color: #412402; }
+.upd-tool-guide-card--copilot .upd-tool-guide-by { color: #854F0B; }
+.upd-tool-guide-card--copilot .upd-tool-guide-logo { background: #FAC775; color: #412402; }
+.upd-tool-guide-card--copilot .upd-tool-guide-str-dot { background: #BA7517; }
+.upd-tool-guide-card--copilot .upd-tool-guide-pill { background: #BA7517; color: #fff; }
+.upd-tool-guide-card--copilot .upd-tool-guide-explore { background: #FAEEDA; color: #412402; border-color: #EF9F27; }
+
+@media (max-width: 960px) {
+  .upd-tool-guide-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .upd-tool-guide-grid {
+    grid-template-columns: 1fr !important;
   }
 }

@@ -1,38 +1,81 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo, useEffect } from "react";
 import B2BTopbar from "@/components/B2BTopbar";
 import BriefNewsCard, { type BriefNewsItem } from "@/components/BriefNewsCard";
+import { formatToolLabel, normalizeToolSlug } from "@/lib/tools";
+import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import "./updates.css";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 type BriefItem = { id: string; content: string; sort_order: number };
 type Brief = { id: string; title: string; published_date: string; fluency_brief_items: BriefItem[] };
 
 type Video = {
+  id: string; title: string; description: string | null; video_url: string | null;
+  thumbnail_url: string | null; duration: string | null;
+  group_name: string | null; category_tag: string | null;
+};
+
+type ProCon = { content: string; sort_order: number };
+
+type Tool = {
+  id: string; category_label: string; name: string; description: string;
+  icon_emoji: string | null; letter: string | null; color: string | null;
+  company_name: string | null; try_url: string | null; best_for: string | null;
+  pricing: string | null; is_featured: boolean;
+  fluency_tool_pros?: ProCon[]; fluency_tool_cons?: ProCon[];
+};
+
+type ToolGuide = {
+  id: string; name: string; logo_letter: string; description: string;
+  accent_color: string; bg_color: string; border_color: string; guide_url: string | null;
+  company_name?: string | null; strengths?: string[] | null;
+  update_label?: string | null; update_date?: string | null; theme_key?: string | null;
+};
+
+type NewActivity = {
+  id: string;
+  title: string;
+  tools: string | string[] | null | undefined;
+  description?: string | null;
+};
+
+type ToolDeepDive = {
   id: string;
   title: string;
   description: string | null;
-  video_url: string | null;
-  thumbnail_url: string | null;
-  duration: string | null;
-  group_name: string | null;
-  category_tag: string | null;
+  tool: string | null;
+  url: string | null;
+  html_path: string | null;
+  link_type: "external" | "html" | null;
 };
 
 type Props = {
   brief: Brief | null;
   videos: Video[];
+  tools: Tool[];
+  toolGuides: ToolGuide[];
+  toolLogos: ToolLogoMap;
+  deepDives?: ToolDeepDive[];
+  newActivities?: NewActivity[];
 };
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────────
 
 const GROUP_ACCENT: Record<string, string> = {
-  Features: "#A855F7",
-  Apps: "#EC4899",
-  Workflows: "#F68A29",
-  Skills: "#3699FC",
+  Features: "#A855F7", Apps: "#EC4899", Workflows: "#F68A29", Skills: "#3699FC",
+};
+
+const TOOL_ACCENTS = ["#17614B", "#326EA9", "#AA577C", "#C66D38", "#623CEA", "#1E8B5C"];
+const TOOLS_PAGE_SIZE = 10;
+
+const THEME_KEYS = ["claude", "gpt", "gemini", "copilot"] as const;
+type ThemeKey = (typeof THEME_KEYS)[number];
+
+const THEME_TO_SLUG: Record<string, string> = {
+  claude: "claude", gpt: "chatgpt", gemini: "gemini", copilot: "copilot",
 };
 
 const WORK_QUESTIONS = [
@@ -118,7 +161,25 @@ const WORK_QUESTIONS = [
   },
 ];
 
-// ── Section header helper ─────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function resolveTheme(themeKey: string | null | undefined, i: number): ThemeKey {
+  if (themeKey && THEME_KEYS.includes(themeKey as ThemeKey)) return themeKey as ThemeKey;
+  return THEME_KEYS[i % THEME_KEYS.length];
+}
+
+function resolveGuideSlug(guide: ToolGuide): string {
+  if (guide.theme_key && THEME_TO_SLUG[guide.theme_key]) return THEME_TO_SLUG[guide.theme_key];
+  return normalizeToolSlug(guide.name);
+}
+
+function guideInitials(slug: string): string {
+  const label = formatToolLabel(slug);
+  const words = label.split(/\s+/).filter(Boolean);
+  return words.length >= 2 ? (words[0][0] + words[1][0]).toUpperCase() : label.slice(0, 2);
+}
+
+// ── Section header ─────────────────────────────────────────────────────────────
 
 function SectionHeader({ label, title, subtitle }: { label: string; title: string; subtitle: string }) {
   return (
@@ -129,7 +190,7 @@ function SectionHeader({ label, title, subtitle }: { label: string; title: strin
       }} />
       <span style={{
         display: "inline-flex", padding: "7px 10px", borderRadius: 999, background: "#221D23",
-        color: "#fff", fontSize: 10, fontWeight: 950, textTransform: "uppercase",
+        color: "#fff", fontSize: 10, fontWeight: 950, textTransform: "uppercase" as const,
         letterSpacing: ".10em", marginBottom: 8,
       }}>{label}</span>
       <h2 className="upd-section-title">{title}</h2>
@@ -138,34 +199,449 @@ function SectionHeader({ label, title, subtitle }: { label: string; title: strin
   );
 }
 
-// ── Video modal ───────────────────────────────────────────────────────────────
+// ── Tool Modal ─────────────────────────────────────────────────────────────────
+
+function ToolModal({ tool, onClose }: { tool: Tool; onClose: () => void }) {
+  const accent = tool.color ?? "#623CEA";
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      background: "rgba(0,0,0,.55)", backdropFilter: "blur(5px)",
+      WebkitBackdropFilter: "blur(5px)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{ position: "relative", width: "min(520px,100%)" }}>
+        <button onClick={onClose} aria-label="Close" style={{
+          position: "absolute", top: 12, right: 12, zIndex: 10,
+          width: 34, height: 34, borderRadius: "50%",
+          background: "rgba(0,0,0,.55)", border: 0, cursor: "pointer",
+          color: "#fff", fontSize: 20, fontWeight: 700,
+          display: "grid", placeItems: "center", fontFamily: "inherit",
+        }}>×</button>
+
+        <div className="upd-modal-scroll" style={{
+          background: "#fff", borderRadius: 20, overflow: "hidden",
+          maxHeight: "90vh", overflowY: "auto",
+          boxShadow: "0 24px 80px rgba(0,0,0,.35)",
+        }}>
+          {/* Gradient header */}
+          <div style={{
+            padding: "28px 28px 24px",
+            background: `linear-gradient(125deg, ${accent} 0%, #F9A8D4 55%, #221D23 100%)`,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 14 }}>
+              <span style={{
+                width: 56, height: 56, borderRadius: 16, flexShrink: 0,
+                background: "rgba(255,255,255,.20)", backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,.30)",
+                display: "grid", placeItems: "center",
+                fontSize: tool.letter ? 22 : 24, fontWeight: 950, color: "#fff", letterSpacing: "-.02em",
+              }}>{tool.letter ?? tool.icon_emoji ?? tool.name[0]}</span>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <span style={{
+                    background: "rgba(255,255,255,.25)", color: "#fff", padding: "2px 10px", borderRadius: 999,
+                    fontSize: 10, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase" as const,
+                  }}>{tool.category_label}</span>
+                  {tool.is_featured && (
+                    <span style={{ background: "#FFCE00", color: "#221D23", padding: "2px 10px", borderRadius: 999, fontSize: 10, fontWeight: 800 }}>Featured</span>
+                  )}
+                </div>
+                <h2 style={{ margin: 0, fontSize: 22, fontWeight: 950, letterSpacing: "-.04em", color: "#fff", lineHeight: 1.1 }}>{tool.name}</h2>
+                {tool.company_name && (
+                  <p style={{ margin: "3px 0 0", fontSize: 12, color: "rgba(255,255,255,.75)", fontWeight: 600 }}>by {tool.company_name}</p>
+                )}
+              </div>
+            </div>
+            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: "rgba(255,255,255,.9)", fontWeight: 500 }}>{tool.description}</p>
+          </div>
+
+          {/* Info grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: "1px solid #F0ECE6" }}>
+            <div style={{ padding: "16px 20px", borderRight: "1px solid #F0ECE6" }}>
+              <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#9B9199" }}>Pricing</p>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#221D23" }}>{tool.pricing ?? "—"}</p>
+            </div>
+            <div style={{ padding: "16px 20px" }}>
+              <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#9B9199" }}>Category</p>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: accent }}>{tool.category_label}</p>
+            </div>
+          </div>
+
+          {/* Best for */}
+          {tool.best_for && (
+            <div style={{ padding: "16px 20px 20px", borderBottom: "1px solid #F0ECE6" }}>
+              <p style={{ margin: "0 0 8px", fontSize: 10, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#9B9199" }}>Best for</p>
+              <div style={{ background: accent + "14", borderRadius: 10, padding: "10px 14px" }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 650, color: "#221D23", lineHeight: 1.5 }}>{tool.best_for}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Pros */}
+          {(tool.fluency_tool_pros?.length ?? 0) > 0 && (
+            <div style={{ padding: "16px 20px 20px", borderBottom: "1px solid #F0ECE6" }}>
+              <p style={{ margin: "0 0 10px", fontSize: 10, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#9B9199" }}>Pros</p>
+              <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+                {[...(tool.fluency_tool_pros ?? [])].sort((a, b) => a.sort_order - b.sort_order).map((p, i) => (
+                  <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, background: "#E8FBEE", borderRadius: 10, padding: "9px 13px" }}>
+                    <span style={{ color: "#16A34A", fontWeight: 900, fontSize: 14, flexShrink: 0, marginTop: 1 }}>✓</span>
+                    <span style={{ fontSize: 13, fontWeight: 650, color: "#166534", lineHeight: 1.45 }}>{p.content}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Cons */}
+          {(tool.fluency_tool_cons?.length ?? 0) > 0 && (
+            <div style={{ padding: "16px 20px 20px", borderBottom: "1px solid #F0ECE6" }}>
+              <p style={{ margin: "0 0 10px", fontSize: 10, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#9B9199" }}>Cons</p>
+              <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+                {[...(tool.fluency_tool_cons ?? [])].sort((a, b) => a.sort_order - b.sort_order).map((c, i) => (
+                  <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, background: "#FDE9EB", borderRadius: 10, padding: "9px 13px" }}>
+                    <span style={{ color: "#DC2626", fontWeight: 900, fontSize: 14, flexShrink: 0, marginTop: 1 }}>✕</span>
+                    <span style={{ fontSize: 13, fontWeight: 650, color: "#991B1B", lineHeight: 1.45 }}>{c.content}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div style={{ padding: "16px 20px 20px", display: "flex", gap: 10 }}>
+            <button onClick={onClose} style={{
+              flex: 1, padding: "11px 0", borderRadius: 999, cursor: "pointer",
+              background: "#fff", border: "1.5px solid #E9E4DC",
+              fontSize: 13, fontWeight: 750, color: "#6B6670", fontFamily: "inherit",
+            }}>Close</button>
+            {tool.try_url ? (
+              <a href={tool.try_url} target="_blank" rel="noopener noreferrer" style={{
+                flex: 2, padding: "11px 0", borderRadius: 999, textAlign: "center",
+                background: accent, color: "#fff", fontSize: 13, fontWeight: 800, textDecoration: "none",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              }}>Try {tool.name} ↗</a>
+            ) : (
+              <span style={{
+                flex: 2, padding: "11px 0", borderRadius: 999, textAlign: "center",
+                background: "#F7F2E9", color: "#9B9199", fontSize: 13, fontWeight: 750,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>Coming soon</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Tools Section ──────────────────────────────────────────────────────────────
+
+function ToolsSection({ tools, onOpenTool }: { tools: Tool[]; onOpenTool: (t: Tool) => void }) {
+  const categories = useMemo(
+    () => ["All", ...Array.from(new Set(tools.map(t => t.category_label)))],
+    [tools],
+  );
+  const [filter, setFilter] = useState("All");
+  const [visibleCount, setVisibleCount] = useState(TOOLS_PAGE_SIZE);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setVisibleCount(TOOLS_PAGE_SIZE);
+    scrollRef.current?.scrollTo({ left: 0 });
+  }, [filter]);
+
+  const filtered = useMemo(
+    () => filter === "All" ? tools : tools.filter(t => t.category_label === filter),
+    [tools, filter],
+  );
+  const visibleItems = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+
+  function scroll(dir: "left" | "right") {
+    const row = scrollRef.current;
+    if (!row) return;
+    if (dir === "right") {
+      const atEnd = row.scrollLeft + row.clientWidth >= row.scrollWidth - 10;
+      if (atEnd && hasMore) { setVisibleCount(c => Math.min(filtered.length, c + TOOLS_PAGE_SIZE)); return; }
+    }
+    row.scrollBy({ left: dir === "left" ? -330 : 330, behavior: "smooth" });
+  }
+
+  return (
+    <section style={{ marginBottom: 60 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 22, marginBottom: 16 }}>
+        <SectionHeader label="Tools" title="Most Useful Tools" subtitle="AI products worth trying for real work." />
+      </div>
+
+      {/* Filter chips */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+        {categories.map(cat => (
+          <button
+            key={cat}
+            onClick={() => setFilter(cat)}
+            style={{
+              padding: "8px 18px", borderRadius: 999, fontSize: 12, fontWeight: 750,
+              border: "1px solid", cursor: "pointer", transition: "all .15s",
+              background: filter === cat ? "#221D23" : "#fff",
+              color: filter === cat ? "#FFCE00" : "#221D23",
+              borderColor: filter === cat ? "#221D23" : "#E9E4DC",
+              fontFamily: "inherit",
+            }}
+          >{cat}</button>
+        ))}
+      </div>
+
+      {/* Scroll row */}
+      <div className="upd-carousel-rail">
+        <button className="upd-arrow-btn" onClick={() => scroll("left")} aria-label="Previous">‹</button>
+        <div ref={scrollRef} className="upd-slider" style={{
+          display: "grid", gridAutoFlow: "column", gridAutoColumns: 292, gap: 24,
+          overflowX: "auto", padding: "4px 0 30px", scrollSnapType: "x mandatory",
+        }}>
+          {visibleItems.map((t, i) => {
+            const accent = TOOL_ACCENTS[i % TOOL_ACCENTS.length];
+            return (
+              <article
+                key={t.id}
+                className="upd-product-card"
+                style={{
+                  scrollSnapAlign: "start", height: 220, borderRadius: 20,
+                  padding: "16px 16px 14px", color: "#221D23",
+                  display: "flex", flexDirection: "column", justifyContent: "space-between",
+                  overflow: "hidden", position: "relative", background: "#fff",
+                  border: "1px solid #E9E4DC", boxShadow: "0 18px 45px rgba(34,29,35,.08)",
+                  width: 292, flexShrink: 0,
+                  ["--upd-accent" as string]: accent,
+                }}
+              >
+                <div style={{ position: "relative", zIndex: 1 }}>
+                  <div style={{ color: accent, fontSize: 11, fontWeight: 950, letterSpacing: ".08em", textTransform: "uppercase" as const }}>
+                    {t.category_label}
+                  </div>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "8px 0" }}>
+                    <span style={{
+                      width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+                      background: t.color ?? "#FFCE00",
+                      display: "grid", placeItems: "center",
+                      fontSize: t.letter ? 18 : 19, fontWeight: 950, color: "#fff", letterSpacing: "-.02em",
+                    }}>{t.letter ?? t.icon_emoji}</span>
+                    <h3 style={{
+                      margin: 0, fontSize: 17, lineHeight: 1.25, letterSpacing: "-.03em",
+                      fontWeight: 700, color: "#221D23",
+                      display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden",
+                    }}>{t.name}</h3>
+                  </div>
+                  <p style={{
+                    margin: 0, fontSize: 12, lineHeight: 1.38, fontWeight: 650, color: "#514B53",
+                    display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden",
+                  }}>{t.description}</p>
+                </div>
+
+                <div style={{ position: "relative", zIndex: 1, paddingTop: 10, borderTop: "1px solid #E9E4DC" }}>
+                  {t.pricing && (
+                    <div style={{ fontSize: 10, color: "#6B6670", fontWeight: 800, marginBottom: 8 }}>{t.pricing}</div>
+                  )}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                    <span style={{ fontSize: 11, color: "#6B6670", fontWeight: 850 }}>
+                      {t.company_name ? <>by <strong style={{ color: "#221D23" }}>{t.company_name}</strong></> : null}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onOpenTool(t)}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 4,
+                        background: "#FFCE00", color: "#221D23", cursor: "pointer",
+                        borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 950,
+                        whiteSpace: "nowrap", border: "1px solid rgba(34,29,35,.10)",
+                        fontFamily: "inherit",
+                      }}
+                    >Details ›</button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+        <button className="upd-arrow-btn" onClick={() => scroll("right")} aria-label="Next">›</button>
+      </div>
+    </section>
+  );
+}
+
+// ── Tool Guide Card ────────────────────────────────────────────────────────────
+
+function ToolGuideCard({
+  guide, sortIndex, toolLogos, resolvedUrl, isHtml, onOpenHtml,
+}: {
+  guide: ToolGuide;
+  sortIndex: number;
+  toolLogos: ToolLogoMap;
+  resolvedUrl: string | null;
+  isHtml: boolean;
+  onOpenHtml?: () => void;
+}) {
+  const theme = resolveTheme(guide.theme_key, sortIndex);
+  const slug = resolveGuideSlug(guide);
+  const logoUrl = resolveToolLogoUrl(slug, toolLogos);
+  const strengths = guide.strengths?.filter(Boolean) ?? [];
+  const showUpdate = guide.update_label || guide.update_date;
+
+  return (
+    <article className={`upd-tool-guide-card upd-tool-guide-card--${theme}`}>
+      <div className="upd-tool-guide-card-header">
+        <div className={`upd-tool-guide-logo${logoUrl ? " upd-tool-guide-logo--img" : ""}`}>
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt="" />
+          ) : guideInitials(slug)}
+        </div>
+        <div>
+          <div className="upd-tool-guide-name">{guide.name}</div>
+          {guide.company_name && <div className="upd-tool-guide-by">by {guide.company_name}</div>}
+        </div>
+      </div>
+
+      <div className="upd-tool-guide-body">
+        {guide.description && <p className="upd-tool-guide-desc">{guide.description}</p>}
+        {strengths.length > 0 && (
+          <div className="upd-tool-guide-strengths">
+            {strengths.map(s => (
+              <div key={s} className="upd-tool-guide-str">
+                <span className="upd-tool-guide-str-dot" aria-hidden />
+                {s}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="upd-tool-guide-footer">
+        {showUpdate && (
+          <span className="upd-tool-guide-pill">
+            <span className="upd-tool-guide-pill-sym" aria-hidden>↻</span>
+            {guide.update_label}
+            {guide.update_label && guide.update_date && <span className="upd-tool-guide-pill-sep" aria-hidden>·</span>}
+            {guide.update_date && <span className="upd-tool-guide-pill-date">{guide.update_date}</span>}
+          </span>
+        )}
+        {resolvedUrl && !isHtml ? (
+          <a
+            href={resolvedUrl}
+            className="upd-tool-guide-explore"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Explore guide <span aria-hidden>→</span>
+          </a>
+        ) : resolvedUrl && isHtml ? (
+          <button
+            type="button"
+            className="upd-tool-guide-explore"
+            onClick={onOpenHtml}
+            style={{ fontFamily: "inherit" }}
+          >
+            Explore guide <span aria-hidden>→</span>
+          </button>
+        ) : (
+          <span className="upd-tool-guide-explore upd-tool-guide-explore--disabled">Guide coming soon</span>
+        )}
+      </div>
+    </article>
+  );
+}
+
+// ── Deep Dive HTML Modal ───────────────────────────────────────────────────────
+
+function DeepDiveModal({ deepDiveId, title, onClose }: { deepDiveId: string; title: string; onClose: () => void }) {
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      background: "rgba(0,0,0,.55)", backdropFilter: "blur(5px)",
+      WebkitBackdropFilter: "blur(5px)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        position: "relative", width: "min(900px,100%)",
+        display: "flex", flexDirection: "column",
+      }}>
+        <div style={{
+          background: "#fff", borderRadius: 20, overflow: "hidden",
+          height: "85vh", boxShadow: "0 24px 80px rgba(0,0,0,.35)",
+          display: "flex", flexDirection: "column",
+        }}>
+          <div style={{
+            padding: "14px 20px", borderBottom: "1px solid #E9E4DC",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            flexShrink: 0,
+          }}>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, letterSpacing: "-.03em", color: "#221D23" }}>
+              {title}
+            </h2>
+            <button onClick={onClose} style={{
+              border: 0, background: "none", cursor: "pointer", fontFamily: "inherit",
+              fontSize: 13, color: "#6B6670", fontWeight: 600, padding: "4px 8px",
+            }}>Close ×</button>
+          </div>
+
+          {!loaded && (
+            <div style={{ flex: 1, display: "grid", placeItems: "center", background: "#F5F3EF", color: "#746F78", fontSize: 14 }}>
+              Loading guide…
+            </div>
+          )}
+          <iframe
+            src={`/api/fluency/deep-dive/${deepDiveId}/html`}
+            title={title}
+            style={{ flex: 1, border: 0, display: loaded ? "block" : "none" }}
+            onLoad={() => setLoaded(true)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Video Modal ────────────────────────────────────────────────────────────────
 
 function VideoModal({ video, onClose }: { video: Video; onClose: () => void }) {
   const accent = GROUP_ACCENT[video.group_name ?? ""] ?? "#623CEA";
   const isYouTube = video.video_url?.includes("youtube.com") || video.video_url?.includes("youtu.be");
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, zIndex: 200,
-        background: "rgba(0,0,0,.55)", backdropFilter: "blur(5px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: 20,
-      }}
-    >
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      background: "rgba(0,0,0,.55)", backdropFilter: "blur(5px)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+    }}>
       <div onClick={e => e.stopPropagation()} style={{ position: "relative", width: "min(640px,100%)" }}>
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          style={{
-            position: "absolute", top: 12, right: 12, zIndex: 10,
-            width: 34, height: 34, borderRadius: "50%",
-            background: "rgba(0,0,0,.55)", border: 0, cursor: "pointer",
-            color: "#fff", fontSize: 20, fontWeight: 700,
-            display: "grid", placeItems: "center",
-          }}
-        >×</button>
+        <button onClick={onClose} aria-label="Close" style={{
+          position: "absolute", top: 12, right: 12, zIndex: 10,
+          width: 34, height: 34, borderRadius: "50%",
+          background: "rgba(0,0,0,.55)", border: 0, cursor: "pointer",
+          color: "#fff", fontSize: 20, fontWeight: 700,
+          display: "grid", placeItems: "center", fontFamily: "inherit",
+        }}>×</button>
 
         <div className="upd-modal-scroll" style={{
           background: "#fff", borderRadius: 20, overflow: "hidden",
@@ -202,13 +678,13 @@ function VideoModal({ video, onClose }: { video: Video; onClose: () => void }) {
               <span style={{
                 background: accent + "22", color: accent,
                 padding: "3px 11px", borderRadius: 999,
-                fontSize: 11, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase",
+                fontSize: 11, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase" as const,
               }}>{video.group_name ?? "Feature"}</span>
               {video.category_tag && (
                 <span style={{
                   background: "#F5F3F0", color: "#6B6670",
                   padding: "3px 11px", borderRadius: 999,
-                  fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase",
+                  fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase" as const,
                 }}>{video.category_tag}</span>
               )}
             </div>
@@ -231,7 +707,7 @@ function VideoModal({ video, onClose }: { video: Video; onClose: () => void }) {
   );
 }
 
-// ── Video carousel ────────────────────────────────────────────────────────────
+// ── Video Carousel ─────────────────────────────────────────────────────────────
 
 function extractYouTubeId(url: string): string | null {
   const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
@@ -301,7 +777,6 @@ function VideoCarousel({ videos }: { videos: Video[] }) {
                     />
                   ) : null}
 
-                  {/* Overlay gradient */}
                   <div style={{
                     position: "absolute", inset: 0,
                     background: "linear-gradient(to top, rgba(0,0,0,.55) 0%, rgba(0,0,0,.15) 50%, rgba(0,0,0,.25) 100%)",
@@ -324,7 +799,6 @@ function VideoCarousel({ videos }: { videos: Video[] }) {
                     }} />
                   </div>
 
-                  {/* Duration badge */}
                   {v.duration && (
                     <span style={{
                       position: "absolute", bottom: 8, right: 8, zIndex: 2,
@@ -344,7 +818,7 @@ function VideoCarousel({ videos }: { videos: Video[] }) {
                     }} />
                     <span style={{
                       fontSize: 10, fontWeight: 800, letterSpacing: ".12em",
-                      textTransform: "uppercase", color: "#6B6670",
+                      textTransform: "uppercase" as const, color: "#6B6670",
                       overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                       flex: 1, minWidth: 0,
                     }}>
@@ -366,7 +840,7 @@ function VideoCarousel({ videos }: { videos: Video[] }) {
   );
 }
 
-// ── AI at Work questions ──────────────────────────────────────────────────────
+// ── AI at Work questions ───────────────────────────────────────────────────────
 
 function WorkQuestionsSection() {
   const questionRefs = useRef<(HTMLDetailsElement | null)[]>([]);
@@ -430,62 +904,59 @@ function WorkQuestionsSection() {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Main component ─────────────────────────────────────────────────────────────
 
-export default function UpdatesClient({ brief, videos }: Props) {
+export default function UpdatesClient({ brief, videos, tools, toolGuides, toolLogos, deepDives = [], newActivities = [] }: Props) {
+  const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
+  const [openDeepDive, setOpenDeepDive] = useState<{ id: string; title: string } | null>(null);
+
+  const deepDiveByTool = useMemo(
+    () => new Map((deepDives).filter(d => d.tool).map(d => [normalizeToolSlug(d.tool!), d])),
+    [deepDives],
+  );
+
+  function resolveGuideLink(guide: ToolGuide): { resolvedUrl: string | null; isHtml: boolean; deepDiveId: string | null; deepDiveTitle: string } {
+    if (guide.guide_url?.trim()) return { resolvedUrl: guide.guide_url.trim(), isHtml: false, deepDiveId: null, deepDiveTitle: "" };
+    const slug = resolveGuideSlug(guide);
+    const dive = deepDiveByTool.get(slug);
+    if (!dive) return { resolvedUrl: null, isHtml: false, deepDiveId: null, deepDiveTitle: "" };
+    if ((dive.link_type ?? "external") === "html" && dive.html_path) {
+      return { resolvedUrl: `/api/fluency/deep-dive/${dive.id}/html`, isHtml: true, deepDiveId: dive.id, deepDiveTitle: dive.title };
+    }
+    return { resolvedUrl: dive.url?.trim() || null, isHtml: false, deepDiveId: null, deepDiveTitle: "" };
+  }
+
   return (
     <>
-      <B2BTopbar />
+      <B2BTopbar newActivities={newActivities} />
 
-      <main style={{ padding: "28px 32px", maxWidth: 1280, minWidth: 0 }}>
+      <div style={{ flex: 1, background: "#F5F3EF" }}>
 
-        {/* Hero strip */}
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "28px 36px", borderRadius: 24,
-          background: "#fff", border: "1px solid #E8DFD2",
-          boxShadow: "0 10px 30px rgba(34,29,35,.06)",
-          marginBottom: 52, gap: 24,
-        }}>
-          <div>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              background: "#FFFDF0", border: "1px solid #F0D35E",
-              borderRadius: 999, padding: "8px 13px",
-              fontWeight: 900, fontSize: 12, marginBottom: 14,
-            }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: 999,
-                background: "#FFCE00", border: "1px solid #221D23", display: "inline-block",
-              }} />
-              Updated every week
+        {/* Page header — matches Workflows pattern */}
+        <div style={{ background: "#F5F3EF", borderBottom: "1px solid #E9E4DC", padding: "22px 28px 20px" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+            <div>
+              <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-.03em", color: "#1C1820", lineHeight: 1.1 }}>
+                AI Updates
+              </h1>
+              <p style={{ fontSize: 13.5, color: "#746F78", fontWeight: 600, marginTop: 4 }}>
+                Latest AI news, short launch videos, and practical perspectives — curated weekly for your team.
+              </p>
             </div>
-            <h1 style={{
-              margin: 0, fontSize: 36, fontWeight: 600,
-              letterSpacing: "-.055em", lineHeight: 1.05, color: "#221D23",
-            }}>Stay current with AI</h1>
-            <p style={{ margin: "12px 0 0", fontSize: 15, color: "#746F78", fontWeight: 500, lineHeight: 1.5, maxWidth: 520 }}>
-              Latest AI news, short launch videos, and practical perspectives — curated weekly for your team.
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 12, flexShrink: 0 }}>
-            {[
-              { icon: "📰", label: "News" },
-              { icon: "▶", label: "Videos" },
-              { icon: "💡", label: "Perspectives" },
-            ].map(({ icon, label }) => (
-              <div key={label} style={{
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
-                padding: "16px 20px", borderRadius: 18,
-                background: "#FEFCFA", border: "1px solid #E8DFD2",
-                minWidth: 72, fontSize: 22,
-              }}>
-                <span>{icon}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#746F78" }}>{label}</span>
-              </div>
-            ))}
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              fontSize: 11, fontWeight: 700, letterSpacing: ".06em",
+              textTransform: "uppercase", borderRadius: 999, padding: "5px 12px",
+              background: "rgba(255,206,0,.10)", color: "#6B5000",
+              border: "1px solid rgba(255,206,0,.40)", whiteSpace: "nowrap",
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#FFCE00", display: "inline-block" }} />
+              Updated every week
+            </span>
           </div>
         </div>
+
+        <main className="upd-main">
 
         {/* Latest AI News */}
         <section id="latest" style={{ marginBottom: 60 }}>
@@ -516,10 +987,56 @@ export default function UpdatesClient({ brief, videos }: Props) {
           </section>
         )}
 
+        {/* Most Useful Tools */}
+        {tools.length > 0 && (
+          <ToolsSection tools={tools} onOpenTool={setSelectedTool} />
+        )}
+
+        {/* AI Tool Guides */}
+        {toolGuides.length > 0 && (
+          <section style={{ marginBottom: 60 }}>
+            <div style={{ marginBottom: 24 }}>
+              <SectionHeader
+                label="Guides"
+                title="AI Tool Guides"
+                subtitle="Understand how each major AI tool fits into real work."
+              />
+            </div>
+            <div className="upd-tool-guide-grid">
+              {toolGuides.map((g, i) => {
+                const { resolvedUrl, isHtml, deepDiveId, deepDiveTitle } = resolveGuideLink(g);
+                return (
+                  <ToolGuideCard
+                    key={g.id}
+                    guide={g}
+                    sortIndex={i}
+                    toolLogos={toolLogos}
+                    resolvedUrl={resolvedUrl}
+                    isHtml={isHtml}
+                    onOpenHtml={isHtml && deepDiveId ? () => setOpenDeepDive({ id: deepDiveId, title: deepDiveTitle }) : undefined}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* AI at Work Questions */}
         <WorkQuestionsSection />
 
       </main>
+      </div>
+
+      {selectedTool && (
+        <ToolModal tool={selectedTool} onClose={() => setSelectedTool(null)} />
+      )}
+      {openDeepDive && (
+        <DeepDiveModal
+          deepDiveId={openDeepDive.id}
+          title={openDeepDive.title}
+          onClose={() => setOpenDeepDive(null)}
+        />
+      )}
     </>
   );
 }
