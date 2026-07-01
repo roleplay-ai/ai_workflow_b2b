@@ -85,6 +85,30 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
     zIndex: 99, overflow: "hidden",
   };
 
+  const agentsBtnStyle = (open: boolean): React.CSSProperties => ({
+    width: 36, height: 36, borderRadius: 10,
+    border: `1.5px solid ${open ? "#623CEA" : "rgba(98,60,234,.22)"}`,
+    background: open ? "#623CEA" : "#F5F3EF",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    cursor: "pointer",
+    color: open ? "#FFCE00" : "#623CEA",
+    position: "relative", padding: 0, fontFamily: "inherit",
+    boxShadow: open ? "0 4px 14px rgba(98,60,234,.28)" : "none",
+    transition: "all .15s ease",
+  });
+
+  const notifBtnStyle = (open: boolean): React.CSSProperties => ({
+    width: 36, height: 36, borderRadius: 10,
+    border: `1.5px solid ${open ? "#1C1820" : hasNew ? "rgba(255,206,0,.55)" : "#E9E4DC"}`,
+    background: open ? "#1C1820" : hasNew ? "#FFFBEB" : "#F5F3EF",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    cursor: "pointer",
+    color: open ? "#FFCE00" : "#1C1820",
+    position: "relative", padding: 0, fontFamily: "inherit",
+    boxShadow: hasNew && !open ? "0 0 0 3px rgba(255,206,0,.18)" : "none",
+    transition: "all .15s ease",
+  });
+
   return (
     <div style={{
       height: "var(--topbar-h)", background: "#fff",
@@ -128,36 +152,26 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
           />
         </div>
 
-        {/* Featured tags */}
+        {/* Featured agents */}
         <div style={{ position: "relative" }}>
           <button
             onClick={() => { setTagsOpen(o => !o); setNotifOpen(false); }}
-            title="Featured tags"
-            style={{
-              width: 34, height: 34, borderRadius: 7,
-              border: `1px solid ${tagsOpen ? "#D8D1C7" : "#E9E4DC"}`,
-              background: tagsOpen ? "#F5F3EF" : "#fff",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", color: "#746F78", position: "relative",
-              padding: 0, fontFamily: "inherit",
-            }}
+            title="Featured agents"
+            style={agentsBtnStyle(tagsOpen)}
           >
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2.5 2.5h4.2L8.5 6.3l2.8-1.1 1.1 2.8-3.8 1.8-1.8 3.8-1.1-2.8-2.8-1.1 1.8-3.8z"/>
             </svg>
-            {hasFeaturedTags && (
-              <span style={{
-                position: "absolute", top: 7, right: 7,
-                width: 6, height: 6, borderRadius: "50%",
-                background: "#FFCE00", border: "1.5px solid #fff",
-              }} />
-            )}
           </button>
 
           {tagsOpen && (
             <div style={panelStyle}>
-              <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #F0EBE4", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "#1C1820", letterSpacing: "-.01em" }}>Featured Tags</div>
+              <div style={{
+                padding: "14px 16px 12px", borderBottom: "1px solid #F0EBE4",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: "#F5F3EF",
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#623CEA", letterSpacing: "-.01em" }}>Featured Agents</div>
                 {hasFeaturedTags && (
                   <span style={{ fontSize: 10.5, fontWeight: 700, background: "#FFCE00", color: "#1C1820", borderRadius: 999, padding: "2px 8px" }}>
                     {featuredTags.length}
@@ -167,7 +181,7 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
 
               {featuredTags.length === 0 ? (
                 <div style={{ padding: "28px 16px", textAlign: "center", color: "#A09AA6", fontSize: 13, fontWeight: 600 }}>
-                  No featured tags yet.
+                  No featured agents yet.
                 </div>
               ) : (
                 <div style={{ maxHeight: 360, overflowY: "auto" }}>
@@ -241,34 +255,35 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
         </div>
 
         {/* Notifications */}
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative", overflow: "visible" }}>
           <button
             onClick={() => { setNotifOpen(o => !o); setTagsOpen(false); }}
-            style={{
-              width: 34, height: 34, borderRadius: 7,
-              border: `1px solid ${notifOpen ? "#D8D1C7" : "#E9E4DC"}`,
-              background: notifOpen ? "#F5F3EF" : "#fff",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", color: "#746F78", position: "relative",
-              padding: 0, fontFamily: "inherit",
-            }}
+            title="What's new"
+            style={notifBtnStyle(notifOpen)}
           >
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M7.5 1.5a5 5 0 015 5v3l1 1.5H1.5l1-1.5v-3a5 5 0 015-5z"/>
               <path d="M5.5 11.5a2 2 0 004 0"/>
             </svg>
             {hasNew && (
               <span style={{
-                position: "absolute", top: 7, right: 7,
-                width: 6, height: 6, borderRadius: "50%",
-                background: "#ED4551", border: "1.5px solid #fff",
+                position: "absolute", top: -3, right: -3,
+                width: 10, height: 10, borderRadius: "50%",
+                background: "#ED4551",
+                border: "2.5px solid #fff",
+                boxShadow: "0 0 0 1.5px #ED4551",
+                pointerEvents: "none",
               }} />
             )}
           </button>
 
           {notifOpen && (
             <div style={panelStyle}>
-              <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #F0EBE4", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{
+                padding: "14px 16px 12px", borderBottom: "1px solid #F0EBE4",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: "#F5F3EF",
+              }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: "#1C1820", letterSpacing: "-.01em" }}>What&apos;s New</div>
                 {hasNew && (
                   <span style={{ fontSize: 10.5, fontWeight: 700, background: "#ED4551", color: "#fff", borderRadius: 999, padding: "2px 8px" }}>
@@ -291,7 +306,7 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
                     return (
                       <a
                         key={a.id}
-                        href={`/workflows/${a.id}`}
+                        href={`/activity/${a.id}`}
                         style={{
                           display: "block", padding: "12px 16px",
                           borderBottom: i < newActivities.length - 1 ? "1px solid #F5F1EC" : "none",

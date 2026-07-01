@@ -3,6 +3,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Activity } from "@/lib/supabase/types";
 import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
+import { formatTopPercentile } from "@/lib/points";
 import type { ToolLogoMap } from "@/lib/toolLogos";
 import B2BTopbar from "@/components/B2BTopbar";
 import ActivityCard, { getTheme, Scene } from "@/components/ActivityCard";
@@ -122,14 +123,14 @@ function FunctionDropdown({ functions, selected, onChange }: {
         }}
       >
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.65 }}>
-          <rect x="1" y="3" width="14" height="2.5" rx="1.2"/>
-          <rect x="3" y="7.5" width="10" height="2.5" rx="1.2"/>
-          <rect x="5.5" y="12" width="5" height="2.5" rx="1.2"/>
+          <rect x="1" y="3" width="14" height="2.5" rx="1.2" />
+          <rect x="3" y="7.5" width="10" height="2.5" rx="1.2" />
+          <rect x="5.5" y="12" width="5" height="2.5" rx="1.2" />
         </svg>
         {label}
         <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8"
           style={{ transition: "transform .2s", transform: open ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.6 }}>
-          <path d="M2 4l4 4 4-4"/>
+          <path d="M2 4l4 4 4-4" />
         </svg>
       </button>
 
@@ -379,12 +380,16 @@ type Props = {
   totalAvailable: number;
   completedCount: number;
   inProgressCount: number;
+  userTotalPoints: number;
+  companyPercentile: number | null;
+  companySize: number;
+  companyAvgPoints: number;
   modules: FoundationModule[];
   functionThumbnails: Record<string, string>;
   functionDescriptions: Record<string, string>;
 };
 
-export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewCounts, completedIds, totalAvailable, completedCount, inProgressCount, modules, functionThumbnails, functionDescriptions }: Props) {
+export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewCounts, completedIds, totalAvailable, completedCount, inProgressCount, userTotalPoints, companyPercentile, companySize, companyAvgPoints, modules, functionThumbnails, functionDescriptions }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedTag = searchParams.get("tag");
@@ -442,7 +447,10 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewC
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selectedTag]);
 
-  const completionPct = totalAvailable > 0 ? Math.round((completedCount / totalAvailable) * 100) : 0;
+  const topPercentileLabel = formatTopPercentile(companyPercentile, companySize);
+  const percentileDelta = companySize > 0
+    ? `Company avg: ${companyAvgPoints} pts`
+    : "Points rank within your company";
 
   function handleTabToggle(tab: Exclude<FilterTab, null>) {
     clearTagFilter();
@@ -453,19 +461,19 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewC
   const sectionTitle = selectedTag
     ? selectedTag
     : selectedFunction
-    ? selectedFunction
-    : selectedTab === "new" ? "New This Week"
-    : selectedTab === "essentials" ? "Start Here"
-    : selectedTab === "continue" ? "Continue"
-    : "All Workflows";
+      ? selectedFunction
+      : selectedTab === "new" ? "New This Week"
+        : selectedTab === "essentials" ? "Start Here"
+          : selectedTab === "continue" ? "Continue"
+            : "All Workflows";
 
   const sectionDesc = selectedTag
     ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} tagged with ${selectedTag}`
     : selectedFunction
-    ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} in ${selectedFunction}`
-    : selectedTab
-    ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} match your filters.`
-    : "Browse every guided workflow in the library. Filter by tool or function to find what fits your work.";
+      ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} in ${selectedFunction}`
+      : selectedTab
+        ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} match your filters.`
+        : "Browse every guided workflow in the library. Filter by tool or function to find what fits your work.";
 
   return (
     <>
@@ -478,10 +486,10 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewC
 
       <div style={{ flex: 1, background: "#F5F3EF" }}>
         {/* Page header */}
-        <div style={{ background: "#F5F3EF", borderBottom: "1px solid #E9E4DC", padding: "22px 28px 20px" }}>
+        <div style={{ background: "#F5F3EF", padding: "22px 28px 0" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 18 }}>
             <div>
-              <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-.03em", color: "#1C1820", lineHeight: 1.1 }}>Workflows</h1>
+              <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-.03em", color: "#1C1820", lineHeight: 1.1 }}>Progress</h1>
               <p style={{ fontSize: 13.5, color: "#746F78", fontWeight: 600, marginTop: 4 }}>Guided AI automations tailored to your tool stack and job function.</p>
             </div>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", borderRadius: 999, padding: "5px 12px", background: "rgba(98,60,234,.08)", color: "#623CEA", border: "1px solid rgba(98,60,234,.18)", whiteSpace: "nowrap" }}>
@@ -491,14 +499,20 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewC
           </div>
 
           {/* Stats */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 18 }}>
-            <StatCard label="Available" value={String(totalAvailable)} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, paddingBottom: 18, borderBottom: "1px solid #E9E4DC" }}>
+            <StatCard
+              label="My Points"
+              value={String(userTotalPoints)}
+              delta={userTotalPoints > 0 ? "Earned from completed workflows" : "Complete workflows to earn points"}
+            />
             <StatCard label="Completed" value={String(completedCount)} delta={completedCount > 0 ? "Keep going!" : "Start your first workflow"} />
             <StatCard label="In Progress" value={String(inProgressCount)} delta={inProgressCount > 0 ? "Pick up where you left off" : "Start a workflow to track"} />
-            <StatCard label="My Progress" value={`${completionPct}%`} delta={`${completedCount} of ${totalAvailable} done`} dark />
+            <StatCard label="Company Rank" value={topPercentileLabel} delta={percentileDelta} dark />
           </div>
+        </div>
 
-          {/* Filter bar */}
+        {/* Filter bar */}
+        <div style={{ background: "#F5F3EF", padding: "18px 28px 20px" }}>
           <div className="ndb-root" style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {/* Chips — scrollable row */}
             <div className="workflows-filter-bar" style={{ flex: 1, minWidth: 0 }}>
@@ -537,7 +551,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewC
               <div className="rail-header">
                 <div className="rail-title">
                   <span className="section-label">Workflow types</span>
-                  <h2>Browse by Outcome</h2>
+                  <h2>Browse Workflows by Outcome</h2>
                   <p>Pick a workflow type to see all guided activities for that function.</p>
                 </div>
               </div>

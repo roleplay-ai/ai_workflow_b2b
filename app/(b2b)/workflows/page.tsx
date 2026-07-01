@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { rowsToToolLogoMap, rowsToTagLogoMap, type ToolLogoMap } from "@/lib/toolLogos";
+import { sumPointsFromProgress, type PointsStats } from "@/lib/points";
+import { rowsToToolLogoMap, rowsToTagLogoMap } from "@/lib/toolLogos";
 import WorkflowsClient from "./WorkflowsClient";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function WorkflowsPage() {
   ] = await Promise.all([
     supabase
       .from("activities")
-      .select("id, title, description, tools, functions, tags, time_estimate_minutes, is_locked, is_featured, published, position, created_at, thumbnail_url")
+      .select("id, title, description, tools, functions, tags, points, time_estimate_minutes, is_locked, is_featured, published, position, created_at, thumbnail_url")
       .eq("published", true)
       .order("position"),
     supabase.from("tool_logos").select("tool, logo_url"),
@@ -62,6 +63,30 @@ export default async function WorkflowsPage() {
     (r: { activity_id: string; status: string }) => r.status === "in_progress"
   ).length;
 
+  const activityPoints: Record<string, number> = {};
+  for (const row of activities ?? []) {
+    activityPoints[row.id as string] = Number((row as { points?: number }).points ?? 0);
+  }
+
+  let userTotalPoints = sumPointsFromProgress(
+    (progressRows ?? []) as { activity_id: string; status: string }[],
+    activityPoints,
+  );
+  let companyPercentile: number | null = null;
+  let companySize = 0;
+  let companyAvgPoints = 0;
+
+  if (user) {
+    const { data: pointsStats } = await supabase.rpc("get_my_points_stats");
+    if (pointsStats && typeof pointsStats === "object") {
+      const stats = pointsStats as PointsStats;
+      userTotalPoints = stats.user_points ?? userTotalPoints;
+      companyPercentile = stats.company_percentile ?? null;
+      companySize = stats.company_size ?? 0;
+      companyAvgPoints = stats.company_avg_points ?? 0;
+    }
+  }
+
   const functionThumbnails: Record<string, string> = {};
   const functionDescriptions: Record<string, string> = {};
   for (const row of functionRows ?? []) {
@@ -82,6 +107,10 @@ export default async function WorkflowsPage() {
         totalAvailable={totalAvailable}
         completedCount={completedCount}
         inProgressCount={inProgressCount}
+        userTotalPoints={userTotalPoints}
+        companyPercentile={companyPercentile}
+        companySize={companySize}
+        companyAvgPoints={companyAvgPoints}
         modules={(modules ?? []) as any}
         functionThumbnails={functionThumbnails}
         functionDescriptions={functionDescriptions}
