@@ -3,9 +3,10 @@
   "configurations": [
     {
       "name": "b2b-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "3001"],
-      "port": 3001
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "dev"],
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }

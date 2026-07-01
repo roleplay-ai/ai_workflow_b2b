@@ -171,9 +171,7 @@ export default function ActivityCard({ activity, toolLogos, viewCount = 0, isCom
 
   return (
     <Link
-      href={`https://app.nudgeable.ai/activity/${activity.id}`}
-      target="_blank"
-      rel="noopener noreferrer"
+      href={`/activity/${activity.id}`}
       className={`workflow-card${navigating ? " is-navigating" : ""}`}
       onClick={() => setNavigating(true)}
       aria-busy={navigating}

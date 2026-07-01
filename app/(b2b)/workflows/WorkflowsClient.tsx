@@ -5,6 +5,7 @@ import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 import type { ToolLogoMap } from "@/lib/toolLogos";
 import B2BTopbar from "@/components/B2BTopbar";
 import ActivityCard, { getTheme, Scene } from "@/components/ActivityCard";
+import ModuleHtmlModal from "@/components/ModuleHtmlModal";
 
 // ── Foundation module type ─────────────────────────────────────────────────
 
@@ -161,56 +162,70 @@ const FOUNDATION_THEMES = [
 
 function AIFoundationsSection({ modules }: { modules: FoundationModule[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeModule, setActiveModule] = useState<FoundationModule | null>(null);
+
   if (modules.length === 0) return null;
 
   const scroll = (dir: "left" | "right") =>
     scrollRef.current?.scrollBy({ left: dir === "left" ? -442 : 442, behavior: "smooth" });
 
   return (
-    <section style={{ padding: "32px 28px 40px", borderTop: "1px solid #E9E4DC", background: "#F5F3EF" }}>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 22, marginBottom: 22 }}>
-        <div style={{ position: "relative", paddingLeft: 22 }}>
-          <div style={{ position: "absolute", left: 0, top: 4, width: 7, height: 58, borderRadius: 999, background: "#FFCE00", border: "1px solid rgba(28,24,32,.18)" }} />
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".09em", textTransform: "uppercase", color: "#746F78", marginBottom: 4 }}>Learn</div>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-.04em", color: "#1C1820" }}>AI Foundations</h2>
-          <p style={{ margin: "6px 0 0", color: "#6B6670", fontSize: 13.5, fontWeight: 600, lineHeight: 1.45 }}>Short explainers that build practical AI fluency.</p>
-        </div>
-        <a href="/mastery" style={{ fontSize: 13, fontWeight: 700, color: "#623CEA", whiteSpace: "nowrap", textDecoration: "none" }}>See all topics →</a>
-      </div>
+    <>
+      {activeModule && (
+        <ModuleHtmlModal
+          moduleId={activeModule.id}
+          moduleTitle={activeModule.title}
+          moduleEmoji={activeModule.emoji || "📘"}
+          onClose={() => setActiveModule(null)}
+        />
+      )}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button onClick={() => scroll("left")} style={{ flexShrink: 0, width: 42, height: 52, borderRadius: 999, background: "#fff", border: "1px solid #E9E4DC", boxShadow: "0 16px 35px rgba(28,24,32,.13)", display: "grid", placeItems: "center", fontSize: 26, fontWeight: 950, cursor: "pointer", fontFamily: "inherit" }}>‹</button>
-
-        <div ref={scrollRef} style={{ flex: 1, minWidth: 0, overflowX: "auto", overflowY: "visible", padding: "12px 0 20px", margin: "-12px 0 -20px", scrollbarWidth: "none" }}>
-          <div style={{ display: "flex", gap: 16, width: "max-content", alignItems: "flex-start" }}>
-            {modules.map((mod, i) => {
-              const { soft, accent } = FOUNDATION_THEMES[i % FOUNDATION_THEMES.length];
-              const sub = mod.description?.trim() || mod.concepts?.[0] || "";
-              return (
-                <div key={mod.id} style={{ flexShrink: 0, width: 205, paddingTop: 4, paddingBottom: 8 }}>
-                  <div
-                    style={{ width: "100%", minHeight: 188, borderRadius: 16, border: "1px solid #E8E0D1", background: "#fff", boxShadow: "0 10px 24px rgba(28,24,32,.06)", cursor: mod.is_locked ? "not-allowed" : "pointer", display: "flex", flexDirection: "column", padding: 18, boxSizing: "border-box", opacity: mod.is_locked ? 0.55 : 1, transition: "transform .15s, box-shadow .15s" }}
-                    onMouseEnter={e => { if (!mod.is_locked) { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 14px 28px rgba(28,24,32,.09)"; } }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 10px 24px rgba(28,24,32,.06)"; }}
-                  >
-                    <div style={{ width: 54, height: 54, borderRadius: 16, display: "grid", placeItems: "center", background: soft, marginBottom: 16, flexShrink: 0, fontSize: 26 }}>
-                      {mod.is_locked ? "🔒" : (mod.emoji || "📘")}
-                    </div>
-                    <div style={{ fontSize: 15, fontWeight: 900, color: "#1C1820", margin: "0 0 7px", lineHeight: 1.18 }}>{mod.title}</div>
-                    <div style={{ fontSize: 13, fontWeight: 400, color: "#6B6B6B", lineHeight: 1.42, margin: "0 0 14px", flex: 1 }}>{sub || " "}</div>
-                    <span style={{ display: "inline-flex", width: "fit-content", alignItems: "center", fontSize: 10, fontWeight: 900, color: accent, letterSpacing: 1, textTransform: "uppercase" }}>
-                      {mod.is_locked ? "Locked" : "Learn →"}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+      <section style={{ padding: "32px 28px 40px", borderTop: "1px solid #E9E4DC", background: "#F5F3EF" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 22, marginBottom: 22 }}>
+          <div style={{ position: "relative", paddingLeft: 22 }}>
+            <div style={{ position: "absolute", left: 0, top: 4, width: 7, height: 58, borderRadius: 999, background: "#FFCE00", border: "1px solid rgba(28,24,32,.18)" }} />
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".09em", textTransform: "uppercase", color: "#746F78", marginBottom: 4 }}>Learn</div>
+            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-.04em", color: "#1C1820" }}>AI Foundations</h2>
+            <p style={{ margin: "6px 0 0", color: "#6B6670", fontSize: 13.5, fontWeight: 600, lineHeight: 1.45 }}>Short explainers that build practical AI fluency.</p>
           </div>
+          <a href="/mastery" style={{ fontSize: 13, fontWeight: 700, color: "#623CEA", whiteSpace: "nowrap", textDecoration: "none" }}>See all topics →</a>
         </div>
 
-        <button onClick={() => scroll("right")} style={{ flexShrink: 0, width: 42, height: 52, borderRadius: 999, background: "#fff", border: "1px solid #E9E4DC", boxShadow: "0 16px 35px rgba(28,24,32,.13)", display: "grid", placeItems: "center", fontSize: 26, fontWeight: 950, cursor: "pointer", fontFamily: "inherit" }}>›</button>
-      </div>
-    </section>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={() => scroll("left")} style={{ flexShrink: 0, width: 42, height: 52, borderRadius: 999, background: "#fff", border: "1px solid #E9E4DC", boxShadow: "0 16px 35px rgba(28,24,32,.13)", display: "grid", placeItems: "center", fontSize: 26, fontWeight: 950, cursor: "pointer", fontFamily: "inherit" }}>‹</button>
+
+          <div ref={scrollRef} style={{ flex: 1, minWidth: 0, overflowX: "auto", overflowY: "visible", padding: "12px 0 20px", margin: "-12px 0 -20px", scrollbarWidth: "none" }}>
+            <div style={{ display: "flex", gap: 16, width: "max-content", alignItems: "flex-start" }}>
+              {modules.map((mod, i) => {
+                const { soft, accent } = FOUNDATION_THEMES[i % FOUNDATION_THEMES.length];
+                const sub = mod.description?.trim() || mod.concepts?.[0] || "";
+                return (
+                  <div key={mod.id} style={{ flexShrink: 0, width: 205, paddingTop: 4, paddingBottom: 8 }}>
+                    <div
+                      onClick={() => { if (!mod.is_locked) setActiveModule(mod); }}
+                      style={{ width: "100%", minHeight: 188, borderRadius: 16, border: "1px solid #E8E0D1", background: "#fff", boxShadow: "0 10px 24px rgba(28,24,32,.06)", cursor: mod.is_locked ? "not-allowed" : "pointer", display: "flex", flexDirection: "column", padding: 18, boxSizing: "border-box", opacity: mod.is_locked ? 0.55 : 1, transition: "transform .15s, box-shadow .15s" }}
+                      onMouseEnter={e => { if (!mod.is_locked) { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 14px 28px rgba(28,24,32,.09)"; } }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 10px 24px rgba(28,24,32,.06)"; }}
+                    >
+                      <div style={{ width: 54, height: 54, borderRadius: 16, display: "grid", placeItems: "center", background: soft, marginBottom: 16, flexShrink: 0, fontSize: 26 }}>
+                        {mod.is_locked ? "🔒" : (mod.emoji || "📘")}
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: "#1C1820", margin: "0 0 7px", lineHeight: 1.18 }}>{mod.title}</div>
+                      <div style={{ fontSize: 13, fontWeight: 400, color: "#6B6B6B", lineHeight: 1.42, margin: "0 0 14px", flex: 1 }}>{sub || " "}</div>
+                      <span style={{ display: "inline-flex", width: "fit-content", alignItems: "center", fontSize: 10, fontWeight: 900, color: accent, letterSpacing: 1, textTransform: "uppercase" }}>
+                        {mod.is_locked ? "Locked" : "Learn →"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <button onClick={() => scroll("right")} style={{ flexShrink: 0, width: 42, height: 52, borderRadius: 999, background: "#fff", border: "1px solid #E9E4DC", boxShadow: "0 16px 35px rgba(28,24,32,.13)", display: "grid", placeItems: "center", fontSize: 26, fontWeight: 950, cursor: "pointer", fontFamily: "inherit" }}>›</button>
+        </div>
+      </section>
+    </>
   );
 }
 

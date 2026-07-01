@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -18,7 +20,7 @@
   --red:      #ED4551;
 
   --sidebar-w: 224px;
-  --topbar-h: 52px;
+  --topbar-h: 44px;
 
   --radius-sm: 7px;
   --radius-md: 12px;
@@ -41,3 +43,53 @@ html, body {
 
 a { text-decoration: none; color: inherit; }
 button { font-family: inherit; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.card-spinner {
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes celebrate-pop {
+  0%   { transform: scale(0.5); opacity: 0; }
+  60%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes celebrate-emoji {
+  0%, 100% { transform: scale(1) rotate(-6deg); }
+  25%  { transform: scale(1.15) rotate(6deg); }
+  50%  { transform: scale(1.05) rotate(-4deg); }
+  75%  { transform: scale(1.12) rotate(4deg); }
+}
+
+@keyframes confetti-fall {
+  0%   { transform: translateY(-12vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(105vh) rotate(720deg); opacity: 0.2; }
+}
+
+.celebrate-pop {
+  animation: celebrate-pop 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+
+.celebrate-emoji {
+  animation: celebrate-emoji 1.2s ease-in-out infinite;
+}
+
+.celebration-confetti-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.celebration-confetti {
+  position: absolute;
+  top: -12px;
+  animation-name: confetti-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}

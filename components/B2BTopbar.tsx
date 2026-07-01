@@ -75,7 +75,7 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
           background: "#F5F3EF", border: "1px solid #E9E4DC",
           borderRadius: 7, padding: "7px 12px",
           fontSize: 13, color: "#A09AA6", fontWeight: 600,
-          minWidth: 200,
+          minWidth: 320,
         }}>
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
             <circle cx="5.5" cy="5.5" r="4"/>

@@ -46,3 +46,27 @@ export function normalizeActivityTools(tools: string[] | null | undefined): stri
 export function toolColor(tool: string): string {
   return TOOL_COLORS[tool.toLowerCase()] ?? "#FFCE00";
 }
+
+export type FluencyToolLink = { name: string; try_url: string | null };
+
+export function buildToolTryUrlMap(tools: FluencyToolLink[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const t of tools) {
+    const slug = normalizeToolSlug(t.name);
+    const url = t.try_url?.trim();
+    if (slug && url && !map[slug]) map[slug] = url;
+  }
+  return map;
+}
+
+export function resolveActivityOpenLink(
+  tryLink: string | null | undefined,
+  activityTools: string[],
+  tryUrlMap: Record<string, string>,
+): { url: string; label: string } | null {
+  const custom = tryLink?.trim();
+  const toolLink = activityTools.map(s => ({ slug: s, url: tryUrlMap[s] })).find(t => t.url);
+  if (custom) return { url: custom, label: toolLink ? formatToolLabel(toolLink.slug) : "Tool" };
+  if (!toolLink) return null;
+  return { url: toolLink.url, label: formatToolLabel(toolLink.slug) };
+}
