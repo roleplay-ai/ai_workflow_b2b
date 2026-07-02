@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { getPostLoginPath } from "@/lib/auth/postLogin";
+import type { Role } from "@/lib/supabase/types";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -10,13 +12,21 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       const next = searchParams.get("next");
-      let destination = "/workflows";
+      let requestedPath: string | null = null;
       if (next) {
         try {
           const url = new URL(next, origin);
-          if (url.origin === origin) destination = url.pathname + url.search;
+          if (url.origin === origin) requestedPath = url.pathname + url.search;
         } catch { /* ignore */ }
       }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = user
+        ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+        : { data: null };
+
+      const role = (profile?.role ?? "user") as Role;
+      const destination = getPostLoginPath(role, requestedPath);
       return NextResponse.redirect(`${origin}${destination}`);
     }
   }

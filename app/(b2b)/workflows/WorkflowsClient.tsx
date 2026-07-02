@@ -158,7 +158,7 @@ function FunctionDropdown({ functions, selected, onChange }: {
               cursor: "pointer", fontFamily: "inherit", textAlign: "left",
               transition: "background .1s",
             }}
-            onMouseEnter={e => { if (selected !== null) (e.currentTarget as HTMLElement).style.background = "#F5F3EF"; }}
+            onMouseEnter={e => { if (selected !== null) (e.currentTarget as HTMLElement).style.background = "var(--bg)"; }}
             onMouseLeave={e => { if (selected !== null) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
           >
             <span>All Functions</span>
@@ -184,14 +184,14 @@ function FunctionDropdown({ functions, selected, onChange }: {
                   cursor: "pointer", fontFamily: "inherit", textAlign: "left",
                   transition: "background .1s",
                 }}
-                onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "#F5F3EF"; }}
+                onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "var(--bg)"; }}
                 onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
               >
                 <span style={{ flex: 1, marginRight: 8 }}>{fn}</span>
                 <span style={{
                   fontSize: 10.5, fontWeight: 700,
                   color: active ? "#623CEA" : "#A09AA6",
-                  background: active ? "rgba(98,60,234,.1)" : "#F5F3EF",
+                  background: active ? "rgba(98,60,234,.1)" : "var(--bg)",
                   borderRadius: 999, padding: "2px 7px", flexShrink: 0,
                 }}>
                   {count}
@@ -317,7 +317,7 @@ function AIFoundationsSection({ modules }: { modules: FoundationModule[] }) {
         />
       )}
 
-      <section style={{ padding: "32px 28px 40px", borderTop: "1px solid #E9E4DC", background: "#F5F3EF" }}>
+      <section style={{ padding: "32px 28px 40px", borderTop: "1px solid #E9E4DC", background: "var(--bg)" }}>
         <div style={{ marginBottom: 22 }}>
           <div style={{ position: "relative", paddingLeft: 22 }}>
             <div style={{ position: "absolute", left: 0, top: 4, width: 7, height: 58, borderRadius: 999, background: "#FFCE00", border: "1px solid rgba(28,24,32,.18)" }} />
@@ -484,9 +484,9 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewC
         activeTag={selectedTag}
       />
 
-      <div style={{ flex: 1, background: "#F5F3EF" }}>
+      <div style={{ flex: 1, background: "var(--bg)" }}>
         {/* Page header */}
-        <div style={{ background: "#F5F3EF", padding: "22px 28px 0" }}>
+        <div style={{ background: "var(--bg)", padding: "22px 28px 0" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 18 }}>
             <div>
               <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-.03em", color: "#1C1820", lineHeight: 1.1 }}>Progress</h1>
@@ -512,7 +512,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewC
         </div>
 
         {/* Filter bar */}
-        <div style={{ background: "#F5F3EF", padding: "18px 28px 20px" }}>
+        <div style={{ background: "var(--bg)", padding: "18px 28px 20px" }}>
           <div className="ndb-root" style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {/* Chips — scrollable row */}
             <div className="workflows-filter-bar" style={{ flex: 1, minWidth: 0 }}>

@@ -88,7 +88,7 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
   const agentsBtnStyle = (open: boolean): React.CSSProperties => ({
     width: 36, height: 36, borderRadius: 10,
     border: `1.5px solid ${open ? "#623CEA" : "rgba(98,60,234,.22)"}`,
-    background: open ? "#623CEA" : "#F5F3EF",
+    background: open ? "#623CEA" : "var(--bg)",
     display: "flex", alignItems: "center", justifyContent: "center",
     cursor: "pointer",
     color: open ? "#FFCE00" : "#623CEA",
@@ -100,7 +100,7 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
   const notifBtnStyle = (open: boolean): React.CSSProperties => ({
     width: 36, height: 36, borderRadius: 10,
     border: `1.5px solid ${open ? "#1C1820" : hasNew ? "rgba(255,206,0,.55)" : "#E9E4DC"}`,
-    background: open ? "#1C1820" : hasNew ? "#FFFBEB" : "#F5F3EF",
+    background: open ? "#1C1820" : hasNew ? "#FFFBEB" : "var(--bg)",
     display: "flex", alignItems: "center", justifyContent: "center",
     cursor: "pointer",
     color: open ? "#FFCE00" : "#1C1820",
@@ -130,7 +130,7 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
         {/* Search */}
         <div style={{
           display: "flex", alignItems: "center", gap: 7,
-          background: "#F5F3EF", border: "1px solid #E9E4DC",
+          background: "var(--bg)", border: "1px solid #E9E4DC",
           borderRadius: 7, padding: "7px 12px",
           fontSize: 13, color: "#A09AA6", fontWeight: 600,
           minWidth: 320,
@@ -169,7 +169,7 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
               <div style={{
                 padding: "14px 16px 12px", borderBottom: "1px solid #F0EBE4",
                 display: "flex", alignItems: "center", justifyContent: "space-between",
-                background: "#F5F3EF",
+                background: "var(--bg)",
               }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: "#623CEA", letterSpacing: "-.01em" }}>Featured Agents</div>
                 {hasFeaturedTags && (
@@ -215,7 +215,7 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
                           ) : (
                             <div style={{
                               width: 28, height: 28, borderRadius: 6, border: "1px solid #E9E4DC",
-                              background: "#F5F3EF", display: "grid", placeItems: "center",
+                              background: "var(--bg)", display: "grid", placeItems: "center",
                               fontSize: 9, fontWeight: 800, color: "#746F78", flexShrink: 0, marginTop: 1,
                             }}>
                               {tag.name.slice(0, 3).toUpperCase()}
@@ -282,7 +282,7 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
               <div style={{
                 padding: "14px 16px 12px", borderBottom: "1px solid #F0EBE4",
                 display: "flex", alignItems: "center", justifyContent: "space-between",
-                background: "#F5F3EF",
+                background: "var(--bg)",
               }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: "#1C1820", letterSpacing: "-.01em" }}>What&apos;s New</div>
                 {hasNew && (

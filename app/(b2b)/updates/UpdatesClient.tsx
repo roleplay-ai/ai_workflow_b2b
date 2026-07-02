@@ -515,7 +515,7 @@ function DeepDiveModal({ deepDiveId, title, onClose }: { deepDiveId: string; tit
           </div>
 
           {!loaded && (
-            <div style={{ flex: 1, display: "grid", placeItems: "center", background: "#F5F3EF", color: "#746F78", fontSize: 14 }}>
+            <div style={{ flex: 1, display: "grid", placeItems: "center", background: "var(--bg)", color: "#746F78", fontSize: 14 }}>
               Loading guide…
             </div>
           )}
@@ -839,10 +839,10 @@ export default function UpdatesClient({ brief, videos, tools, toolGuides, toolLo
     <>
       <B2BTopbar newActivities={newActivities} />
 
-      <div style={{ flex: 1, background: "#F5F3EF" }}>
+      <div style={{ flex: 1, background: "var(--bg)" }}>
 
         {/* Page header — matches Workflows pattern */}
-        <div style={{ background: "#F5F3EF", borderBottom: "1px solid #E9E4DC", padding: "22px 28px 20px" }}>
+        <div style={{ background: "var(--bg)", borderBottom: "1px solid #E9E4DC", padding: "22px 28px 20px" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
             <div>
               <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-.03em", color: "#1C1820", lineHeight: 1.1 }}>
