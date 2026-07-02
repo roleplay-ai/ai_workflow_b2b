@@ -3,7 +3,7 @@
 import { useRef, useState, useMemo, useEffect } from "react";
 import B2BTopbar from "@/components/B2BTopbar";
 import BriefNewsCard, { type BriefNewsItem } from "@/components/BriefNewsCard";
-import { formatToolLabel, normalizeToolSlug } from "@/lib/tools";
+import { normalizeToolSlug } from "@/lib/tools";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import "./updates.css";
 
@@ -68,11 +68,9 @@ const GROUP_ACCENT: Record<string, string> = {
   Features: "#A855F7", Apps: "#EC4899", Workflows: "#F68A29", Skills: "#3699FC",
 };
 
-const TOOL_ACCENTS = ["#17614B", "#326EA9", "#AA577C", "#C66D38", "#623CEA", "#1E8B5C"];
 const TOOLS_PAGE_SIZE = 10;
 
-const THEME_KEYS = ["claude", "gpt", "gemini", "copilot"] as const;
-type ThemeKey = (typeof THEME_KEYS)[number];
+const GUIDE_ICON_SYMBOLS = ["✦", "●", "✧", "◆"];
 
 const THEME_TO_SLUG: Record<string, string> = {
   claude: "claude", gpt: "chatgpt", gemini: "gemini", copilot: "copilot",
@@ -163,20 +161,9 @@ const WORK_QUESTIONS = [
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function resolveTheme(themeKey: string | null | undefined, i: number): ThemeKey {
-  if (themeKey && THEME_KEYS.includes(themeKey as ThemeKey)) return themeKey as ThemeKey;
-  return THEME_KEYS[i % THEME_KEYS.length];
-}
-
 function resolveGuideSlug(guide: ToolGuide): string {
   if (guide.theme_key && THEME_TO_SLUG[guide.theme_key]) return THEME_TO_SLUG[guide.theme_key];
   return normalizeToolSlug(guide.name);
-}
-
-function guideInitials(slug: string): string {
-  const label = formatToolLabel(slug);
-  const words = label.split(/\s+/).filter(Boolean);
-  return words.length >= 2 ? (words[0][0] + words[1][0]).toUpperCase() : label.slice(0, 2);
 }
 
 // ── Section header ─────────────────────────────────────────────────────────────
@@ -402,73 +389,20 @@ function ToolsSection({ tools, onOpenTool }: { tools: Tool[]; onOpenTool: (t: To
       {/* Scroll row */}
       <div className="upd-carousel-rail">
         <button className="upd-arrow-btn" onClick={() => scroll("left")} aria-label="Previous">‹</button>
-        <div ref={scrollRef} className="upd-slider" style={{
-          display: "grid", gridAutoFlow: "column", gridAutoColumns: 292, gap: 24,
-          overflowX: "auto", padding: "4px 0 30px", scrollSnapType: "x mandatory",
-        }}>
-          {visibleItems.map((t, i) => {
-            const accent = TOOL_ACCENTS[i % TOOL_ACCENTS.length];
-            return (
-              <article
-                key={t.id}
-                className="upd-product-card"
-                style={{
-                  scrollSnapAlign: "start", height: 220, borderRadius: 20,
-                  padding: "16px 16px 14px", color: "#221D23",
-                  display: "flex", flexDirection: "column", justifyContent: "space-between",
-                  overflow: "hidden", position: "relative", background: "#fff",
-                  border: "1px solid #E9E4DC", boxShadow: "0 18px 45px rgba(34,29,35,.08)",
-                  width: 292, flexShrink: 0,
-                  ["--upd-accent" as string]: accent,
-                }}
-              >
-                <div style={{ position: "relative", zIndex: 1 }}>
-                  <div style={{ color: accent, fontSize: 11, fontWeight: 950, letterSpacing: ".08em", textTransform: "uppercase" as const }}>
-                    {t.category_label}
-                  </div>
-                  <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "8px 0" }}>
-                    <span style={{
-                      width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-                      background: t.color ?? "#FFCE00",
-                      display: "grid", placeItems: "center",
-                      fontSize: t.letter ? 18 : 19, fontWeight: 950, color: "#fff", letterSpacing: "-.02em",
-                    }}>{t.letter ?? t.icon_emoji}</span>
-                    <h3 style={{
-                      margin: 0, fontSize: 17, lineHeight: 1.25, letterSpacing: "-.03em",
-                      fontWeight: 700, color: "#221D23",
-                      display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden",
-                    }}>{t.name}</h3>
-                  </div>
-                  <p style={{
-                    margin: 0, fontSize: 12, lineHeight: 1.38, fontWeight: 650, color: "#514B53",
-                    display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden",
-                  }}>{t.description}</p>
-                </div>
-
-                <div style={{ position: "relative", zIndex: 1, paddingTop: 10, borderTop: "1px solid #E9E4DC" }}>
-                  {t.pricing && (
-                    <div style={{ fontSize: 10, color: "#6B6670", fontWeight: 800, marginBottom: 8 }}>{t.pricing}</div>
-                  )}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                    <span style={{ fontSize: 11, color: "#6B6670", fontWeight: 850 }}>
-                      {t.company_name ? <>by <strong style={{ color: "#221D23" }}>{t.company_name}</strong></> : null}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => onOpenTool(t)}
-                      style={{
-                        display: "inline-flex", alignItems: "center", gap: 4,
-                        background: "#FFCE00", color: "#221D23", cursor: "pointer",
-                        borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 950,
-                        whiteSpace: "nowrap", border: "1px solid rgba(34,29,35,.10)",
-                        fontFamily: "inherit",
-                      }}
-                    >Details ›</button>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
+        <div ref={scrollRef} className="upd-slider upd-tool-slider">
+          {visibleItems.map((t, i) => (
+            <article key={t.id} className="upd-tool-card">
+              <div className={`upd-tool-icon upd-tool-icon--${(i % 4) + 1}`}>
+                {t.letter ?? t.icon_emoji ?? t.name[0]?.toUpperCase()}
+              </div>
+              <div className="upd-tool-cat">{t.category_label}</div>
+              <h4 className="upd-tool-name">{t.name}</h4>
+              <p className="upd-tool-desc">{t.description}</p>
+              <button type="button" className="upd-tool-details-link" onClick={() => onOpenTool(t)}>
+                Details ›
+              </button>
+            </article>
+          ))}
         </div>
         <button className="upd-arrow-btn" onClick={() => scroll("right")} aria-label="Next">›</button>
       </div>
@@ -488,72 +422,53 @@ function ToolGuideCard({
   isHtml: boolean;
   onOpenHtml?: () => void;
 }) {
-  const theme = resolveTheme(guide.theme_key, sortIndex);
   const slug = resolveGuideSlug(guide);
   const logoUrl = resolveToolLogoUrl(slug, toolLogos);
-  const strengths = guide.strengths?.filter(Boolean) ?? [];
   const showUpdate = guide.update_label || guide.update_date;
+  const iconIndex = (sortIndex % 4) + 1;
+
+  const exploreBtn = resolvedUrl && !isHtml ? (
+    <a
+      href={resolvedUrl}
+      className="upd-guide-explore"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Explore guide ›
+    </a>
+  ) : resolvedUrl && isHtml ? (
+    <button
+      type="button"
+      className="upd-guide-explore"
+      onClick={onOpenHtml}
+      style={{ fontFamily: "inherit" }}
+    >
+      Explore guide ›
+    </button>
+  ) : (
+    <span className="upd-guide-explore upd-guide-explore--disabled">Guide coming soon</span>
+  );
 
   return (
-    <article className={`upd-tool-guide-card upd-tool-guide-card--${theme}`}>
-      <div className="upd-tool-guide-card-header">
-        <div className={`upd-tool-guide-logo${logoUrl ? " upd-tool-guide-logo--img" : ""}`}>
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt="" />
-          ) : guideInitials(slug)}
-        </div>
-        <div>
-          <div className="upd-tool-guide-name">{guide.name}</div>
-          {guide.company_name && <div className="upd-tool-guide-by">by {guide.company_name}</div>}
-        </div>
-      </div>
-
-      <div className="upd-tool-guide-body">
-        {guide.description && <p className="upd-tool-guide-desc">{guide.description}</p>}
-        {strengths.length > 0 && (
-          <div className="upd-tool-guide-strengths">
-            {strengths.map(s => (
-              <div key={s} className="upd-tool-guide-str">
-                <span className="upd-tool-guide-str-dot" aria-hidden />
-                {s}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="upd-tool-guide-footer">
-        {showUpdate && (
-          <span className="upd-tool-guide-pill">
-            <span className="upd-tool-guide-pill-sym" aria-hidden>↻</span>
-            {guide.update_label}
-            {guide.update_label && guide.update_date && <span className="upd-tool-guide-pill-sep" aria-hidden>·</span>}
-            {guide.update_date && <span className="upd-tool-guide-pill-date">{guide.update_date}</span>}
-          </span>
-        )}
-        {resolvedUrl && !isHtml ? (
-          <a
-            href={resolvedUrl}
-            className="upd-tool-guide-explore"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Explore guide <span aria-hidden>→</span>
-          </a>
-        ) : resolvedUrl && isHtml ? (
-          <button
-            type="button"
-            className="upd-tool-guide-explore"
-            onClick={onOpenHtml}
-            style={{ fontFamily: "inherit" }}
-          >
-            Explore guide <span aria-hidden>→</span>
-          </button>
+    <article className="upd-guide-card">
+      <div className={`upd-guide-icon upd-guide-icon--${iconIndex}`}>
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt="" />
         ) : (
-          <span className="upd-tool-guide-explore upd-tool-guide-explore--disabled">Guide coming soon</span>
+          GUIDE_ICON_SYMBOLS[sortIndex % GUIDE_ICON_SYMBOLS.length]
         )}
       </div>
+      <h4 className="upd-guide-name">{guide.name}</h4>
+      {guide.description && <p className="upd-guide-desc">{guide.description}</p>}
+      {showUpdate && (
+        <div className="upd-guide-meta">
+          {guide.update_label}
+          {guide.update_label && guide.update_date && " · "}
+          {guide.update_date}
+        </div>
+      )}
+      {exploreBtn}
     </article>
   );
 }
@@ -853,52 +768,46 @@ function WorkQuestionsSection() {
 
   return (
     <section className="upd-questions-section" id="questions">
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 22, marginBottom: 24 }}>
+      <div style={{ marginBottom: 24 }}>
         <SectionHeader
           label="Perspective"
           title="AI at Work: Questions"
-          subtitle="Practical takes on adoption, automation, and work redesign. Click any question to expand."
+          subtitle="Practical takes on adoption, automation, and work redesign."
         />
       </div>
 
-      <div className="upd-question-grid">
+      <div className="upd-faq-grid">
         {WORK_QUESTIONS.map((item, index) => (
           <details
             key={item.question}
-            className="upd-question"
+            className="upd-faq-item"
             ref={el => { questionRefs.current[index] = el; }}
             onToggle={() => handleToggle(index)}
           >
-            <summary>
-              <span className="upd-question-emoji">{item.emoji}</span>
-              <span>{item.question}</span>
-              <span className="upd-question-chev">+</span>
+            <summary className="upd-faq-summary">
+              <span className="upd-faq-emoji">{item.emoji}</span>
+              <span className="upd-faq-q">{item.question}</span>
+              <span className="upd-faq-toggle" aria-hidden>+</span>
             </summary>
-            <div className="upd-question-answer">
-              <p className="upd-question-short">{item.short}</p>
-              <ul>
-                {item.bullets.map(bullet => <li key={bullet}>{bullet}</li>)}
-              </ul>
+            <div className="upd-faq-answer">
+              <p className="upd-faq-lead">{item.short}</p>
+              {item.bullets.map(bullet => (
+                <p key={bullet}>{bullet}</p>
+              ))}
             </div>
           </details>
         ))}
       </div>
 
-      <div className="upd-questions-cta">
-        <div>
-          <h3>Use updates for awareness. Use workflows for practice.</h3>
-          <p>The AI Updates page keeps your team informed. The Workflows page drives hands-on practice.</p>
+      <div className="upd-footer-cta">
+        <div className="upd-footer-cta-left">
+          <div className="upd-footer-cta-spark" aria-hidden>✦</div>
+          <div>
+            <h3>Stay updated. Then practice.</h3>
+            <p>Track what matters and apply it through Workflows.</p>
+          </div>
         </div>
-        <a
-          href="/workflows"
-          style={{
-            display: "inline-flex", alignItems: "center",
-            padding: "12px 18px", borderRadius: 999,
-            background: "#FFCE00", color: "#221D23",
-            border: "1px solid rgba(34,29,35,.10)",
-            fontWeight: 700, fontSize: 13, textDecoration: "none", whiteSpace: "nowrap",
-          }}
-        >Go to Workflows →</a>
+        <a href="/workflows" className="upd-footer-cta-btn">Go to Workflows ›</a>
       </div>
     </section>
   );
@@ -1002,7 +911,7 @@ export default function UpdatesClient({ brief, videos, tools, toolGuides, toolLo
                 subtitle="Understand how each major AI tool fits into real work."
               />
             </div>
-            <div className="upd-tool-guide-grid">
+            <div className="upd-guide-grid">
               {toolGuides.map((g, i) => {
                 const { resolvedUrl, isHtml, deepDiveId, deepDiveTitle } = resolveGuideLink(g);
                 return (
