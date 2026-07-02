@@ -18,6 +18,8 @@ export type Profile = {
   created_at: string;
   aimastery_approved: boolean;
   aimastery_requested: boolean;
+  streak_count: number;
+  streak_week_start: string | null;
 };
 
 export type Activity = {

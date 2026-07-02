@@ -26,7 +26,7 @@ export default async function B2BLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, email, company_id")
+    .select("full_name, email, company_id, streak_count")
     .eq("id", user.id)
     .single();
 
@@ -51,6 +51,7 @@ export default async function B2BLayout({ children }: { children: React.ReactNod
         userName={userName}
         userEmail={userEmail}
         userInitials={initials(userName, userEmail)}
+        streakCount={profile?.streak_count ?? 0}
       />
       <div style={{
         marginLeft: "var(--sidebar-w)",
