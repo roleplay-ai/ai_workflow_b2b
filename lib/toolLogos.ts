@@ -7,9 +7,21 @@ export type TagLogoMap = Record<string, string>;
 
 export function rowsToToolLogoMap(rows: ToolLogoRow[] | null | undefined): ToolLogoMap {
   const map: ToolLogoMap = {};
+  const priority: Record<string, number> = {};
+
   for (const row of rows ?? []) {
-    map[row.tool.toLowerCase()] = row.logo_url;
+    const key = normalizeToolSlug(row.tool);
+    const url = row.logo_url?.trim();
+    if (!key || !url) continue;
+
+    // Prefer canonical lowercase slugs (e.g. "claude") over display variants ("Claude").
+    const rowPriority = row.tool === key ? 2 : 1;
+    if (!(key in map) || rowPriority > (priority[key] ?? 0)) {
+      map[key] = url;
+      priority[key] = rowPriority;
+    }
   }
+
   return map;
 }
 

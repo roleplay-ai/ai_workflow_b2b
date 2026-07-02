@@ -317,14 +317,13 @@ function AIFoundationsSection({ modules }: { modules: FoundationModule[] }) {
       )}
 
       <section style={{ padding: "32px 28px 40px", borderTop: "1px solid #E9E4DC", background: "#F5F3EF" }}>
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 22, marginBottom: 22 }}>
+        <div style={{ marginBottom: 22 }}>
           <div style={{ position: "relative", paddingLeft: 22 }}>
             <div style={{ position: "absolute", left: 0, top: 4, width: 7, height: 58, borderRadius: 999, background: "#FFCE00", border: "1px solid rgba(28,24,32,.18)" }} />
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".09em", textTransform: "uppercase", color: "#746F78", marginBottom: 4 }}>Learn</div>
             <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-.04em", color: "#1C1820" }}>AI Foundations</h2>
             <p style={{ margin: "6px 0 0", color: "#6B6670", fontSize: 13.5, fontWeight: 600, lineHeight: 1.45 }}>Short explainers that build practical AI fluency.</p>
           </div>
-          <a href="/mastery" style={{ fontSize: 13, fontWeight: 700, color: "#623CEA", whiteSpace: "nowrap", textDecoration: "none" }}>See all topics →</a>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

@@ -81,10 +81,22 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
+const GUIDE_CARD_DISMISSED_KEY = "b2b-sidebar-guide-dismissed";
+
 export default function B2BSidebar({ companyName, companyInitials, userName, userEmail, userInitials }: Props) {
   const supabase = createClient();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [signingOut, setSigningOut] = React.useState(false);
+  const [showGuideCard, setShowGuideCard] = React.useState(false);
+
+  React.useEffect(() => {
+    setShowGuideCard(localStorage.getItem(GUIDE_CARD_DISMISSED_KEY) !== "1");
+  }, []);
+
+  function dismissGuideCard() {
+    localStorage.setItem(GUIDE_CARD_DISMISSED_KEY, "1");
+    setShowGuideCard(false);
+  }
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -185,9 +197,45 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
       </nav>
 
       {/* Free guide card */}
-      <div style={{ margin: "0 10px 12px", background: "#0F0D12", border: "1px solid rgba(255,255,255,.1)", borderRadius: 8, padding: "10px" }}>
+      {showGuideCard && (
+      <div style={{ margin: "0 10px 12px", background: "#0F0D12", border: "1px solid rgba(255,255,255,.1)", borderRadius: 8, padding: "10px", position: "relative" }}>
+        <button
+          type="button"
+          onClick={dismissGuideCard}
+          aria-label="Dismiss download card"
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 6,
+            width: 22,
+            height: 22,
+            borderRadius: 6,
+            border: "none",
+            background: "rgba(255,255,255,.08)",
+            color: "rgba(255,255,255,.55)",
+            display: "grid",
+            placeItems: "center",
+            cursor: "pointer",
+            padding: 0,
+            fontFamily: "inherit",
+            transition: "background .12s, color .12s",
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,.14)";
+            (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,.9)";
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,.08)";
+            (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,.55)";
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+
         {/* Label + title row */}
-        <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: ".1em", textTransform: "uppercase", color: "#FFCE00", marginBottom: 3 }}>
+        <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: ".1em", textTransform: "uppercase", color: "#FFCE00", marginBottom: 3, paddingRight: 20 }}>
           Free Download
         </div>
         <div style={{ fontSize: 11.5, fontWeight: 900, color: "#fff", lineHeight: 1.3, marginBottom: 6, letterSpacing: "-.01em" }}>
@@ -213,6 +261,7 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
           </svg>
         </a>
       </div>
+      )}
 
       {/* User footer */}
       <div style={{ borderTop: "1px solid rgba(255,255,255,.08)", padding: "12px 12px 14px", position: "relative" }}>
