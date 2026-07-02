@@ -105,7 +105,7 @@ export default function AdminShell({ profile, children }: Props) {
         <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #F0EEE8" }}>
           <Link href="/apply" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/Nudgeable-black.png" alt="Nudgeable" style={{ height: 32 }} />
+            <img src="/nudgeable-logo.png" alt="Nudgeable" style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 500, color: "#221D23", letterSpacing: "-.02em" }}>
               AI Practice Lab
             </span>

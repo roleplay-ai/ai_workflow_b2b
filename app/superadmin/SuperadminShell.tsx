@@ -185,7 +185,7 @@ export default function SuperadminShell({ profile, children }: Props) {
         <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid rgba(255,255,255,.08)" }}>
           <Link href="/apply" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/Nudgeable-black.png" alt="Nudgeable" style={{ height: 32, filter: "invert(1)", opacity: .9 }} />
+            <img src="/nudgeable-logo.png" alt="Nudgeable" style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 500, color: "rgba(255,255,255,.85)", letterSpacing: "-.02em" }}>
               AI Practice Lab
             </span>
