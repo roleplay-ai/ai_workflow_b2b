@@ -50,7 +50,7 @@ export default function MasteryClient({ completedModules: initial, userName }: P
   const pct = Math.round((completed.length / TOTAL_MODULES) * 100);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", background: "#FEFCFA" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", background: "var(--bg)" }}>
 
       {/* Top bar */}
       <div style={{
@@ -71,7 +71,7 @@ export default function MasteryClient({ completedModules: initial, userName }: P
               padding: "6px 10px", borderRadius: 7,
               fontFamily: "inherit",
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#F5F3EF"; }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none"; }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -121,7 +121,7 @@ export default function MasteryClient({ completedModules: initial, userName }: P
         ref={iframeRef}
         title="AI Mastery Course"
         src="/api/ai-mastery/content"
-        style={{ flex: 1, width: "100%", border: 0, background: "#FEFCFA", minHeight: 0 }}
+        style={{ flex: 1, width: "100%", border: 0, background: "var(--bg)", minHeight: 0 }}
         sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
       />
     </div>

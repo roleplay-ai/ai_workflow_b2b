@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getPostLoginPath } from "@/lib/auth/postLogin";
+import type { Role } from "@/lib/supabase/types";
 import ToolIcon from "@/components/ToolIcon";
 import { formatToolLabel } from "@/lib/tools";
 import type { ToolLogoMap } from "@/lib/toolLogos";
@@ -145,7 +147,7 @@ export default function LoginPageClient({ toolLogos, featuredTags }: Props) {
   const [error, setError] = useState("");
   const [redirectTo, setRedirectTo] = useState("/workflows");
   const [focused, setFocused] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
@@ -163,7 +165,14 @@ export default function LoginPageClient({ toolLogos, featuredTags }: Props) {
       setLoading(false);
       return;
     }
-    window.location.href = redirectTo;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: profile } = user
+      ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+      : { data: null };
+
+    const role = (profile?.role ?? "user") as Role;
+    window.location.href = getPostLoginPath(role, redirectTo);
   }
 
   const marqueeTags = featuredTags.length > 0 ? [...featuredTags, ...featuredTags] : [];
