@@ -25,7 +25,8 @@ type FoundationModule = {
 
 // ── Stat card ─────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, delta, dark = false }: { label: string; value: string; delta?: string; dark?: boolean }) {
+function StatCard({ label, value, delta, deltaColor, dark = false }: { label: string; value: string; delta?: string; deltaColor?: string; dark?: boolean }) {
+  const resolvedDeltaColor = deltaColor ?? (dark ? "rgba(255,255,255,.55)" : "#23CE68");
   return (
     <div style={{ background: dark ? "#1C1820" : "#fff", border: `1px solid ${dark ? "#2E2930" : "#E9E4DC"}`, borderRadius: 12, padding: "16px 18px" }}>
       <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: dark ? "rgba(255,255,255,.45)" : "#746F78", marginBottom: 6 }}>
@@ -34,7 +35,7 @@ function StatCard({ label, value, delta, dark = false }: { label: string; value:
       <div style={{ fontSize: dark ? 32 : 28, fontWeight: 900, letterSpacing: "-.04em", color: dark ? "#FFCE00" : "#1C1820", lineHeight: 1 }}>
         {value}
       </div>
-      {delta && <div style={{ fontSize: 11.5, fontWeight: 700, marginTop: 5, color: dark ? "rgba(255,255,255,.55)" : "#23CE68" }}>{delta}</div>}
+      {delta && <div style={{ fontSize: 11.5, fontWeight: 700, marginTop: 5, color: resolvedDeltaColor }}>{delta}</div>}
     </div>
   );
 }
@@ -500,12 +501,12 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewC
           {/* Stats */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, paddingBottom: 18, borderBottom: "1px solid #E9E4DC" }}>
             <StatCard
-              label="My Points"
+              label="💰 My Points"
               value={String(userTotalPoints)}
               delta={userTotalPoints > 0 ? "Earned from completed workflows" : "Complete workflows to earn points"}
             />
-            <StatCard label="Completed" value={String(completedCount)} delta={completedCount > 0 ? "Keep going!" : "Start your first workflow"} />
-            <StatCard label="In Progress" value={String(inProgressCount)} delta={inProgressCount > 0 ? "Pick up where you left off" : "Start a workflow to track"} />
+            <StatCard label="✅ Completed" value={String(completedCount)} delta={completedCount > 0 ? "Keep going!" : "Start your first workflow"} deltaColor={completedCount > 0 ? "#3699FC" : undefined} />
+            <StatCard label="⌛In Progress" value={String(inProgressCount)} delta={inProgressCount > 0 ? "Pick up where you left off" : "Start a workflow to track"} deltaColor={inProgressCount > 0 ? "#F68A29" : undefined} />
             <StatCard label="Company Rank" value={topPercentileLabel} delta={percentileDelta} dark />
           </div>
         </div>
