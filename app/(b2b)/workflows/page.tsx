@@ -75,6 +75,7 @@ export default async function WorkflowsPage() {
   let companyPercentile: number | null = null;
   let companySize = 0;
   let companyAvgPoints = 0;
+  let streakCount = 0;
 
   if (user) {
     const { data: pointsStats } = await supabase.rpc("get_my_points_stats");
@@ -85,6 +86,13 @@ export default async function WorkflowsPage() {
       companySize = stats.company_size ?? 0;
       companyAvgPoints = stats.company_avg_points ?? 0;
     }
+
+    const { data: streakProfile } = await supabase
+      .from("profiles")
+      .select("streak_count")
+      .eq("id", user.id)
+      .single();
+    streakCount = streakProfile?.streak_count ?? 0;
   }
 
   const functionThumbnails: Record<string, string> = {};
@@ -111,6 +119,7 @@ export default async function WorkflowsPage() {
         companyPercentile={companyPercentile}
         companySize={companySize}
         companyAvgPoints={companyAvgPoints}
+        streakCount={streakCount}
         modules={(modules ?? []) as any}
         functionThumbnails={functionThumbnails}
         functionDescriptions={functionDescriptions}

@@ -10,7 +10,6 @@ type Props = {
   userName: string | null;
   userEmail: string | null;
   userInitials: string;
-  streakCount: number;
 };
 
 function NavItem({
@@ -82,34 +81,9 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
-function StreakRow({ count }: { count: number }) {
-  const active = count > 0;
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "8px 10px", margin: "0 0 8px",
-      borderRadius: 8,
-      background: active ? "rgba(255,206,0,.08)" : "rgba(255,255,255,.05)",
-      border: `1px solid ${active ? "rgba(255,206,0,.22)" : "rgba(255,255,255,.08)"}`,
-    }}>
-      <span style={{ fontSize: 11.5, fontWeight: 650, color: "rgba(255,255,255,.55)" }}>
-        Your weekly streak
-      </span>
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: active ? "#FFCE00" : "rgba(255,255,255,.5)" }}>
-          {count}
-        </span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill={active ? "#FFCE00" : "rgba(255,255,255,.35)"} stroke="none">
-          <path fillRule="evenodd" clipRule="evenodd" d="M12.963 2.286a.75.75 0 0 0-1.071-.136 9.742 9.742 0 0 0-3.539 6.176 7.547 7.547 0 0 1-1.705-1.715.75.75 0 0 0-1.152-.082A9 9 0 1 0 15.68 4.534a7.46 7.46 0 0 1-2.717-2.248ZM15.75 14.25a3.75 3.75 0 1 1-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 0 1 1.925-3.545 3.75 3.75 0 0 1 3.255 3.717Z"/>
-        </svg>
-      </div>
-    </div>
-  );
-}
-
 const GUIDE_CARD_DISMISSED_KEY = "b2b-sidebar-guide-dismissed";
 
-export default function B2BSidebar({ companyName, companyInitials, userName, userEmail, userInitials, streakCount }: Props) {
+export default function B2BSidebar({ companyName, companyInitials, userName, userEmail, userInitials }: Props) {
   const supabase = createClient();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [signingOut, setSigningOut] = React.useState(false);
@@ -334,8 +308,6 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
             </div>
           </>
         )}
-
-        <StreakRow count={streakCount} />
 
         {/* Profile row */}
         <button

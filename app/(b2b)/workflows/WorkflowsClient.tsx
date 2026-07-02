@@ -25,15 +25,25 @@ type FoundationModule = {
 
 // ── Stat card ─────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, delta, deltaColor, dark = false }: { label: string; value: string; delta?: string; deltaColor?: string; dark?: boolean }) {
+function FireIcon({ size, color }: { size: number; color: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="none">
+      <path fillRule="evenodd" clipRule="evenodd" d="M12.963 2.286a.75.75 0 0 0-1.071-.136 9.742 9.742 0 0 0-3.539 6.176 7.547 7.547 0 0 1-1.705-1.715.75.75 0 0 0-1.152-.082A9 9 0 1 0 15.68 4.534a7.46 7.46 0 0 1-2.717-2.248ZM15.75 14.25a3.75 3.75 0 1 1-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 0 1 1.925-3.545 3.75 3.75 0 0 1 3.255 3.717Z"/>
+    </svg>
+  );
+}
+
+function StatCard({ label, value, delta, deltaColor, labelColor, dark = false, valueIcon }: { label: string; value: string; delta?: string; deltaColor?: string; labelColor?: string; dark?: boolean; valueIcon?: React.ReactNode }) {
   const resolvedDeltaColor = deltaColor ?? (dark ? "rgba(255,255,255,.55)" : "#23CE68");
+  const resolvedLabelColor = labelColor ?? (dark ? "rgba(255,255,255,.45)" : "#746F78");
   return (
     <div style={{ background: dark ? "#1C1820" : "#fff", border: `1px solid ${dark ? "#2E2930" : "#E9E4DC"}`, borderRadius: 12, padding: "16px 18px" }}>
-      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: dark ? "rgba(255,255,255,.45)" : "#746F78", marginBottom: 6 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: resolvedLabelColor, marginBottom: 6 }}>
         {label}
       </div>
-      <div style={{ fontSize: dark ? 32 : 28, fontWeight: 900, letterSpacing: "-.04em", color: dark ? "#FFCE00" : "#1C1820", lineHeight: 1 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: dark ? 32 : 28, fontWeight: 900, letterSpacing: "-.04em", color: dark ? "#FFCE00" : "#1C1820", lineHeight: 1 }}>
         {value}
+        {valueIcon}
       </div>
       {delta && <div style={{ fontSize: 11.5, fontWeight: 700, marginTop: 5, color: resolvedDeltaColor }}>{delta}</div>}
     </div>
@@ -384,12 +394,13 @@ type Props = {
   companyPercentile: number | null;
   companySize: number;
   companyAvgPoints: number;
+  streakCount: number;
   modules: FoundationModule[];
   functionThumbnails: Record<string, string>;
   functionDescriptions: Record<string, string>;
 };
 
-export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewCounts, completedIds, totalAvailable, completedCount, inProgressCount, userTotalPoints, companyPercentile, companySize, companyAvgPoints, modules, functionThumbnails, functionDescriptions }: Props) {
+export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewCounts, completedIds, totalAvailable, completedCount, inProgressCount, userTotalPoints, companyPercentile, companySize, companyAvgPoints, streakCount, modules, functionThumbnails, functionDescriptions }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedTag = searchParams.get("tag");
@@ -499,7 +510,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewC
           </div>
 
           {/* Stats */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, paddingBottom: 18, borderBottom: "1px solid #E9E4DC" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 12, paddingBottom: 18, borderBottom: "1px solid #E9E4DC" }}>
             <StatCard
               label="💰 My Points"
               value={String(userTotalPoints)}
@@ -507,6 +518,19 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, viewC
             />
             <StatCard label="✅ Completed" value={String(completedCount)} delta={completedCount > 0 ? "Keep going!" : "Start your first workflow"} deltaColor={completedCount > 0 ? "#3699FC" : undefined} />
             <StatCard label="⌛In Progress" value={String(inProgressCount)} delta={inProgressCount > 0 ? "Pick up where you left off" : "Start a workflow to track"} deltaColor={inProgressCount > 0 ? "#F68A29" : undefined} />
+            <StatCard
+              label="Weekly Streak"
+              value={String(streakCount)}
+              valueIcon={<FireIcon size={28} color="#F68A29" />}
+              delta={
+                streakCount === 0
+                  ? "Complete a workflow to start"
+                  : streakCount === 1
+                    ? "Streak started"
+                    : `${streakCount} weeks in a row`
+              }
+              deltaColor="#623CEA"
+            />
             <StatCard label="Company Rank" value={topPercentileLabel} delta={percentileDelta} dark />
           </div>
         </div>
