@@ -5,47 +5,27 @@ import "./BriefNewsCard.css";
 
 export type BriefNewsItem = { id: string; content: string; sort_order: number };
 
-const TAG_ACCENTS: Record<string, { className: string; accent: string }> = {
-  Microsoft: { className: "microsoft", accent: "#3699FC" },
-  Google: { className: "google", accent: "#23CE6B" },
-  Enterprise: { className: "enterprise", accent: "#F68A29" },
-  Update: { className: "", accent: "#FFCE00" },
-};
+const SCROLL_CARD_WIDTH = 280;
+const SCROLL_GAP = 20;
 
-const SCROLL_CARD_WIDTH = 340;
-const SCROLL_GAP = 18;
-
-function inferTag(text: string): string {
-  const lower = text.toLowerCase();
-  if (lower.includes("microsoft") || lower.includes("copilot")) return "Microsoft";
-  if (lower.includes("google") || lower.includes("gemini") || lower.includes("notebooklm")) return "Google";
-  if (
-    lower.includes("anthropic") || lower.includes("claude") || lower.includes("openai")
-    || lower.includes("salesforce") || lower.includes("enterprise")
-  ) return "Enterprise";
-  return "Update";
-}
-
-function parseNewsContent(content: string): { title: string; description: string; tag: string } {
+function parseNewsContent(content: string): { title: string; description: string } {
   const cleaned = content.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\s]+/u, "").trim();
-  const tag = inferTag(cleaned);
   const colonIdx = cleaned.indexOf(": ");
 
   if (colonIdx > 0) {
     return {
       title: cleaned.slice(0, colonIdx).trim(),
       description: cleaned.slice(colonIdx + 2).trim(),
-      tag,
     };
   }
 
-  return { title: cleaned, description: "", tag };
+  return { title: cleaned, description: "" };
 }
 
 export function formatBriefNewsDate(dateStr?: string | null) {
   const date = dateStr ? new Date(`${dateStr}T00:00:00`) : new Date();
   const day = date.getDate();
-  const month = date.toLocaleDateString("en-GB", { month: "short" });
+  const month = date.toLocaleDateString("en-GB", { month: "short" }).toUpperCase();
   const year = date.getFullYear();
   return `${day} ${month} ${year}`;
 }
@@ -58,23 +38,19 @@ function NewsCard({
   displayDate: string;
 }) {
   const parsed = parseNewsContent(item.content);
-  const accent = TAG_ACCENTS[parsed.tag] ?? TAG_ACCENTS.Update;
-  const cardClass = accent.className
-    ? `aif-news-card aif-news-card--${accent.className}`
-    : "aif-news-card";
 
   return (
-    <article
-      className={cardClass}
-      style={{ ["--aif-news-accent" as string]: accent.accent }}
-    >
+    <article className="aif-news-card">
       <div className="aif-news-meta">
         <span>{displayDate}</span>
       </div>
       <h3 className="aif-news-title">{parsed.title}</h3>
       {parsed.description ? (
         <p className="aif-news-desc">{parsed.description}</p>
-      ) : null}
+      ) : (
+        <p className="aif-news-desc" style={{ marginBottom: 14 }} />
+      )}
+      <span className="aif-news-read-link">Read update ›</span>
     </article>
   );
 }
