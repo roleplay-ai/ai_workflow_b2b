@@ -1,0 +1,313 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 460px;
+  font-family: Inter, system-ui, sans-serif;
+  background: #14111a;
+}
+
+.brandPanel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 52px 64px 40px;
+  overflow: hidden;
+}
+
+.brandHeader {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 48px;
+}
+
+.brandLogoRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brandBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  background: rgba(255, 206, 0, 0.08);
+  border: 1px solid rgba(255, 206, 0, 0.18);
+  border-radius: 999px;
+  padding: 7px 16px;
+}
+
+.hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  max-width: 620px;
+  padding: 8px 0 32px;
+}
+
+.headline {
+  margin: 0 0 20px;
+  color: #fff;
+  font-size: clamp(34px, 3.6vw, 52px);
+  font-weight: 600;
+  line-height: 1.06;
+  letter-spacing: -0.055em;
+}
+
+.subtext {
+  margin: 0 0 44px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 15.5px;
+  font-weight: 450;
+  line-height: 1.65;
+  max-width: 480px;
+}
+
+.sectionLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.32);
+  letter-spacing: 0.08em;
+  margin: 0 0 16px;
+}
+
+.primaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.primaryCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px 14px 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  min-height: 112px;
+}
+
+.marqueeOuter {
+  overflow: hidden;
+  margin: 0 0 32px;
+  padding: 4px 0;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.marqueeTrack {
+  display: flex;
+  gap: 28px;
+  width: max-content;
+  padding: 2px 0;
+  animation: loginMarquee 48s linear infinite;
+}
+
+.marqueeTrack:hover {
+  animation-play-state: paused;
+}
+
+@keyframes loginMarquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.featuredTagItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  width: 62px;
+}
+
+.productRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.featurePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px 12px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.featureIcon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: rgba(255, 206, 0, 0.1);
+  border: 1px solid rgba(255, 206, 0, 0.16);
+  overflow: hidden;
+}
+
+.brandFooter {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 24px;
+}
+
+.formPanel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 48px;
+}
+
+.formCard {
+  width: 100%;
+  max-width: 400px;
+  background: #fff;
+  border-radius: 24px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.14);
+  padding: 42px 38px 36px;
+}
+
+.formHeader {
+  margin-bottom: 32px;
+}
+
+.formTitle {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: #14111a;
+}
+
+.formSubtitle {
+  margin: 0;
+  color: #8c8595;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formFooter {
+  margin: 24px 0 0;
+  font-size: 12px;
+  color: #b0a8b8;
+  font-weight: 500;
+  line-height: 1.6;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .brandPanel {
+    min-height: auto;
+    padding: 40px 32px 36px;
+  }
+
+  .brandHeader {
+    margin-bottom: 36px;
+  }
+
+  .hero {
+    padding: 0 0 28px;
+  }
+
+  .subtext {
+    margin-bottom: 36px;
+  }
+
+  .primaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .formPanel {
+    padding: 8px 28px 48px;
+  }
+}
+
+@media (max-width: 520px) {
+  .brandPanel {
+    padding: 32px 20px 28px;
+  }
+
+  .brandHeader {
+    margin-bottom: 28px;
+  }
+
+  .headline {
+    margin-bottom: 16px;
+  }
+
+  .subtext {
+    margin-bottom: 28px;
+  }
+
+  .primaryGrid {
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .primaryCard {
+    padding: 18px 12px 16px;
+    min-height: 96px;
+    gap: 12px;
+  }
+
+  .marqueeOuter {
+    margin-bottom: 28px;
+  }
+
+  .productRow {
+    gap: 10px;
+  }
+
+  .featurePill {
+    padding: 10px 16px 10px 12px;
+  }
+
+  .formPanel {
+    padding: 4px 20px 40px;
+  }
+
+  .formCard {
+    padding: 32px 24px 28px;
+    border-radius: 20px;
+  }
+
+  .formHeader {
+    margin-bottom: 28px;
+  }
+}
