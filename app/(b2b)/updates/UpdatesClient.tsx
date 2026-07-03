@@ -791,9 +791,7 @@ function WorkQuestionsSection() {
             </summary>
             <div className="upd-faq-answer">
               <p className="upd-faq-lead">{item.short}</p>
-              {item.bullets.map(bullet => (
-                <p key={bullet}>{bullet}</p>
-              ))}
+              <p>{item.bullets.join(" ")}</p>
             </div>
           </details>
         ))}
