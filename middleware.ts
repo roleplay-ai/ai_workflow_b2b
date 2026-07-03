@@ -25,10 +25,10 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
 
+  const { data: { user } } = await supabase.auth.getUser();
+
   if (path.startsWith("/api/") || path.startsWith("/auth/")) return supabaseResponse;
   if (path.startsWith("/login") || path.startsWith("/signup")) return supabaseResponse;
-
-  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     if (path.startsWith("/admin") || path.startsWith("/superadmin")) {

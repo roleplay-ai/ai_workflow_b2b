@@ -1,14 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { NextRequest } from "next/server";
+import { createRouteHandlerClient, jsonWithSessionCookies } from "@/lib/supabase/route-handler";
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  const { supabase, sessionResponse } = createRouteHandlerClient(req);
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) {
+    return jsonWithSessionCookies(sessionResponse, { error: "Unauthorized" }, { status: 401 });
+  }
 
   const { activityId } = await req.json() as { activityId?: string };
-  if (!activityId) return NextResponse.json({ error: "Missing activityId" }, { status: 400 });
+  if (!activityId) {
+    return jsonWithSessionCookies(sessionResponse, { error: "Missing activityId" }, { status: 400 });
+  }
 
   const { error } = await supabase
     .from("user_saved_workflows")
@@ -16,7 +20,7 @@ export async function POST(req: NextRequest) {
     .eq("user_id", user.id)
     .eq("activity_id", activityId);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return jsonWithSessionCookies(sessionResponse, { error: error.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true });
+  return jsonWithSessionCookies(sessionResponse, { ok: true });
 }
