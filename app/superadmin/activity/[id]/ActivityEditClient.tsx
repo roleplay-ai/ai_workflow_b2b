@@ -13,8 +13,9 @@ type Props = {
   toolOptions: SelectOption[];
   toolLogos: ToolLogoMap;
   tagOptions:      SelectOption[];
+  categoryOptions: SelectOption[];
   functionOptions: SelectOption[];
-  categories:      string[];
+  contentTypes:    string[];
 };
 
 type EditableStep = Omit<ActivityStep, "created_at"> & {
@@ -37,7 +38,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "downloads", label: "📥 Downloads"},
 ];
 
-export default function ActivityEditClient({ activity, activitySteps: initSteps, toolOptions: initToolOpts, toolLogos: initToolLogos, tagOptions: initTagOpts, functionOptions: initFunctionOpts, categories: initCategories }: Props) {
+export default function ActivityEditClient({ activity, activitySteps: initSteps, toolOptions: initToolOpts, toolLogos: initToolLogos, tagOptions: initTagOpts, categoryOptions: initCategoryOpts, functionOptions: initFunctionOpts, contentTypes: initContentTypes }: Props) {
   const supabase   = createClient();
   const content    = activity.activity_content;
   const [tab, setTab] = useState<Tab>("info");
@@ -69,15 +70,17 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
   const [infoToolsArr,  setInfoToolsArr]  = useState<string[]>(normalizeToolList(activity.tools ?? []));
   const [infoTryLink,   setInfoTryLink]   = useState<string>(activity.try_link ?? "");
   const [infoTagsArr,       setInfoTagsArr]       = useState<string[]>(activity.tags ?? []);
-  const [infoFunctionsArr,  setInfoFunctionsArr]  = useState<string[]>(activity.functions ?? []);
-  const [infoCategoryArr,   setInfoCategoryArr]   = useState<string[]>(activity.category ? [activity.category] : []);
+  const [infoCategoriesArr,   setInfoCategoriesArr]   = useState<string[]>(activity.categories ?? []);
+  const [infoFunctionsArr,    setInfoFunctionsArr]    = useState<string[]>(activity.functions ?? []);
+  const [infoContentTypeArr,  setInfoContentTypeArr]  = useState<string[]>(activity.content_type ? [activity.content_type] : []);
 
   // Option lists (grow when new items are added via the dropdowns)
   const [toolLogos, setToolLogos] = useState<ToolLogoMap>(initToolLogos);
   const [toolOpts, setToolOpts] = useState<SelectOption[]>(() => mergeToolSelectOptions(initToolOpts, initToolLogos));
   const [tagOpts,      setTagOpts]      = useState<SelectOption[]>(initTagOpts);
-  const [functionOpts, setFunctionOpts] = useState<SelectOption[]>(initFunctionOpts);
-  const [catOpts,      setCatOpts]      = useState<SelectOption[]>(initCategories.map(c => ({ name: c })));
+  const [categoryOpts,    setCategoryOpts]    = useState<SelectOption[]>(initCategoryOpts);
+  const [functionOpts,    setFunctionOpts]    = useState<SelectOption[]>(initFunctionOpts);
+  const [contentTypeOpts, setContentTypeOpts] = useState<SelectOption[]>(initContentTypes.map(c => ({ name: c })));
 
   useEffect(() => {
     supabase.from("tool_logos").select("tool, logo_url").then(({ data }) => {
@@ -130,6 +133,14 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
     setInfoTagsArr(prev => [...prev, name]);
   }
 
+  async function handleAddCategory(name: string, imageFile: File | null) {
+    const iconUrl = imageFile ? (await uploadIcon(imageFile, "categories") ?? null) : null;
+    await supabase.from("activity_categories").insert({ name, icon_url: iconUrl });
+    const opt = { name, imageUrl: iconUrl };
+    setCategoryOpts(prev => [...prev, opt]);
+    setInfoCategoriesArr(prev => [...prev, name]);
+  }
+
   async function handleAddFunction(name: string, imageFile: File | null) {
     const iconUrl = imageFile ? (await uploadIcon(imageFile, "functions") ?? null) : null;
     await supabase.from("activity_functions").insert({ name, icon_url: iconUrl });
@@ -138,9 +149,9 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
     setInfoFunctionsArr(prev => [...prev, name]);
   }
 
-  async function handleAddCategory(name: string, _imageFile: File | null) {
-    setCatOpts(prev => [...prev, { name }]);
-    setInfoCategoryArr([name]);
+  async function handleAddContentType(name: string, _imageFile: File | null) {
+    setContentTypeOpts(prev => [...prev, { name }]);
+    setInfoContentTypeArr([name]);
   }
 
   async function handleUpdateToolImage(name: string, imageFile: File) {
@@ -169,6 +180,13 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
     if (!iconUrl) return;
     await supabase.from("activity_tags").update({ icon_url: iconUrl }).eq("name", name);
     setTagOpts(prev => prev.map(o => o.name === name ? { ...o, imageUrl: iconUrl } : o));
+  }
+
+  async function handleUpdateCategoryImage(name: string, imageFile: File) {
+    const iconUrl = await uploadIcon(imageFile, "categories");
+    if (!iconUrl) return;
+    await supabase.from("activity_categories").update({ icon_url: iconUrl }).eq("name", name);
+    setCategoryOpts(prev => prev.map(o => o.name === name ? { ...o, imageUrl: iconUrl } : o));
   }
 
   async function handleUpdateFunctionImage(name: string, imageFile: File) {
@@ -233,9 +251,10 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
       level:                  infoLevel,
       time_estimate_minutes:  infoTime || null,
       points:                 infoPoints,
-      category:               infoCategoryArr[0] ?? "",
+      content_type:           infoContentTypeArr[0] ?? "",
       tools:                  normalizeToolList(infoToolsArr),
       tags:                   infoTagsArr,
+      categories:             infoCategoriesArr,
       functions:              infoFunctionsArr,
       published:              infoPublished,
       position:               infoPosition,
@@ -783,16 +802,16 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
                 </div>
               </div>
 
-              {/* Category (single-select dropdown) + Position */}
+              {/* Content type (single-select dropdown) + Position */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: 12, alignItems: "end" }}>
                 <MultiSelect
-                  label="Category"
+                  label="Content Type"
                   mode="single"
-                  selected={infoCategoryArr}
-                  options={catOpts}
-                  onChange={setInfoCategoryArr}
-                  onAddNew={handleAddCategory}
-                  placeholder="Select or add a category…"
+                  selected={infoContentTypeArr}
+                  options={contentTypeOpts}
+                  onChange={setInfoContentTypeArr}
+                  onAddNew={handleAddContentType}
+                  placeholder="Select or add a content type…"
                 />
                 <div>
                   <label style={lbl}>Position</label>
@@ -842,6 +861,18 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
                 placeholder="Select tags (Chat, Email, PPT…)"
               />
 
+              {/* Categories multi-select */}
+              <MultiSelect
+                label="Categories"
+                mode="multi"
+                selected={infoCategoriesArr}
+                options={categoryOpts}
+                onChange={setInfoCategoriesArr}
+                onAddNew={handleAddCategory}
+                onUpdateImage={handleUpdateCategoryImage}
+                placeholder="Select categories (HR, Finance, Marketing…)"
+              />
+
               {/* Functions multi-select */}
               <MultiSelect
                 label="Functions"
@@ -851,7 +882,7 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
                 onChange={setInfoFunctionsArr}
                 onAddNew={handleAddFunction}
                 onUpdateImage={handleUpdateFunctionImage}
-                placeholder="Select functions (HR, Finance, Marketing…)"
+                placeholder="Select functions (Sales, IT/Tech, Leadership…)"
               />
 
               {/* Published toggle */}

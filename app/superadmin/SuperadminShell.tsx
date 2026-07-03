@@ -73,14 +73,26 @@ const NAV_SECTIONS = [
         ),
       },
       {
-        label: "Functions",
-        href: "/superadmin/functions",
+        label: "Categories",
+        href: "/superadmin/categories",
         icon: (
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="7" height="7" />
             <rect x="14" y="3" width="7" height="7" />
             <rect x="14" y="14" width="7" height="7" />
             <rect x="3" y="14" width="7" height="7" />
+          </svg>
+        ),
+      },
+      {
+        label: "Functions",
+        href: "/superadmin/functions",
+        icon: (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+            <path d="M2 10h20" />
+            <path d="M8 14h2" />
+            <path d="M14 14h2" />
           </svg>
         ),
       },

@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
-  const fn = searchParams.get("function");
+  const cat = searchParams.get("category");
 
   const { data: companyUsers } = await supabase
     .from("profiles")
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
   if (userIds.length === 0) {
     return NextResponse.json({
       users: [], views: [], progress: [], activities: [],
-      fluencyViews: [], functions: [],
+      fluencyViews: [], categories: [],
     });
   }
 
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
 
   let activitiesQuery = supabase
     .from("activities")
-    .select("id, title, category, functions, tools, published")
+    .select("id, title, content_type, categories, tools, published")
     .eq("published", true);
 
   if (assignedIds.length > 0) {
@@ -56,15 +56,15 @@ export async function GET(req: NextRequest) {
 
   const { data: activities } = await activitiesQuery;
 
-  const companyFunctions = new Set<string>();
+  const companyCategories = new Set<string>();
   (activities ?? []).forEach(a => {
-    (a.functions ?? []).forEach((f: string) => companyFunctions.add(f));
+    (a.categories ?? []).forEach((c: string) => companyCategories.add(c));
   });
 
   let filteredActivityIds: string[] | null = null;
-  if (fn && activities) {
+  if (cat && activities) {
     filteredActivityIds = activities
-      .filter(a => (a.functions ?? []).includes(fn))
+      .filter(a => (a.categories ?? []).includes(cat))
       .map(a => a.id);
   }
 
@@ -110,6 +110,6 @@ export async function GET(req: NextRequest) {
     progress: progress ?? [],
     activities: activities ?? [],
     fluencyViews: fluencyViews ?? [],
-    functions: Array.from(companyFunctions).sort(),
+    categories: Array.from(companyCategories).sort(),
   });
 }

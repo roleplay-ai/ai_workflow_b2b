@@ -24,11 +24,16 @@ export default async function B2BLayout({ children }: { children: React.ReactNod
 
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("full_name, email, company_id")
+    .select("full_name, email, company_id, onboarding_completed_at")
     .eq("id", user.id)
     .single();
+
+  // Fail open (don't gate) if the query itself errored — e.g. the
+  // onboarding_completed_at column doesn't exist yet because the migration
+  // hasn't been applied. Only gate when we can positively confirm it's unset.
+  if (!profileError && profile && !profile.onboarding_completed_at) redirect("/onboarding");
 
   let companyName: string | null = null;
   if (profile?.company_id) {

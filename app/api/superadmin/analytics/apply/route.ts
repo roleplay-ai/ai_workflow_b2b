@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   const { data: activities } = await supabase
     .from("activities")
-    .select("id, title, category, published")
+    .select("id, title, content_type, published")
     .order("position");
 
   let viewsQuery = supabase

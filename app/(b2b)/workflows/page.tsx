@@ -16,12 +16,13 @@ export default async function WorkflowsPage() {
     { data: viewRows },
     { data: progressRows },
     { data: modules },
-    { data: functionRows },
+    { data: categoryRows },
     { data: tagRows },
+    { data: savedWorkflowRows },
   ] = await Promise.all([
     supabase
       .from("activities")
-      .select("id, title, description, tools, functions, tags, points, time_estimate_minutes, is_locked, is_featured, published, position, created_at, thumbnail_url")
+      .select("id, title, description, tools, categories, tags, points, time_estimate_minutes, is_locked, is_featured, published, position, created_at, thumbnail_url")
       .eq("published", true)
       .order("position"),
     supabase.from("tool_logos").select("tool, logo_url"),
@@ -35,11 +36,14 @@ export default async function WorkflowsPage() {
       .eq("published", true)
       .order("sort_order"),
     supabase
-      .from("activity_functions")
+      .from("activity_categories")
       .select("name, thumbnail_url, description"),
     supabase
       .from("activity_tags")
       .select("name, icon_url"),
+    user
+      ? supabase.from("user_saved_workflows").select("activity_id").eq("user_id", user.id)
+      : Promise.resolve({ data: [] as { activity_id: string }[] }),
   ]);
 
   const viewCounts: Record<string, number> = {};
@@ -52,6 +56,16 @@ export default async function WorkflowsPage() {
     (progressRows ?? [])
       .filter((r: { activity_id: string; status: string }) => r.status === "completed")
       .map((r: { activity_id: string; status: string }) => r.activity_id)
+  );
+
+  const inProgressIds = new Set(
+    (progressRows ?? [])
+      .filter((r: { activity_id: string; status: string }) => r.status === "in_progress")
+      .map((r: { activity_id: string; status: string }) => r.activity_id)
+  );
+
+  const savedWorkflowIds = new Set(
+    (savedWorkflowRows ?? []).map((r: { activity_id: string }) => r.activity_id)
   );
 
   const totalAvailable = (activities ?? []).length;
@@ -75,6 +89,7 @@ export default async function WorkflowsPage() {
   let companyPercentile: number | null = null;
   let companySize = 0;
   let companyAvgPoints = 0;
+  let workflowsConfirmed = false;
   let streakCount = 0;
 
   if (user) {
@@ -87,21 +102,24 @@ export default async function WorkflowsPage() {
       companyAvgPoints = stats.company_avg_points ?? 0;
     }
 
-    const { data: streakProfile } = await supabase
+    const { data: profileExtras, error: profileExtrasError } = await supabase
       .from("profiles")
-      .select("streak_count")
+      .select("workflows_confirmed_at, streak_count")
       .eq("id", user.id)
       .single();
-    streakCount = streakProfile?.streak_count ?? 0;
+    if (!profileExtrasError && profileExtras) {
+      workflowsConfirmed = !!profileExtras.workflows_confirmed_at;
+      streakCount = profileExtras.streak_count ?? 0;
+    }
   }
 
-  const functionThumbnails: Record<string, string> = {};
-  const functionDescriptions: Record<string, string> = {};
-  for (const row of functionRows ?? []) {
+  const categoryThumbnails: Record<string, string> = {};
+  const categoryDescriptions: Record<string, string> = {};
+  for (const row of categoryRows ?? []) {
     const r = row as { name: string; thumbnail_url: string | null; description: string | null };
     const key = r.name.toLowerCase();
-    if (r.thumbnail_url) functionThumbnails[key] = r.thumbnail_url;
-    if (r.description) functionDescriptions[key] = r.description;
+    if (r.thumbnail_url) categoryThumbnails[key] = r.thumbnail_url;
+    if (r.description) categoryDescriptions[key] = r.description;
   }
 
   return (
@@ -110,8 +128,11 @@ export default async function WorkflowsPage() {
         activities={(activities ?? []) as any}
         toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
         tagLogos={rowsToTagLogoMap(tagRows ?? [])}
+        userId={user?.id ?? null}
         viewCounts={viewCounts}
         completedIds={completedIds}
+        inProgressIds={inProgressIds}
+        savedWorkflowIds={savedWorkflowIds}
         totalAvailable={totalAvailable}
         completedCount={completedCount}
         inProgressCount={inProgressCount}
@@ -121,8 +142,9 @@ export default async function WorkflowsPage() {
         companyAvgPoints={companyAvgPoints}
         streakCount={streakCount}
         modules={(modules ?? []) as any}
-        functionThumbnails={functionThumbnails}
-        functionDescriptions={functionDescriptions}
+        categoryThumbnails={categoryThumbnails}
+        categoryDescriptions={categoryDescriptions}
+        workflowsConfirmed={workflowsConfirmed}
       />
     </Suspense>
   );

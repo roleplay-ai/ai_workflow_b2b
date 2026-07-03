@@ -15,6 +15,7 @@ export default async function ActivityPage({ params }: Props) {
 
   const [
     { data: profile },
+    { data: onboardingProfile, error: onboardingError },
     { data: activity },
     { data: activitySteps },
     { data: logoRows },
@@ -23,6 +24,11 @@ export default async function ActivityPage({ params }: Props) {
     supabase
       .from("profiles")
       .select("*, companies(name)")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("profiles")
+      .select("onboarding_completed_at")
       .eq("id", user.id)
       .single(),
     supabase
@@ -43,6 +49,10 @@ export default async function ActivityPage({ params }: Props) {
       .select("name, try_url"),
   ]);
 
+  // Fail open (don't gate) if the query errored — e.g. the
+  // onboarding_completed_at column doesn't exist yet because the migration
+  // hasn't been applied. Only gate when we can positively confirm it's unset.
+  if (!onboardingError && onboardingProfile && !onboardingProfile.onboarding_completed_at) redirect("/onboarding");
   if (!activity) redirect("/workflows");
 
   const { data: progress } = await supabase

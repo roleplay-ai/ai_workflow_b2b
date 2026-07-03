@@ -886,15 +886,15 @@
   border: 1px solid rgba(34, 29, 35, 0.18);
 }
 
-/* ── Function card ────────────────────────────────────────────────────────── */
+/* ── Category card ────────────────────────────────────────────────────────── */
 
-.ndb-root .function-card-body {
+.ndb-root .category-card-body {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-.ndb-root .function-card-count {
+.ndb-root .category-card-count {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
@@ -909,14 +909,14 @@
   line-height: 1;
 }
 
-.ndb-root .function-card-footer {
+.ndb-root .category-card-footer {
   display: flex;
   justify-content: flex-end;
   margin-top: auto;
   padding-top: 10px;
 }
 
-.ndb-root .function-card-cta {
+.ndb-root .category-card-cta {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
@@ -930,10 +930,120 @@
   transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.ndb-root .workflow-card:hover .function-card-cta {
+.ndb-root .workflow-card:hover .category-card-cta {
   background: #FFD833;
   transform: translateX(2px);
   box-shadow: 0 4px 12px rgba(34, 29, 35, 0.12);
+}
+
+/* ── Main tab switch (My Workflows / All Workflows) ──────────────────────── */
+
+.ndb-root.workflows-main-tab-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px 28px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.ndb-root.workflows-main-tab-bar .workflows-main-tab-bar-end {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.ndb-root.workflows-main-tab-bar .workflows-main-tab-switch {
+  display: inline-flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(34, 29, 35, 0.04);
+}
+
+.ndb-root .workflows-main-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: #746F78;
+  font-size: 13.5px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ndb-root .workflows-main-tab:hover:not(.active) {
+  color: var(--dark);
+  background: rgba(34, 29, 35, 0.04);
+}
+
+.ndb-root .workflows-main-tab.active {
+  background: var(--dark);
+  color: var(--amber);
+  box-shadow: 0 2px 10px rgba(34, 29, 35, 0.14);
+}
+
+.ndb-root .workflows-main-tab-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: rgba(34, 29, 35, 0.07);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.ndb-root .workflows-main-tab.active .workflows-main-tab-icon {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.ndb-root .workflows-main-tab-count {
+  font-size: 10.5px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: rgba(34, 29, 35, 0.06);
+  color: #746F78;
+}
+
+.ndb-root .workflows-main-tab.active .workflows-main-tab-count {
+  background: rgba(255, 206, 0, 0.18);
+  color: var(--amber);
+}
+
+.ndb-root.workflows-main-tab-bar .workflows-main-tab-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #623CEA;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.ndb-root.workflows-main-tab-bar .workflows-main-tab-action:hover {
+  background: #5230d4;
+  transform: translateY(-1px);
 }
 
 /* ── Tab bar (filter chips) ───────────────────────────────────────────────── */
