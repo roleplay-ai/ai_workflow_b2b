@@ -163,7 +163,7 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
       display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
       fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif",
     }}>
-      <div style={{ width: "100%", maxWidth: 800, position: "relative" }}>
+      <div style={{ width: "100%", maxWidth: 960, position: "relative" }}>
 
         {mode === "update" && typeof step === "number" && (
           <button
