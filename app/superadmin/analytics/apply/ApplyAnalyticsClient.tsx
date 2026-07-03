@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { AI_UPDATES_PAGE_NAME, WORKFLOWS_PAGE_NAME } from "@/lib/site";
 
-type ActivityRow = { id: string; title: string; category: string; published: boolean };
+type ActivityRow = { id: string; title: string; content_type: string; published: boolean };
 type ViewRow = {
   id: string; activity_id: string;
   user_id: string | null; session_id: string | null;
@@ -315,7 +315,7 @@ export default function ApplyAnalyticsClient() {
                   const ip = inProgressByActivity[act.id] ?? 0;
                   const c  = completionsByActivity[act.id] ?? 0;
                   const rate = v > 0 ? Math.round((c / v) * 100) : 0;
-                  const catColor = CAT_COLORS[act.category] ?? "#6B6B6B";
+                  const catColor = CAT_COLORS[act.content_type] ?? "#6B6B6B";
                   return (
                     <tr key={act.id} style={{ borderBottom: "1px solid #F6F4EE" }}>
                       <td style={{ padding: "10px 12px", fontWeight: 600 }}>
@@ -326,7 +326,7 @@ export default function ApplyAnalyticsClient() {
                         </Link>
                       </td>
                       <td style={{ padding: "10px 12px" }}>
-                        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: `${catColor}18`, color: catColor }}>{act.category}</span>
+                        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: `${catColor}18`, color: catColor }}>{act.content_type}</span>
                       </td>
                       <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700 }}>{v.toLocaleString()}</td>
                       <td style={{ padding: "10px 12px", textAlign: "right", color: "#F68A29", fontWeight: 700 }}>{ip.toLocaleString()}</td>

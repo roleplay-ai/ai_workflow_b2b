@@ -45,7 +45,7 @@ type Props = {
   deepDives: ToolDeepDive[];
 };
 
-const CATEGORIES = ["chat", "build", "automate"];
+const CONTENT_TYPES = ["chat", "build", "automate"];
 
 export default function SuperadminClient({ companies, activities: initActivities, allAssignments: initAssignments, tags: initTags, availableTools, deepDives }: Props) {
   const [activities,   setActivities]   = useState(initActivities);
@@ -61,7 +61,7 @@ export default function SuperadminClient({ companies, activities: initActivities
   const [time,     setTime]     = useState(15);
   const [points,   setPoints]   = useState(50);
   const [tool,     setTool]     = useState<string>(availableTools[0] ?? DEFAULT_TOOLS[0]);
-  const [category, setCategory] = useState("chat");
+  const [contentType, setContentType] = useState("chat");
   const [creating, setCreating] = useState(false);
 
   async function createActivity(e: React.FormEvent) {
@@ -70,7 +70,7 @@ export default function SuperadminClient({ companies, activities: initActivities
     const nextPosition = activities.reduce((max, a) => Math.max(max, a.position), -1) + 1;
     const { data, error } = await supabase.from("activities").insert({
       title, description: desc, level, time_estimate_minutes: time,
-      points, tools: [tool], category, published: false, position: nextPosition,
+      points, tools: [tool], content_type: contentType, published: false, position: nextPosition,
     }).select().single();
     if (!error && data) {
       setActivities(prev => [...prev, { ...(data as ActivityRow), activity_content: null, activity_steps: [{ count: 0 }] }]);
@@ -177,11 +177,11 @@ export default function SuperadminClient({ companies, activities: initActivities
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const catColor = (cat: string) => ({
+  const contentTypeColor = (contentType: string) => ({
     chat:     { bg: "rgba(98,60,234,.08)",  color: "#5030C0" },
     build:    { bg: "rgba(35,206,104,.08)", color: "#17A855" },
     automate: { bg: "rgba(246,138,41,.08)", color: "#B05000" },
-  }[cat] ?? { bg: "#F0EEE8", color: "#6B6B6B" });
+  }[contentType] ?? { bg: "#F0EEE8", color: "#6B6B6B" });
 
   return (
     <div>
@@ -204,8 +204,8 @@ export default function SuperadminClient({ companies, activities: initActivities
               <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} placeholder="Short description shown on the dashboard card" style={{ ...inp, resize: "vertical" }} />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10 }}>
                 <div>
-                  <label style={lbl}>Category</label>
-                  <select value={category} onChange={e => setCategory(e.target.value)} style={inp}>
+                  <label style={lbl}>Content Type</label>
+                  <select value={contentType} onChange={e => setContentType(e.target.value)} style={inp}>
                     <option value="chat">✦ Chatbot</option>
                     <option value="build">🛠 Vibe Coding</option>
                     <option value="automate">⚡ Automation</option>
@@ -265,7 +265,7 @@ export default function SuperadminClient({ companies, activities: initActivities
                 </colgroup>
                 <thead>
                   <tr>
-                    {["", "#", "Cat.", "Activity", "Video", "Thumb", "Slides", "Steps", "Functions", "Tools", "Actions", ""].map((label, i) => (
+                    {["", "#", "Type", "Activity", "Video", "Thumb", "Slides", "Steps", "Categories", "Tools", "Actions", ""].map((label, i) => (
                       <th key={label || `col-${i}`} style={{
                         ...activityThStyle,
                         textAlign: i >= 4 && i <= 7 ? "center" : "left",
@@ -280,8 +280,8 @@ export default function SuperadminClient({ companies, activities: initActivities
                 const expanded = expandedId === act.id;
                 const actAssignments = assignments.filter(a => a.activity_id === act.id);
                 const actTools = normalizeActivityTools(act.tools);
-                const actFunctions = act.functions ?? [];
-                const cc = catColor(act.category);
+                const actCategories = act.categories ?? [];
+                const cc = contentTypeColor(act.content_type);
                 const video = hasVideo(act);
                 const thumb = hasThumbnail(act);
                 const slides = slideCount(act);
@@ -306,7 +306,7 @@ export default function SuperadminClient({ companies, activities: initActivities
                       <td style={{ ...activityTdStyle, fontSize: 11, fontWeight: 900, color: "#9A9590" }}>{idx + 1}</td>
 
                       <td style={activityTdStyle}>
-                        <span style={{ display: "block", padding: "3px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: cc.bg, color: cc.color, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={act.category}>{act.category}</span>
+                        <span style={{ display: "block", padding: "3px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: cc.bg, color: cc.color, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={act.content_type}>{act.content_type}</span>
                       </td>
 
                       <td style={activityTdStyle}>
@@ -334,8 +334,8 @@ export default function SuperadminClient({ companies, activities: initActivities
 
                       <td style={{ ...activityTdStyle, verticalAlign: "top" }}>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                          {actFunctions.length > 0 ? actFunctions.map(fn => (
-                            <span key={fn} style={chipStyle} title={fn}>{fn}</span>
+                          {actCategories.length > 0 ? actCategories.map(cat => (
+                            <span key={cat} style={chipStyle} title={cat}>{cat}</span>
                           )) : (
                             <span style={{ fontSize: 11, color: "#C4BFB8", fontStyle: "italic" }}>None</span>
                           )}

@@ -7,7 +7,7 @@ type AnalyticsData = {
   progress: any[];
   activities: any[];
   fluencyViews: any[];
-  functions: string[];
+  categories: string[];
 };
 
 function getDefaultFrom() {
@@ -34,7 +34,7 @@ export default function AnalyticsClient() {
   const [loading, setLoading] = useState(true);
   const [from, setFrom] = useState(getDefaultFrom);
   const [to, setTo] = useState(getDefaultTo);
-  const [fn, setFn] = useState("");
+  const [cat, setCat] = useState("");
   const [tab, setTab] = useState<"activities" | "users" | "know">("activities");
 
   useEffect(() => {
@@ -42,13 +42,13 @@ export default function AnalyticsClient() {
     const params = new URLSearchParams();
     if (from) params.set("from", from);
     if (to) params.set("to", to);
-    if (fn) params.set("function", fn);
+    if (cat) params.set("category", cat);
 
     fetch(`/api/admin/analytics?${params}`)
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [from, to, fn]);
+  }, [from, to, cat]);
 
   const completedCount = data?.progress.filter(p => p.status === "completed").length ?? 0;
   const inProgressCount = data?.progress.filter(p => p.status === "in_progress").length ?? 0;
@@ -168,11 +168,11 @@ export default function AnalyticsClient() {
           <input type="date" value={to} onChange={e => setTo(e.target.value)}
             style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #E8E6DC", fontSize: 13, fontFamily: "inherit", fontWeight: 600 }} />
         </div>
-        {data && data.functions.length > 0 && (
-          <select value={fn} onChange={e => setFn(e.target.value)}
+        {data && data.categories.length > 0 && (
+          <select value={cat} onChange={e => setCat(e.target.value)}
             style={{ padding: "8px 14px", borderRadius: 10, border: "1px solid #E8E6DC", fontSize: 13, fontWeight: 700, background: "white", cursor: "pointer", fontFamily: "inherit" }}>
-            <option value="">All functions</option>
-            {data.functions.map(f => <option key={f} value={f}>{f}</option>)}
+            <option value="">All categories</option>
+            {data.categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         )}
       </div>

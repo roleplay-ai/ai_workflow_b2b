@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import ToolLogosManager from "@/components/ToolLogosManager";
-import type { ActivityTag, ActivityFunction } from "@/lib/supabase/types";
+import type { ActivityTag, ActivityCategory } from "@/lib/supabase/types";
 import type { ToolLogoMap } from "@/lib/toolLogos";
 
 type CatalogItem = Pick<ActivityTag, "id" | "name" | "icon_url">;
@@ -12,7 +12,7 @@ type CatalogItem = Pick<ActivityTag, "id" | "name" | "icon_url">;
 type Props = {
   toolLogos: ToolLogoMap;
   tags: CatalogItem[];
-  functions: Pick<ActivityFunction, "id" | "name" | "icon_url">[];
+  categories: Pick<ActivityCategory, "id" | "name" | "icon_url">[];
 };
 
 function CatalogGrid({
@@ -79,10 +79,10 @@ function CatalogGrid({
   );
 }
 
-export default function ToolLogosPageClient({ toolLogos, tags: initTags, functions: initFunctions }: Props) {
+export default function ToolLogosPageClient({ toolLogos, tags: initTags, categories: initCategories }: Props) {
   const supabase = createClient();
   const [tags, setTags] = useState(initTags);
-  const [functions, setFunctions] = useState(initFunctions);
+  const [categories, setCategories] = useState(initCategories);
   const [uploading, setUploading] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -131,7 +131,7 @@ export default function ToolLogosPageClient({ toolLogos, tags: initTags, functio
   }
 
   async function uploadCatalogIcon(
-    table: "activity_tags" | "activity_functions",
+    table: "activity_tags" | "activity_categories",
     folder: string,
     itemId: string,
     itemName: string,
@@ -163,28 +163,28 @@ export default function ToolLogosPageClient({ toolLogos, tags: initTags, functio
     setMessage(`Logo uploaded for ${itemName}.`);
   }
 
-  async function uploadFunctionLogo(fnId: string, fnName: string, file: File) {
-    await uploadCatalogIcon("activity_functions", "function", fnId, fnName, file, iconUrl => {
-      setFunctions(prev => prev.map(f => f.id === fnId ? { ...f, icon_url: iconUrl } : f));
+  async function uploadCategoryLogo(catId: string, catName: string, file: File) {
+    await uploadCatalogIcon("activity_categories", "category", catId, catName, file, iconUrl => {
+      setCategories(prev => prev.map(c => c.id === catId ? { ...c, icon_url: iconUrl } : c));
     });
   }
 
-  async function removeFunctionLogo(fnId: string, fnName: string) {
-    if (!confirm(`Remove logo for function "${fnName}"?`)) return;
-    setUploading(fnId);
-    await supabase.from("activity_functions").update({ icon_url: null }).eq("id", fnId);
-    setFunctions(prev => prev.map(f => f.id === fnId ? { ...f, icon_url: null } : f));
+  async function removeCategoryLogo(catId: string, catName: string) {
+    if (!confirm(`Remove logo for category "${catName}"?`)) return;
+    setUploading(catId);
+    await supabase.from("activity_categories").update({ icon_url: null }).eq("id", catId);
+    setCategories(prev => prev.map(c => c.id === catId ? { ...c, icon_url: null } : c));
     setUploading(null);
-    setMessage(`Removed logo for ${fnName}.`);
+    setMessage(`Removed logo for ${catName}.`);
   }
 
-  async function deleteFunction(fnId: string, fnName: string) {
-    if (!confirm(`Delete function "${fnName}"? It will be removed from all activities.`)) return;
-    setUploading(fnId);
-    await supabase.from("activity_functions").delete().eq("id", fnId);
-    setFunctions(prev => prev.filter(f => f.id !== fnId));
+  async function deleteCategory(catId: string, catName: string) {
+    if (!confirm(`Delete category "${catName}"? It will be removed from all activities.`)) return;
+    setUploading(catId);
+    await supabase.from("activity_categories").delete().eq("id", catId);
+    setCategories(prev => prev.filter(c => c.id !== catId));
     setUploading(null);
-    setMessage(`Deleted function "${fnName}".`);
+    setMessage(`Deleted category "${catName}".`);
   }
 
   const messageStyle = {
@@ -208,7 +208,7 @@ export default function ToolLogosPageClient({ toolLogos, tags: initTags, functio
 
         <ToolLogosManager initialLogos={toolLogos} />
 
-        {(tags.length > 0 || functions.length > 0) && message && (
+        {(tags.length > 0 || categories.length > 0) && message && (
           <p style={{ ...messageStyle, marginTop: 32 }}>{message}</p>
         )}
 
@@ -231,20 +231,20 @@ export default function ToolLogosPageClient({ toolLogos, tags: initTags, functio
           </div>
         )}
 
-        {functions.length > 0 && (
+        {categories.length > 0 && (
           <div style={{ marginTop: 32 }}>
-            <h2 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 900, letterSpacing: "-.03em" }}>Functions</h2>
+            <h2 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 900, letterSpacing: "-.03em" }}>Categories</h2>
             <p style={{ margin: "0 0 14px", color: "#6B6B6B", fontSize: 13 }}>
-              Upload icons for job functions and delete functions you no longer need.
+              Upload icons for job categories and delete categories you no longer need.
             </p>
             <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 18, padding: 18, boxShadow: "0 2px 12px rgba(34,29,35,.06)" }}>
               <CatalogGrid
-                items={functions}
+                items={categories}
                 uploading={uploading}
-                onUpload={(id, name, file) => void uploadFunctionLogo(id, name, file)}
-                onRemoveLogo={(id, name) => void removeFunctionLogo(id, name)}
-                onDelete={(id, name) => void deleteFunction(id, name)}
-                deleteLabel="Delete function"
+                onUpload={(id, name, file) => void uploadCategoryLogo(id, name, file)}
+                onRemoveLogo={(id, name) => void removeCategoryLogo(id, name)}
+                onDelete={(id, name) => void deleteCategory(id, name)}
+                deleteLabel="Delete category"
               />
             </div>
           </div>

@@ -18,6 +18,18 @@ export type Profile = {
   created_at: string;
   aimastery_approved: boolean;
   aimastery_requested: boolean;
+  streak_count: number;
+  streak_week_start: string | null;
+  onboarding_completed_at: string | null;
+  onboarding_tool: string | null;
+  onboarding_tool_tier: string | null;
+  onboarding_tool_other: string | null;
+  onboarding_function: string | null;
+  onboarding_function_other: string | null;
+  onboarding_interests: string[];
+  onboarding_interests_other: string | null;
+  onboarding_experience: string | null;
+  workflows_confirmed_at: string | null;
 };
 
 export type Activity = {
@@ -29,6 +41,7 @@ export type Activity = {
   points: number;
   tools: string[];
   tags: string[];
+  categories: string[];
   functions: string[];
   position: number;
   published: boolean;
@@ -36,7 +49,7 @@ export type Activity = {
   is_locked: boolean;
   is_mastery: boolean;
   hero_position: number | null;
-  category: string;
+  content_type: string;
   created_at: string;
   thumbnail_url: string | null;
   banner_url: string | null;
@@ -53,12 +66,28 @@ export type ActivityTag = {
   created_at: string;
 };
 
+export type ActivityCategory = {
+  id: string;
+  name: string;
+  description: string | null;
+  icon_url: string | null;
+  thumbnail_url: string | null;
+  created_at: string;
+};
+
 export type ActivityFunction = {
   id: string;
   name: string;
   description: string | null;
   icon_url: string | null;
   thumbnail_url: string | null;
+  created_at: string;
+};
+
+export type UserSavedWorkflow = {
+  id: string;
+  user_id: string;
+  activity_id: string;
   created_at: string;
 };
 
@@ -218,14 +247,32 @@ export type Database = {
       };
       profiles: {
         Row: Profile;
-        Insert: { id: string; email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean };
-        Update: { email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean };
+        Insert: { id: string; email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean; onboarding_completed_at?: string | null; onboarding_tool?: string | null; onboarding_tool_tier?: string | null; onboarding_tool_other?: string | null; onboarding_function?: string | null; onboarding_function_other?: string | null; onboarding_interests?: string[]; onboarding_interests_other?: string | null; onboarding_experience?: string | null; workflows_confirmed_at?: string | null };
+        Update: { email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean; onboarding_completed_at?: string | null; onboarding_tool?: string | null; onboarding_tool_tier?: string | null; onboarding_tool_other?: string | null; onboarding_function?: string | null; onboarding_function_other?: string | null; onboarding_interests?: string[]; onboarding_interests_other?: string | null; onboarding_experience?: string | null; workflows_confirmed_at?: string | null };
         Relationships: [];
       };
       activities: {
         Row: Activity;
-        Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; is_locked?: boolean; category?: string; banner_url?: string | null; try_link?: string | null };
-        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; is_locked?: boolean; category?: string; banner_url?: string | null; try_link?: string | null };
+        Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; categories?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; is_locked?: boolean; content_type?: string; banner_url?: string | null; try_link?: string | null };
+        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; categories?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; is_locked?: boolean; content_type?: string; banner_url?: string | null; try_link?: string | null };
+        Relationships: [];
+      };
+      activity_categories: {
+        Row: ActivityCategory;
+        Insert: { name: string; description?: string | null; icon_url?: string | null; thumbnail_url?: string | null };
+        Update: { name?: string; description?: string | null; icon_url?: string | null; thumbnail_url?: string | null };
+        Relationships: [];
+      };
+      activity_functions: {
+        Row: ActivityFunction;
+        Insert: { name: string; description?: string | null; icon_url?: string | null; thumbnail_url?: string | null };
+        Update: { name?: string; description?: string | null; icon_url?: string | null; thumbnail_url?: string | null };
+        Relationships: [];
+      };
+      user_saved_workflows: {
+        Row: UserSavedWorkflow;
+        Insert: { user_id: string; activity_id: string };
+        Update: Record<string, never>;
         Relationships: [];
       };
       activity_companies: {

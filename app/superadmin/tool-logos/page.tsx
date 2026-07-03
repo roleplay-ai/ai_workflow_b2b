@@ -19,17 +19,17 @@ export default async function ToolLogosPage() {
   if (profileError || !profile) redirect("/login");
   if (profile.role !== "superadmin") redirect("/apply");
 
-  const [{ data: toolLogoRows }, { data: tags }, { data: functions }] = await Promise.all([
+  const [{ data: toolLogoRows }, { data: tags }, { data: categories }] = await Promise.all([
     supabase.from("tool_logos").select("tool, logo_url"),
     supabase.from("activity_tags").select("id, name, icon_url").order("name"),
-    supabase.from("activity_functions").select("id, name, icon_url").order("name"),
+    supabase.from("activity_categories").select("id, name, icon_url").order("name"),
   ]);
 
   return (
     <ToolLogosPageClient
       toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
       tags={tags ?? []}
-      functions={functions ?? []}
+      categories={categories ?? []}
     />
   );
 }
