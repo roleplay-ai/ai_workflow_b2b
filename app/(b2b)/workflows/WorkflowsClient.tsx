@@ -610,7 +610,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
             <StatCard label="✅ Completed" value={String(completedCount)} delta={completedCount > 0 ? "Keep going!" : "Start your first workflow"} deltaColor={completedCount > 0 ? "#3699FC" : undefined} />
             <StatCard label="⌛In Progress" value={String(inProgressCount)} delta={inProgressCount > 0 ? "Pick up where you left off" : "Start a workflow to track"} deltaColor={inProgressCount > 0 ? "#F68A29" : undefined} />
             <StatCard
-              label="🔥 Weekly Streak"
+              label="Weekly Streak"
               value={String(streakCount)}
               valueIcon={<FireIcon size={28} color="#F68A29" />}
               delta={
