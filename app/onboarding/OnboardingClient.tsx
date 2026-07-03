@@ -115,6 +115,7 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
+          credentials: "include",
         }),
         minDelay,
       ]);
@@ -256,7 +257,7 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
               onBack={() => goTo(2)}
               backLabel="← Back"
             >
-              <OptionGrid options={q3Options} selected={q3Interests} mode="multi" onPick={toggleInterest} />
+              <OptionGrid options={q3Options} selected={q3Interests} mode="multi" columns={4} onPick={toggleInterest} />
               {q3Interests.includes("Other") && (
                 <input
                   value={q3Other}
@@ -385,14 +386,19 @@ function QuestionScreen({
   );
 }
 
-function OptionGrid({ options, selected, mode, onPick }: {
+function OptionGrid({ options, selected, mode, columns, onPick }: {
   options: string[];
   selected: string[];
   mode: "single" | "multi";
+  columns?: number;
   onPick: (value: string) => void;
 }) {
+  const gridTemplateColumns = columns
+    ? `repeat(${columns}, 1fr)`
+    : "repeat(auto-fill, minmax(210px, 1fr))";
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 12 }}>
+    <div style={{ display: "grid", gridTemplateColumns, gap: 12 }}>
       {options.map(opt => {
         const isSelected = selected.includes(opt);
         return (

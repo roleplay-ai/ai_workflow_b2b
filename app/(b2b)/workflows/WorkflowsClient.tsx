@@ -275,7 +275,7 @@ function CategoryCard({ name, count, description, thumbnail, onClick }: { name: 
       onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
       style={{ cursor: "pointer" }}
     >
-      <div className={`card-poster ${theme.posterColor}${thumbnail ? " has-thumbnail" : ""}`}>
+      <div className={`card-poster category-card-poster ${theme.posterColor}${thumbnail ? " has-thumbnail" : ""}`}>
         {thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img className="card-thumbnail" src={thumbnail} alt="" />

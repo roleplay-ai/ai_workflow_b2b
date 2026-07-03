@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { onboardingExperienceToLevels, onboardingToolToSlug } from "@/lib/onboarding";
+import { createRouteHandlerClient, jsonWithSessionCookies } from "@/lib/supabase/route-handler";
 
 type CompleteBody = {
   tool: string;
@@ -13,10 +14,12 @@ type CompleteBody = {
 };
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  const { supabase, sessionResponse } = createRouteHandlerClient(req);
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) {
+    return jsonWithSessionCookies(sessionResponse, { error: "Unauthorized" }, { status: 401 });
+  }
 
   const body = await req.json() as Partial<CompleteBody>;
   const {
@@ -27,7 +30,7 @@ export async function POST(req: NextRequest) {
   } = body;
 
   if (!tool || !jobFunction || !experience || !Array.isArray(interests) || interests.length === 0) {
-    return NextResponse.json({ error: "Missing required onboarding answers" }, { status: 400 });
+    return jsonWithSessionCookies(sessionResponse, { error: "Missing required onboarding answers" }, { status: 400 });
   }
 
   const { error: profileError } = await supabase
@@ -47,11 +50,10 @@ export async function POST(req: NextRequest) {
     .eq("id", user.id);
 
   if (profileError) {
-    return NextResponse.json({ error: profileError.message }, { status: 500 });
+    return jsonWithSessionCookies(sessionResponse, { error: profileError.message }, { status: 500 });
   }
 
-  // Match: category overlap is always required; function match is required
-  // unless the user picked "Other" for their function (no catalog entry to match against).
+  // Match: category overlap + function + tool + level (when applicable).
   let matchQuery = supabase
     .from("activities")
     .select("id")
@@ -62,9 +64,19 @@ export async function POST(req: NextRequest) {
     matchQuery = matchQuery.contains("functions", [jobFunction]);
   }
 
+  const toolSlug = onboardingToolToSlug(tool);
+  if (toolSlug) {
+    matchQuery = matchQuery.contains("tools", [toolSlug]);
+  }
+
+  const levels = onboardingExperienceToLevels(experience);
+  if (levels.length > 0) {
+    matchQuery = matchQuery.in("level", levels);
+  }
+
   const { data: matched, error: matchError } = await matchQuery;
   if (matchError) {
-    return NextResponse.json({ error: matchError.message }, { status: 500 });
+    return jsonWithSessionCookies(sessionResponse, { error: matchError.message }, { status: 500 });
   }
 
   // Replace the whole snapshot — full recompute on every onboarding completion.
@@ -73,7 +85,7 @@ export async function POST(req: NextRequest) {
     .delete()
     .eq("user_id", user.id);
   if (deleteError) {
-    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    return jsonWithSessionCookies(sessionResponse, { error: deleteError.message }, { status: 500 });
   }
 
   const matchedActivities = matched ?? [];
@@ -82,9 +94,9 @@ export async function POST(req: NextRequest) {
       .from("user_saved_workflows")
       .insert(matchedActivities.map(a => ({ user_id: user.id, activity_id: a.id })));
     if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
+      return jsonWithSessionCookies(sessionResponse, { error: insertError.message }, { status: 500 });
     }
   }
 
-  return NextResponse.json({ matchedCount: matchedActivities.length });
+  return jsonWithSessionCookies(sessionResponse, { matchedCount: matchedActivities.length });
 }
