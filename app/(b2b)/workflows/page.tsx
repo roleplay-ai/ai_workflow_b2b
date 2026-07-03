@@ -90,6 +90,7 @@ export default async function WorkflowsPage() {
   let companySize = 0;
   let companyAvgPoints = 0;
   let workflowsConfirmed = false;
+  let streakCount = 0;
 
   if (user) {
     const { data: pointsStats } = await supabase.rpc("get_my_points_stats");
@@ -101,13 +102,14 @@ export default async function WorkflowsPage() {
       companyAvgPoints = stats.company_avg_points ?? 0;
     }
 
-    const { data: confirmProfile, error: confirmError } = await supabase
+    const { data: profileExtras, error: profileExtrasError } = await supabase
       .from("profiles")
-      .select("workflows_confirmed_at")
+      .select("workflows_confirmed_at, streak_count")
       .eq("id", user.id)
       .single();
-    if (!confirmError && confirmProfile) {
-      workflowsConfirmed = !!confirmProfile.workflows_confirmed_at;
+    if (!profileExtrasError && profileExtras) {
+      workflowsConfirmed = !!profileExtras.workflows_confirmed_at;
+      streakCount = profileExtras.streak_count ?? 0;
     }
   }
 
@@ -138,6 +140,7 @@ export default async function WorkflowsPage() {
         companyPercentile={companyPercentile}
         companySize={companySize}
         companyAvgPoints={companyAvgPoints}
+        streakCount={streakCount}
         modules={(modules ?? []) as any}
         categoryThumbnails={categoryThumbnails}
         categoryDescriptions={categoryDescriptions}
