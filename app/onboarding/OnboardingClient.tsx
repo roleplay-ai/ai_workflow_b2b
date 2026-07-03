@@ -46,21 +46,23 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
 
   const [step, setStep] = useState<Step>(1);
 
-  const [q1Tool, setQ1Tool]   = useState<string | null>(existingAnswers?.tool ?? null);
-  const [q1Tier, setQ1Tier]   = useState<string | null>(existingAnswers?.toolTier ?? null);
+  const [q1Tool, setQ1Tool] = useState<string | null>(existingAnswers?.tool ?? null);
+  const [q1Tier, setQ1Tier] = useState<string | null>(existingAnswers?.toolTier ?? null);
   const [q1Other, setQ1Other] = useState(existingAnswers?.toolOther ?? "");
 
   const [q2Function, setQ2Function] = useState<string | null>(existingAnswers?.jobFunction ?? null);
-  const [q2Other, setQ2Other]       = useState(existingAnswers?.jobFunctionOther ?? "");
+  const [q2Other, setQ2Other] = useState(existingAnswers?.jobFunctionOther ?? "");
 
   const [q3Interests, setQ3Interests] = useState<string[]>(existingAnswers?.interests ?? []);
-  const [q3Other, setQ3Other]         = useState(existingAnswers?.interestsOther ?? "");
+  const [q3Other, setQ3Other] = useState(existingAnswers?.interestsOther ?? "");
 
   const [q4Experience, setQ4Experience] = useState<string | null>(existingAnswers?.experience ?? null);
 
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
-  const [matchedCount, setMatchedCount]   = useState<number | null>(null);
-  const [errorMsg, setErrorMsg]           = useState("");
+  const [matchedCount, setMatchedCount] = useState<number | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [navigatingToWorkflows, setNavigatingToWorkflows] = useState(false);
 
   const q2Options = [...functionOptions, "Other"];
   const q3Options = [...categoryOptions, "Other"];
@@ -88,6 +90,11 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
   const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function submitOnboarding() {
+    // button-level spinner, held long enough to actually register, before
+    // handing off to the full-screen loading state
+    setSubmitting(true);
+    await new Promise(resolve => setTimeout(resolve, 600));
+    setSubmitting(false);
     setStep("loading");
     setLoadingMsgIdx(0);
     setErrorMsg("");
@@ -275,6 +282,7 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
               sub="No wrong answer, this just sets your starting point."
               nextDisabled={!q4Experience}
               nextLabel="See My Journey →"
+              nextLoading={submitting}
               onNext={submitOnboarding}
               onBack={() => goTo(3)}
               backLabel="← Back"
@@ -321,7 +329,18 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 32 }}>
                 <button onClick={restart} style={ghostBtnStyle}>Start Over</button>
-                <button onClick={closeToWorkflows} style={primaryBtnStyle}>See My Workflows →</button>
+                <button
+                  onClick={() => { setNavigatingToWorkflows(true); closeToWorkflows(); }}
+                  disabled={navigatingToWorkflows}
+                  style={{ ...primaryBtnStyle, opacity: navigatingToWorkflows ? 0.6 : 1, cursor: navigatingToWorkflows ? "not-allowed" : "pointer" }}
+                >
+                  {navigatingToWorkflows ? (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
+                      <span style={btnSpinnerStyle} />
+                      Loading…
+                    </span>
+                  ) : "See My Workflows →"}
+                </button>
               </div>
             </div>
           )}
@@ -345,9 +364,15 @@ const otherInputStyle: React.CSSProperties = {
 };
 
 const primaryBtnStyle: React.CSSProperties = {
-  border: "none", borderRadius: 999, padding: "12px 28px",
+  border: `1px solid ${SHADOW}`, borderRadius: 999, padding: "12px 28px",
   fontFamily: "inherit", fontWeight: 600, fontSize: 14, cursor: "pointer",
   background: AMBER, color: SHADOW,
+};
+
+const btnSpinnerStyle: React.CSSProperties = {
+  width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
+  border: "2px solid rgba(34,29,35,.3)", borderTopColor: SHADOW,
+  animation: "onboarding-spin .7s linear infinite",
 };
 
 const ghostBtnStyle: React.CSSProperties = {
@@ -356,17 +381,19 @@ const ghostBtnStyle: React.CSSProperties = {
 };
 
 function QuestionScreen({
-  title, sub, children, nextDisabled, nextLabel = "Next", onNext, onBack, backLabel,
+  title, sub, children, nextDisabled, nextLabel = "Next", nextLoading = false, onNext, onBack, backLabel,
 }: {
   title: string;
   sub: string;
   children: React.ReactNode;
   nextDisabled: boolean;
   nextLabel?: string;
+  nextLoading?: boolean;
   onNext: () => void;
   onBack?: () => void;
   backLabel?: string;
 }) {
+  const disabled = nextDisabled || nextLoading;
   return (
     <div>
       <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 6, lineHeight: 1.3, color: SHADOW }}>{title}</div>
@@ -376,10 +403,15 @@ function QuestionScreen({
         {onBack ? <button onClick={onBack} style={ghostBtnStyle}>{backLabel}</button> : <span />}
         <button
           onClick={onNext}
-          disabled={nextDisabled}
-          style={{ ...primaryBtnStyle, opacity: nextDisabled ? 0.4 : 1, cursor: nextDisabled ? "not-allowed" : "pointer" }}
+          disabled={disabled}
+          style={{ ...primaryBtnStyle, opacity: disabled ? 0.6 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
         >
-          {nextLabel}
+          {nextLoading ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
+              <span style={btnSpinnerStyle} />
+              Loading…
+            </span>
+          ) : nextLabel}
         </button>
       </div>
     </div>

@@ -445,15 +445,17 @@ type Props = {
   categoryThumbnails: Record<string, string>;
   categoryDescriptions: Record<string, string>;
   workflowsConfirmed: boolean;
+  preferredToolSlug: string | null;
 };
 
-export default function WorkflowsClient({ activities, toolLogos, tagLogos, userId, viewCounts, completedIds, inProgressIds, savedWorkflowIds, totalAvailable, completedCount, inProgressCount, userTotalPoints, companyPercentile, companySize, companyAvgPoints, streakCount, modules, categoryThumbnails, categoryDescriptions, workflowsConfirmed: workflowsConfirmedInitial }: Props) {
+export default function WorkflowsClient({ activities, toolLogos, tagLogos, userId, viewCounts, completedIds, inProgressIds, savedWorkflowIds, totalAvailable, completedCount, inProgressCount, userTotalPoints, companyPercentile, companySize, companyAvgPoints, streakCount, modules, categoryThumbnails, categoryDescriptions, workflowsConfirmed: workflowsConfirmedInitial, preferredToolSlug }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedTag = searchParams.get("tag");
   const [activeMainTab, setActiveMainTab] = useState<"my" | "all">("my");
   const [preferencesConfirmed, setPreferencesConfirmed] = useState(workflowsConfirmedInitial);
   const [confirmingPreferences, setConfirmingPreferences] = useState(false);
+  const [navigatingToPreferences, setNavigatingToPreferences] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [selectedTab, setSelectedTab] = useState<FilterTab>(null);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -522,7 +524,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
     let result = activities;
     if (selectedTab === "new") result = result.filter(a => a.is_featured);
     if (selectedTab === "essentials") result = result.filter(a => (a as any).is_mastery);
-    if (selectedTab === "continue") result = result.filter(a => !completedIds.has(a.id));
+    if (selectedTab === "continue") result = result.filter(a => inProgressIds.has(a.id));
     if (selectedTool) result = result.filter(a => normalizeActivityTools(a.tools).includes(selectedTool));
     if (selectedCategory) result = result.filter(a => (a.categories ?? []).some(c => c.toLowerCase() === selectedCategory.toLowerCase()));
     if (selectedTag) result = result.filter(a => activityHasTag(a, selectedTag));
@@ -533,7 +535,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
       normalizeActivityTools(a.tools).some(t => formatToolLabel(t).toLowerCase().includes(q))
     );
     return result;
-  }, [activities, selectedTab, selectedTool, selectedCategory, selectedTag, searchQuery, completedIds]);
+  }, [activities, selectedTab, selectedTool, selectedCategory, selectedTag, searchQuery, completedIds, inProgressIds]);
 
   const visibleCount = COLS * (2 + extraRows);
   const visible = filtered.slice(0, visibleCount);
@@ -629,8 +631,25 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
           <MainTabSwitch active={activeMainTab} onChange={setActiveMainTab} />
           <div className="workflows-main-tab-bar-end">
             {activeMainTab === "my" && (
-              <Link href="/onboarding" className="workflows-main-tab-action">
-                ⚙️ Update My Preferences
+              <Link
+                href="/onboarding"
+                className="workflows-main-tab-action"
+                onClick={() => setNavigatingToPreferences(true)}
+                style={navigatingToPreferences ? { opacity: 0.75, pointerEvents: "none" } : undefined}
+                aria-disabled={navigatingToPreferences}
+              >
+                {navigatingToPreferences ? (
+                  <>
+                    <span style={{
+                      width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
+                      border: "2px solid rgba(255,255,255,.4)", borderTopColor: "#fff",
+                      animation: "cardNavSpin .65s linear infinite",
+                    }} />
+                    Loading…
+                  </>
+                ) : (
+                  <>⚙️ Update My Preferences</>
+                )}
               </Link>
             )}
           </div>
@@ -654,7 +673,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
                       onClick={() => { clearTagFilter(); setSelectedTool(selectedTool === tool ? null : tool); setSelectedCategory(null); }}
                     />
                   ))}
-                  {completedCount > 0 && (
+                  {inProgressCount > 0 && (
                     <TabChip label="Continue" icon="⏩" active={selectedTab === "continue"} onClick={() => handleTabToggle("continue")} />
                   )}
                 </div>
@@ -726,7 +745,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
                       <div className="static-grid">
                         {visible.map(a => (
                           <div key={a.id} className="static-grid-slot">
-                            <ActivityCard activity={a} toolLogos={toolLogos} tagLogos={tagLogos} viewCount={viewCounts[a.id] ?? 0} isCompleted={completedIds.has(a.id)} />
+                            <ActivityCard activity={a} toolLogos={toolLogos} tagLogos={tagLogos} viewCount={viewCounts[a.id] ?? 0} isCompleted={completedIds.has(a.id)} onlyTool={selectedTool} />
                           </div>
                         ))}
                       </div>
@@ -808,6 +827,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
                           tagLogos={tagLogos}
                           viewCount={viewCounts[a.id] ?? 0}
                           isCompleted={completedIds.has(a.id)}
+                          onlyTool={preferredToolSlug}
                         />
                       </div>
                     ))}

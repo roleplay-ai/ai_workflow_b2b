@@ -142,11 +142,15 @@ type Props = {
   tagLogos?: Record<string, string>;
   viewCount?: number;
   isCompleted?: boolean;
+  /** When set, RotatingTools shows only this tool (if the activity has it) instead of all of them. */
+  onlyTool?: string | null;
 };
 
-export default function ActivityCard({ activity, toolLogos, tagLogos = {}, viewCount = 0, isCompleted = false }: Props) {
+export default function ActivityCard({ activity, toolLogos, tagLogos = {}, viewCount = 0, isCompleted = false, onlyTool = null }: Props) {
   const theme = getTheme(activity.id);
-  const tools = normalizeActivityTools(activity.tools);
+  const allTools = normalizeActivityTools(activity.tools);
+  const preferredOnly = onlyTool ? allTools.filter(t => t.toLowerCase() === onlyTool.toLowerCase()) : [];
+  const tools = preferredOnly.length > 0 ? preferredOnly : allTools;
   const [navigating, setNavigating] = useState(false);
 
   const inner = (

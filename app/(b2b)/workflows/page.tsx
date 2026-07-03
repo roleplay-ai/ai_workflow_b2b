@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { sumPointsFromProgress, type PointsStats } from "@/lib/points";
 import { rowsToToolLogoMap, rowsToTagLogoMap } from "@/lib/toolLogos";
+import { onboardingToolToSlug } from "@/lib/onboarding";
 import WorkflowsClient from "./WorkflowsClient";
 
 export const dynamic = "force-dynamic";
@@ -91,6 +92,7 @@ export default async function WorkflowsPage() {
   let companyAvgPoints = 0;
   let workflowsConfirmed = false;
   let streakCount = 0;
+  let preferredToolSlug: string | null = null;
 
   if (user) {
     const { data: pointsStats } = await supabase.rpc("get_my_points_stats");
@@ -104,12 +106,13 @@ export default async function WorkflowsPage() {
 
     const { data: profileExtras, error: profileExtrasError } = await supabase
       .from("profiles")
-      .select("workflows_confirmed_at, streak_count")
+      .select("workflows_confirmed_at, streak_count, onboarding_tool")
       .eq("id", user.id)
       .single();
     if (!profileExtrasError && profileExtras) {
       workflowsConfirmed = !!profileExtras.workflows_confirmed_at;
       streakCount = profileExtras.streak_count ?? 0;
+      preferredToolSlug = profileExtras.onboarding_tool ? onboardingToolToSlug(profileExtras.onboarding_tool) : null;
     }
   }
 
@@ -145,6 +148,7 @@ export default async function WorkflowsPage() {
         categoryThumbnails={categoryThumbnails}
         categoryDescriptions={categoryDescriptions}
         workflowsConfirmed={workflowsConfirmed}
+        preferredToolSlug={preferredToolSlug}
       />
     </Suspense>
   );
