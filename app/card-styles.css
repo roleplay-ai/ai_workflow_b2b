@@ -609,6 +609,13 @@
   background: #FFE7EA;
 }
 
+/* Category cards: once a thumbnail is uploaded, drop the auto-assigned
+   theme pastel so the poster reflects only the uploaded image, not an
+   unrelated hash-based color. */
+.ndb-root .card-poster.category-card-poster.has-thumbnail {
+  background: #FAFAF8;
+}
+
 .ndb-root .card-poster::before {
   content: "";
   position: absolute;
