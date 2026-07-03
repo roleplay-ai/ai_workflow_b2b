@@ -58,9 +58,8 @@ type FilterTab = "new" | "essentials" | "continue" | null;
 
 type MainTab = "my" | "all";
 
-function MainTabSwitch({ active, myCount, onChange }: {
+function MainTabSwitch({ active, onChange }: {
   active: MainTab;
-  myCount: number;
   onChange: (tab: MainTab) => void;
 }) {
   return (
@@ -74,7 +73,6 @@ function MainTabSwitch({ active, myCount, onChange }: {
       >
         <span className="workflows-main-tab-icon" aria-hidden="true">⭐</span>
         My Workflows
-        <span className="workflows-main-tab-count">{myCount}</span>
       </button>
       <button
         type="button"
@@ -607,8 +605,8 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
               value={String(userTotalPoints)}
               delta={userTotalPoints > 0 ? "Earned from completed workflows" : "Complete workflows to earn points"}
             />
-            <StatCard label="✅ Completed" value={String(completedCount)} delta={completedCount > 0 ? "Keep going!" : "Start your first workflow"} deltaColor={completedCount > 0 ? "#3699FC" : undefined} />
-            <StatCard label="⌛In Progress" value={String(inProgressCount)} delta={inProgressCount > 0 ? "Pick up where you left off" : "Start a workflow to track"} deltaColor={inProgressCount > 0 ? "#F68A29" : undefined} />
+            <StatCard label="✅ Completed" value={String(completedCount)} delta={`${inProgressCount} in progress`} deltaColor={inProgressCount > 0 ? "#F68A29" : undefined} />
+            <StatCard label="⭐ My Workflows" value={String(myWorkflows.length)} delta={myWorkflows.length > 0 ? "Tailored to your stack" : "Update preferences to get started"} deltaColor={myWorkflows.length > 0 ? "#3699FC" : undefined} />
             <StatCard
               label="Weekly Streak"
               value={String(streakCount)}
@@ -628,7 +626,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
 
         {/* Main tab switcher */}
         <div className="ndb-root workflows-main-tab-bar">
-          <MainTabSwitch active={activeMainTab} myCount={myWorkflows.length} onChange={setActiveMainTab} />
+          <MainTabSwitch active={activeMainTab} onChange={setActiveMainTab} />
           <div className="workflows-main-tab-bar-end">
             {activeMainTab === "my" && (
               <Link href="/onboarding" className="workflows-main-tab-action">
