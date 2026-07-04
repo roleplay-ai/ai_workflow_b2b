@@ -15,6 +15,8 @@ import { buildCoachChatMessage } from "@/types";
 import type { Profile, Activity, ActivityContent, ActivityStep, UserProgress } from "@/lib/supabase/types";
 import s from "./activity-panel.module.css";
 
+const OVERVIEW_CARD_TONES = [s.overviewCardTone0, s.overviewCardTone1, s.overviewCardTone2];
+
 type Props = {
   profile: (Profile & { companies: { name: string } | null }) | null;
   activity: Activity & { activity_content: ActivityContent | null };
@@ -278,37 +280,59 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
             <>
               <div className={s.overviewWrap}>
                 <div className={s.overviewScroll}>
-                  <div className={s.overviewQuickActions}>
+                  <div className={s.overviewHero}>
+                    <div className={s.overviewHeroLeft}>
+                      <div className={s.overviewPill}>Workflow overview</div>
+                      <OverviewTitle title={activity.title} />
+                      {activity.description && (
+                        <p className={s.overviewDesc}>{activity.description.replace(/\*\*/g, "").replace(/\n+/g, " ").trim()}</p>
+                      )}
+                    </div>
                     {content?.video_url && (
-                      <button type="button" className={s.ghostBtn} onClick={() => setShowVideo(true)}>▶ Video</button>
-                    )}
-                    <button type="button" className={s.nudgeCta} onClick={() => setActiveDrawer("chat")}>
-                      <span className={s.nudgeIcon}>🤖</span><span>Ask Nudgie</span>
-                    </button>
-                  </div>
-                  <div className={s.overviewInner}>
-                    <div className={s.overviewPill}>Workflow overview</div>
-                    <OverviewTitle title={activity.title} />
-                    {activity.description && (
-                      <p className={s.overviewDesc}>{activity.description.replace(/\*\*/g, "").replace(/\n+/g, " ").trim()}</p>
-                    )}
-                    {whatYouGet.length > 0 && (
-                      <>
-                        <div className={s.overviewSectionLabel}>What you&apos;ll walk away with</div>
-                        <div className={s.overviewItemList}>
-                          {whatYouGet.map((item, i) => (
-                            <div key={i} className={s.overviewItem}>
-                              <div className={s.overviewItemIcon}>{item.icon || "✨"}</div>
-                              <div>
-                                <div className={s.overviewItemTitle}>{item.title}</div>
-                                <div className={s.overviewItemDesc}>{item.description}</div>
-                              </div>
-                            </div>
-                          ))}
+                      <div className={s.overviewVideoCard}>
+                        <button type="button" className={s.overviewVideoThumbBtn} onClick={() => setShowVideo(true)} aria-label="Watch walkthrough video">
+                          {(videoThumb || activity.thumbnail_url) ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img className={s.overviewVideoThumbImg} src={videoThumb ?? activity.thumbnail_url ?? ""} alt="" />
+                          ) : (
+                            <div className={s.overviewVideoThumbPlaceholder} />
+                          )}
+                          <span className={s.overviewVideoPlay}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="8 5 19 12 8 19 8 5" /></svg>
+                          </span>
+                        </button>
+                        <div className={s.overviewVideoFooter}>
+                          <span className={s.overviewVideoLabel}>2-min walkthrough</span>
+                          <button type="button" className={s.overviewVideoLink} onClick={() => setShowVideo(true)}>
+                            Watch video <span aria-hidden="true">›</span>
+                          </button>
                         </div>
-                      </>
+                      </div>
                     )}
                   </div>
+
+                  {whatYouGet.length > 0 && (
+                    <div className={s.overviewOutcomes}>
+                      <div className={s.overviewOutcomesHead}>
+                        <div className={s.overviewSectionLabel}>What you&apos;ll walk away with</div>
+                        {activity.points > 0 && (
+                          <div className={s.overviewPointsBadge}>
+                            <span className={s.overviewPointsIcon} aria-hidden="true">⚡</span>
+                            {activity.points} points available
+                          </div>
+                        )}
+                      </div>
+                      <div className={s.overviewCardGrid}>
+                        {whatYouGet.map((item, i) => (
+                          <div key={i} className={`${s.overviewCard} ${OVERVIEW_CARD_TONES[i % 3]}`}>
+                            <div className={s.overviewCardIcon}>{item.icon || "✨"}</div>
+                            <div className={s.overviewCardTitle}>{item.title}</div>
+                            <div className={s.overviewCardDesc}>{item.description}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className={s.overviewFooter}>
