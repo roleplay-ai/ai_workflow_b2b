@@ -12,7 +12,7 @@ const MUTED = "#6B6B6B";
 
 const Q1_OPTIONS = ["Claude", "Gemini", "Copilot", "ChatGPT", "None"];
 const Q1_TIER_OPTIONS = ["Free", "Paid", "Not sure"];
-const Q4_OPTIONS = ["Beginner", "Some experience", "Advanced"];
+const Q4_OPTIONS = ["Beginner", "Some experience", "Advanced", "Not sure"];
 
 const LOADING_MESSAGES = [
   "Getting to know your workflow...",
@@ -155,7 +155,7 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
     : (q1Tool ?? "your tool");
   const toolLabelWithTier = q1Tool !== "None" && q1Tier ? `${toolLabel} (${q1Tier})` : toolLabel;
   const functionLabel = q2Function === "Other" && q2Other.trim() ? q2Other.trim() : (q2Function ?? "your function");
-  const experienceLabel = q4Experience ?? "Some experience";
+  const experienceLabel = q4Experience === "Not sure" ? null : (q4Experience ?? "Some experience");
 
   return (
     <div style={{
@@ -316,7 +316,11 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
                   Your Learning Journey
                 </div>
                 <div style={{ fontSize: 15, lineHeight: 1.6, color: "#E8E6DC" }}>
-                  Built for someone in <b style={{ color: "white" }}>{functionLabel}</b> using <b style={{ color: "white" }}>{toolLabelWithTier}</b>, at <b style={{ color: "white" }}>{experienceLabel}</b> level, focused on:
+                  Built for someone in <b style={{ color: "white" }}>{functionLabel}</b> using <b style={{ color: "white" }}>{toolLabelWithTier}</b>
+                  {experienceLabel && (
+                    <>, at <b style={{ color: "white" }}>{experienceLabel}</b> level</>
+                  )}
+                  , focused on:
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
                   {q3Interests.map((tag, i) => (
