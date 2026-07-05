@@ -23,6 +23,7 @@ export default async function ProfilePage() {
     { data: activities },
     { data: progressRows },
     { data: profileExtras },
+    { data: savedWorkflowRows },
   ] = await Promise.all([
     supabase
       .from("activities")
@@ -35,6 +36,9 @@ export default async function ProfilePage() {
     user
       ? supabase.from("profiles").select("streak_count").eq("id", user.id).single()
       : Promise.resolve({ data: null as { streak_count: number } | null }),
+    user
+      ? supabase.from("user_saved_workflows").select("activity_id").eq("user_id", user.id)
+      : Promise.resolve({ data: [] as { activity_id: string }[] }),
   ]);
 
   const activityList = (activities ?? []) as ActivityRow[];
@@ -45,6 +49,10 @@ export default async function ProfilePage() {
   const progress = (progressRows ?? []) as ProgressRow[];
   const completedIds = new Set(progress.filter(r => r.status === "completed").map(r => r.activity_id));
   const inProgressIds = new Set(progress.filter(r => r.status === "in_progress").map(r => r.activity_id));
+
+  const savedWorkflowIds = new Set(
+    (savedWorkflowRows ?? []).map(r => (r as { activity_id: string }).activity_id),
+  );
 
   function categoryOf(a: ActivityRow): string {
     return a.categories?.[0]?.trim() || "General";
@@ -118,11 +126,29 @@ export default async function ProfilePage() {
     };
   });
 
-  const recommended: RecommendedActivity[] = activityList
-    .filter(a => !completedIds.has(a.id) && !inProgressIds.has(a.id) && !a.is_locked)
-    .sort((a, b) => Number(b.is_featured) - Number(a.is_featured) || Number(b.points) - Number(a.points))
+  const toRecommended = (a: ActivityRow): RecommendedActivity => ({
+    id: a.id,
+    title: a.title,
+    description: a.description,
+    category: categoryOf(a),
+  });
+
+  const sortRecommended = (a: ActivityRow, b: ActivityRow) =>
+    Number(b.is_featured) - Number(a.is_featured) || Number(b.points) - Number(a.points);
+
+  const isUnlockedNotCompleted = (a: ActivityRow) => !completedIds.has(a.id) && !a.is_locked;
+
+  const myWorkflowRecommended = activityList
+    .filter(a => savedWorkflowIds.has(a.id) && isUnlockedNotCompleted(a))
+    .sort(sortRecommended);
+
+  const otherRecommended = activityList
+    .filter(a => !savedWorkflowIds.has(a.id) && isUnlockedNotCompleted(a) && !inProgressIds.has(a.id))
+    .sort(sortRecommended);
+
+  const recommended: RecommendedActivity[] = [...myWorkflowRecommended, ...otherRecommended]
     .slice(0, 3)
-    .map(a => ({ id: a.id, title: a.title, description: a.description, category: categoryOf(a) }));
+    .map(toRecommended);
 
   return (
     <Suspense fallback={null}>
