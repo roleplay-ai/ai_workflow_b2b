@@ -261,7 +261,7 @@ export default function ProfileClient({ history, userTotalPoints, completedCount
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 12, paddingBottom: 18, borderBottom: "1px solid #E9E4DC" }}>
               <StatCard label="💰 My Points" value={String(userTotalPoints)} delta={companySize > 0 ? `${Math.max(userTotalPoints - companyAvgPoints, 0)} pts above company avg` : "Earned from completed workflows"} />
-              <StatCard label="✅ Completed" value={String(completedCount)} delta={companySize > 0 ? `Company avg: ${companyAvgPoints} workflows` : `${inProgressCount} in progress`} />
+              <StatCard label="✅ Completed" value={String(completedCount)} delta={`${inProgressCount} in progress`} deltaColor={inProgressCount > 0 ? "#F68A29" : undefined} />
               <StatCard label="🧠 AI Level" value={aiLevel.label} delta={aiLevel.next ? `Next: ${aiLevel.next}` : "Highest level reached"} deltaColor="#623CEA" />
               <StatCard label="🔥 Weekly Streak" value={String(streakCount)} delta={streakCount > 0 ? "Active this week" : "Complete a workflow to start"} deltaColor="#F68A29" />
               <StatCard label="Company Rank" value={topPercentileLabel} delta={percentileDelta} dark />
