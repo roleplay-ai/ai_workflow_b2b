@@ -29,7 +29,7 @@ export default async function WorkflowsPage() {
     supabase.from("tool_logos").select("tool, logo_url"),
     supabase.from("activity_view_counts").select("activity_id, count"),
     user
-      ? supabase.from("user_progress").select("activity_id, status").eq("user_id", user.id)
+      ? supabase.from("user_progress").select("activity_id, status, quiz_score").eq("user_id", user.id)
       : Promise.resolve({ data: [] as { activity_id: string; status: string }[] }),
     supabase
       .from("fluency_modules")

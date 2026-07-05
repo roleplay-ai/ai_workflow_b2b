@@ -12,6 +12,7 @@ type ActivityContentSummary = {
   id: string;
   video_url?: string | null;
   slide_images?: { url: string; caption?: string }[] | null;
+  quiz?: { question?: string }[] | null;
 };
 
 type ActivityRow = Activity & {
@@ -34,6 +35,11 @@ function hasVideo(act: ActivityRow): boolean {
 
 function hasThumbnail(act: ActivityRow): boolean {
   return Boolean(act.thumbnail_url?.trim());
+}
+
+function quizCount(act: ActivityRow): number {
+  const quiz = act.activity_content?.quiz;
+  return Array.isArray(quiz) ? quiz.length : 0;
 }
 
 type Props = {
@@ -156,6 +162,11 @@ export default function SuperadminClient({ companies, activities: initActivities
     setTags(prev => prev.filter(t => t.id !== id));
   }
 
+  async function syncAssignments() {
+    const { data, error } = await supabase.from("activity_companies").select("activity_id, company_id");
+    if (!error && data) setAssignments(data);
+  }
+
   async function toggleAssignment(activityId: string, companyId: string) {
     const exists = assignments.some(a => a.activity_id === activityId && a.company_id === companyId);
     if (exists) {
@@ -164,14 +175,28 @@ export default function SuperadminClient({ companies, activities: initActivities
         .delete()
         .eq("activity_id", activityId)
         .eq("company_id", companyId);
-      if (error) { alert(`Failed to remove assignment: ${error.message}`); return; }
+      if (error) {
+        alert(`Failed to remove assignment: ${error.message}`);
+        await syncAssignments();
+        return;
+      }
       setAssignments(prev => prev.filter(a => !(a.activity_id === activityId && a.company_id === companyId)));
     } else {
       const { error } = await supabase
         .from("activity_companies")
-        .insert({ activity_id: activityId, company_id: companyId });
-      if (error) { alert(`Failed to add assignment: ${error.message}`); return; }
-      setAssignments(prev => [...prev, { activity_id: activityId, company_id: companyId }]);
+        .upsert(
+          { activity_id: activityId, company_id: companyId },
+          { onConflict: "activity_id,company_id", ignoreDuplicates: true },
+        );
+      if (error) {
+        alert(`Failed to add assignment: ${error.message}`);
+        await syncAssignments();
+        return;
+      }
+      setAssignments(prev => {
+        if (prev.some(a => a.activity_id === activityId && a.company_id === companyId)) return prev;
+        return [...prev, { activity_id: activityId, company_id: companyId }];
+      });
     }
   }
 
@@ -258,6 +283,8 @@ export default function SuperadminClient({ companies, activities: initActivities
                   <col style={{ width: 68 }} />
                   <col style={{ width: 68 }} />
                   <col style={{ width: 68 }} />
+                  <col style={{ width: 68 }} />
+                  <col style={{ width: 160 }} />
                   <col style={{ width: 160 }} />
                   <col style={{ width: 160 }} />
                   <col style={{ width: 500 }} />
@@ -265,10 +292,10 @@ export default function SuperadminClient({ companies, activities: initActivities
                 </colgroup>
                 <thead>
                   <tr>
-                    {["", "#", "Type", "Activity", "Video", "Thumb", "Slides", "Steps", "Categories", "Tools", "Actions", ""].map((label, i) => (
+                    {["", "#", "Type", "Activity", "Video", "Thumb", "Slides", "Steps", "Quiz", "Categories", "Functions", "Tools", "Actions", ""].map((label, i) => (
                       <th key={label || `col-${i}`} style={{
                         ...activityThStyle,
-                        textAlign: i >= 4 && i <= 7 ? "center" : "left",
+                        textAlign: i >= 4 && i <= 8 ? "center" : "left",
                       }}>
                         {label}
                       </th>
@@ -281,11 +308,13 @@ export default function SuperadminClient({ companies, activities: initActivities
                 const actAssignments = assignments.filter(a => a.activity_id === act.id);
                 const actTools = normalizeActivityTools(act.tools);
                 const actCategories = act.categories ?? [];
+                const actFunctions = act.functions ?? [];
                 const cc = contentTypeColor(act.content_type);
                 const video = hasVideo(act);
                 const thumb = hasThumbnail(act);
                 const slides = slideCount(act);
                 const steps = stepCount(act);
+                const questions = quizCount(act);
                 return (
                   <Fragment key={act.id}>
                     <tr
@@ -294,7 +323,11 @@ export default function SuperadminClient({ companies, activities: initActivities
                         background: expanded ? "#FFFCF0" : "white",
                         borderBottom: expanded ? "none" : "1px solid #F0EEE8",
                       }}
-                      onClick={() => setExpandedId(expanded ? null : act.id)}
+                      onClick={() => {
+                        const next = expanded ? null : act.id;
+                        setExpandedId(next);
+                        if (next) void syncAssignments();
+                      }}
                     >
                       <td style={activityTdStyle} onClick={e => e.stopPropagation()}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -331,11 +364,24 @@ export default function SuperadminClient({ companies, activities: initActivities
                       <td style={{ ...activityTdStyle, textAlign: "center" }}>
                         <ContentBadge ok={steps > 0} label="Steps" detail={steps > 0 ? String(steps) : "—"} />
                       </td>
+                      <td style={{ ...activityTdStyle, textAlign: "center" }}>
+                        <ContentBadge ok={questions > 0} label="Quiz" detail={questions > 0 ? String(questions) : "—"} />
+                      </td>
 
                       <td style={{ ...activityTdStyle, verticalAlign: "top" }}>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                           {actCategories.length > 0 ? actCategories.map(cat => (
                             <span key={cat} style={chipStyle} title={cat}>{cat}</span>
+                          )) : (
+                            <span style={{ fontSize: 11, color: "#C4BFB8", fontStyle: "italic" }}>None</span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td style={{ ...activityTdStyle, verticalAlign: "top" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {actFunctions.length > 0 ? actFunctions.map(fn => (
+                            <span key={fn} style={{ ...chipStyle, background: "rgba(35,206,104,.08)", color: "#128A45" }} title={fn}>{fn}</span>
                           )) : (
                             <span style={{ fontSize: 11, color: "#C4BFB8", fontStyle: "italic" }}>None</span>
                           )}
@@ -428,7 +474,7 @@ export default function SuperadminClient({ companies, activities: initActivities
 
                     {expanded && (
                       <tr style={{ background: "#FFFCF0", borderBottom: "1px solid #F0EEE8" }}>
-                        <td colSpan={12} style={{ padding: "0 16px 14px", borderTop: "1px solid #F0EEE8" }}>
+                        <td colSpan={14} style={{ padding: "0 16px 14px", borderTop: "1px solid #F0EEE8" }}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6B6B", margin: "10px 0 7px" }}>
                             Assign to companies
                             {actAssignments.length === 0 && <span style={{ fontWeight: 400, marginLeft: 6 }}>· no assignments = visible to everyone</span>}
@@ -469,7 +515,7 @@ export default function SuperadminClient({ companies, activities: initActivities
   );
 }
 
-const ACTIVITY_TABLE_MIN_WIDTH = 1636;
+const ACTIVITY_TABLE_MIN_WIDTH = 1864;
 
 const activityTableStyle: React.CSSProperties = {
   width: "100%",

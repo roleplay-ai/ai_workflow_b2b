@@ -1,14 +1,22 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { sumPointsFromProgress, aiLevelForPoints, type PointsStats } from "@/lib/points";
+import { sumPointsFromProgress, aiLevelForPoints, quizBonusPoints, type PointsStats } from "@/lib/points";
 import ProfileClient from "./ProfileClient";
 
 export const dynamic = "force-dynamic";
 
-type ProgressRow = { activity_id: string; status: string; completed_at: string | null };
+type ProgressRow = { activity_id: string; status: string; completed_at: string | null; quiz_score: number | null };
 type ActivityRow = { id: string; title: string; description: string | null; categories: string[] | null; points: number; is_featured: boolean; is_locked: boolean };
 
-export type HistoryRow = { id: string; title: string; category: string; points: number; completedAt: string };
+export type HistoryRow = {
+  id: string;
+  title: string;
+  category: string;
+  points: number;
+  bonusPoints: number;
+  quizScore: number | null;
+  completedAt: string;
+};
 export type CategoryProficiency = { category: string; percent: number };
 export type Certificate = { title: string; icon: string; earnedAt: string | null; percent: number | null };
 export type RecommendedActivity = { id: string; title: string; description: string | null; category: string };
@@ -31,7 +39,7 @@ export default async function ProfilePage() {
       .eq("published", true)
       .order("position"),
     user
-      ? supabase.from("user_progress").select("activity_id, status, completed_at").eq("user_id", user.id)
+      ? supabase.from("user_progress").select("activity_id, status, completed_at, quiz_score").eq("user_id", user.id)
       : Promise.resolve({ data: [] as ProgressRow[] }),
     user
       ? supabase.from("profiles").select("streak_count").eq("id", user.id).single()
@@ -62,7 +70,16 @@ export default async function ProfilePage() {
     .filter(r => r.status === "completed" && r.completed_at && activityById.has(r.activity_id))
     .map(r => {
       const a = activityById.get(r.activity_id)!;
-      return { id: a.id, title: a.title, category: categoryOf(a), points: Number(a.points ?? 0), completedAt: r.completed_at as string };
+      const points = Number(a.points ?? 0);
+      return {
+        id: a.id,
+        title: a.title,
+        category: categoryOf(a),
+        points,
+        bonusPoints: quizBonusPoints(points, r.quiz_score),
+        quizScore: r.quiz_score,
+        completedAt: r.completed_at as string,
+      };
     })
     .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
 

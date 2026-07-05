@@ -81,16 +81,16 @@ function SectionHeader({ label, title, desc }: { label: string; title: string; d
 function HistorySection({ history }: { history: HistoryRow[] }) {
   return (
     <section className="rail">
-      <SectionHeader label="Completed by you" title="Workflow History" desc="A simple record of what you completed and the points earned." />
+      <SectionHeader label="Completed by you" title="Workflow History" desc="Workflows you finished, points earned, and optional bonus quiz results." />
 
       {history.length === 0 ? (
         <div className="static-grid-empty">No completed workflows yet. Finish a workflow to see it here.</div>
       ) : (
         <div style={{ overflowX: "auto", border: "1px solid #E9E4DC", borderRadius: 14, background: "#fff" }}>
-          <table style={{ width: "100%", minWidth: 640, borderCollapse: "collapse" }}>
+          <table style={{ width: "100%", minWidth: 860, borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["Workflow", "Category", "Points Earned", "Date Completed"].map(h => (
+                {["Workflow", "Category", "Base Pts", "Quiz", "Bonus", "Date Completed"].map(h => (
                   <th key={h} style={{ textAlign: "left", color: "#817988", background: "var(--bg)", padding: "12px 18px", fontSize: 11, letterSpacing: ".08em", fontWeight: 800, textTransform: "uppercase", borderBottom: "1px solid #E9E4DC" }}>
                     {h}
                   </th>
@@ -107,6 +107,31 @@ function HistorySection({ history }: { history: HistoryRow[] }) {
                     </span>
                   </td>
                   <td style={{ padding: "16px 18px", borderBottom: "1px solid #F0EBE4", color: "#0FA84D", fontWeight: 900, whiteSpace: "nowrap" }}>+{h.points}</td>
+                  <td style={{ padding: "16px 18px", borderBottom: "1px solid #F0EBE4", whiteSpace: "nowrap" }}>
+                    {h.quizScore == null ? (
+                      <span style={{ color: "#9A9590", fontWeight: 700, fontSize: 13 }}>Not taken</span>
+                    ) : (
+                      <span style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        borderRadius: 999,
+                        padding: "4px 10px",
+                        fontSize: 12.5,
+                        fontWeight: 800,
+                        background: h.quizScore >= 70 ? "rgba(35,206,104,.1)" : h.quizScore > 0 ? "rgba(246,138,41,.1)" : "rgba(154,149,144,.12)",
+                        color: h.quizScore >= 70 ? "#128A45" : h.quizScore > 0 ? "#B05000" : "#746F78",
+                      }}>
+                        {h.quizScore}%
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ padding: "16px 18px", borderBottom: "1px solid #F0EBE4", whiteSpace: "nowrap" }}>
+                    {h.bonusPoints > 0 ? (
+                      <span style={{ color: "#623CEA", fontWeight: 900 }}>+{h.bonusPoints}</span>
+                    ) : (
+                      <span style={{ color: "#9A9590", fontWeight: 700, fontSize: 13 }}>—</span>
+                    )}
+                  </td>
                   <td style={{ padding: "16px 18px", borderBottom: "1px solid #F0EBE4", color: "#746F78", fontWeight: 700, whiteSpace: "nowrap" }}>{formatDate(h.completedAt)}</td>
                 </tr>
               ))}

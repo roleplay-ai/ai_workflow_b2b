@@ -1,7 +1,16 @@
 export type PointsProgressRow = {
   activity_id: string;
   status: string;
+  quiz_score?: number | null;
 };
+
+/** Max bonus is 25% of base activity points, scaled by quiz score (0–100). */
+export const QUIZ_BONUS_RATIO = 0.25;
+
+export function quizBonusPoints(activityPoints: number, quizScore: number | null | undefined): number {
+  if (quizScore == null || quizScore <= 0 || activityPoints <= 0) return 0;
+  return Math.round(activityPoints * QUIZ_BONUS_RATIO * (quizScore / 100));
+}
 
 export function sumPointsFromProgress(
   progress: PointsProgressRow[],
@@ -9,7 +18,10 @@ export function sumPointsFromProgress(
 ): number {
   return progress
     .filter(p => p.status === "completed")
-    .reduce((sum, p) => sum + (activityPoints[p.activity_id] ?? 0), 0);
+    .reduce((sum, p) => {
+      const base = activityPoints[p.activity_id] ?? 0;
+      return sum + base + quizBonusPoints(base, p.quiz_score);
+    }, 0);
 }
 
 /** Share of company users with fewer total points (0–100). */

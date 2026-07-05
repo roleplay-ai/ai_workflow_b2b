@@ -36,7 +36,7 @@ export default async function SuperadminPage() {
   ] = await Promise.all([
     supabase.from("companies").select("id, name, domain").order("name"),
     supabase.from("activities")
-      .select("*, activity_content(id, video_url, slide_images), activity_steps(count)")
+      .select("*, activity_content(id, video_url, slide_images, quiz), activity_steps(count)")
       .order("position"),
     supabase.from("activity_companies").select("activity_id, company_id"),
     supabase.from("activity_tags").select("id, name, icon_url").order("name"),

@@ -5,12 +5,24 @@ import { useMemo, useState } from "react";
 type Props = {
   activityTitle: string;
   points: number;
+  bonusPoints?: number;
+  maxQuizBonus?: number;
+  showQuizOffer?: boolean;
+  onTakeQuiz?: () => void;
   onContinue: () => void;
 };
 
 const CONFETTI_COLORS = ["#FFCE00", "#2563EB", "#14B8A6", "#F68A29", "#22C55E", "#221D23", "#F472B6"];
 
-export default function CelebrationModal({ activityTitle, points, onContinue }: Props) {
+export default function CelebrationModal({
+  activityTitle,
+  points,
+  bonusPoints = 0,
+  maxQuizBonus = 0,
+  showQuizOffer = false,
+  onTakeQuiz,
+  onContinue,
+}: Props) {
   const [loading, setLoading] = useState(false);
 
   const confetti = useMemo(
@@ -155,15 +167,75 @@ export default function CelebrationModal({ activityTitle, points, onContinue }: 
           </p>
 
           {/* Points */}
-          {points > 0 ? (
-            <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 24, color: "#2563EB" }}>
-              +{points} points earned
-            </p>
+          {points > 0 || bonusPoints > 0 ? (
+            <div style={{ marginBottom: showQuizOffer ? 16 : 24 }}>
+              {points > 0 && (
+                <p style={{ fontSize: 14, fontWeight: 700, marginBottom: bonusPoints > 0 ? 4 : 0, color: "#2563EB" }}>
+                  +{points} points earned
+                </p>
+              )}
+              {bonusPoints > 0 && (
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#623CEA" }}>
+                  +{bonusPoints} bonus quiz points
+                </p>
+              )}
+            </div>
           ) : (
-            <div style={{ marginBottom: 24 }} />
+            <div style={{ marginBottom: showQuizOffer ? 16 : 24 }} />
           )}
 
-          {/* CTA button */}
+          {showQuizOffer && maxQuizBonus > 0 && (
+            <p style={{ fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 16, lineHeight: 1.45 }}>
+              Optional: take a quick quiz to earn up to <strong style={{ color: "#2563EB" }}>+{maxQuizBonus}</strong> bonus points.
+            </p>
+          )}
+
+          {showQuizOffer && onTakeQuiz ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button
+                type="button"
+                className="cel-btn"
+                onClick={onTakeQuiz}
+                style={{
+                  width: "100%",
+                  padding: "14px 0",
+                  borderRadius: 16,
+                  border: 0,
+                  fontWeight: 900,
+                  fontSize: 14,
+                  fontFamily: "inherit",
+                  cursor: "pointer",
+                  color: "#fff",
+                  background: "linear-gradient(135deg,#2563EB,#1D4ED8)",
+                  boxShadow: "0 10px 28px rgba(37,99,235,.35)",
+                  transition: "transform 0.15s",
+                }}
+              >
+                Take bonus quiz (+{maxQuizBonus} pts max)
+              </button>
+              <button
+                type="button"
+                className="cel-btn"
+                onClick={() => { if (loading) return; setLoading(true); onContinue(); }}
+                style={{
+                  width: "100%",
+                  padding: "14px 0",
+                  borderRadius: 16,
+                  border: "1.5px solid #E8E6DC",
+                  fontWeight: 800,
+                  fontSize: 14,
+                  fontFamily: "inherit",
+                  cursor: loading ? "default" : "pointer",
+                  color: "#6B6B6B",
+                  background: "white",
+                  transition: "transform 0.15s",
+                }}
+              >
+                {loading ? "Going to Workflows…" : "Skip quiz — back to Workflows"}
+              </button>
+            </div>
+          ) : (
+          /* CTA button */
           <button
             type="button"
             className="cel-btn"
@@ -206,6 +278,7 @@ export default function CelebrationModal({ activityTitle, points, onContinue }: 
               "Back to Workflows"
             )}
           </button>
+          )}
         </div>
       </div>
     </>

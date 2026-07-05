@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MultiSelect, { type SelectOption } from "@/components/MultiSelect";
-import type { Activity, ActivityContent, ActivityStep, PromptTemplate, DownloadFile, WhatYouGetItem } from "@/lib/supabase/types";
+import type { Activity, ActivityContent, ActivityStep, PromptTemplate, DownloadFile, WhatYouGetItem, QuizQuestion } from "@/lib/supabase/types";
 import { formatToolLabel, normalizeToolList, normalizeToolSlug, sortToolSlugs } from "@/lib/tools";
 import { mergeToolSelectOptions, rowsToToolLogoMap, type ToolLogoMap } from "@/lib/toolLogos";
 
@@ -27,6 +27,32 @@ type EditableStep = Omit<ActivityStep, "created_at"> & {
 };
 
 type Tab = "info" | "slides" | "steps" | "quiz" | "goals" | "prompts" | "downloads" | "video";
+
+function validateQuizQuestions(raw: unknown): { ok: true; questions: QuizQuestion[] } | { ok: false; error: string } {
+  if (!Array.isArray(raw)) return { ok: false, error: "JSON must be an array of questions" };
+  if (raw.length === 0) return { ok: false, error: "Quiz array is empty" };
+  for (let i = 0; i < raw.length; i++) {
+    const q = raw[i] as QuizQuestion;
+    if (!q || typeof q.question !== "string" || !q.question.trim()) {
+      return { ok: false, error: `Question ${i + 1}: missing "question" string` };
+    }
+    if (!Array.isArray(q.options) || q.options.length < 2) {
+      return { ok: false, error: `Question ${i + 1}: "options" must be an array with at least 2 items` };
+    }
+    if (typeof q.correct_index !== "number" || q.correct_index < 0 || q.correct_index >= q.options.length) {
+      return { ok: false, error: `Question ${i + 1}: "correct_index" must be a valid 0-based option index` };
+    }
+  }
+  return { ok: true, questions: raw as QuizQuestion[] };
+}
+
+const QUIZ_JSON_EXAMPLE = `[
+  {
+    "question": "What is the main goal of this workflow?",
+    "options": ["Option A", "Option B", "Option C"],
+    "correct_index": 0
+  }
+]`;
 const TABS: { id: Tab; label: string }[] = [
   { id: "info",      label: "✏️ Info"      },
   { id: "slides",    label: "📸 Slides"    },
@@ -292,10 +318,11 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
   const [savingSteps,   setSavingSteps]   = useState(false);
 
   // Quiz
-  const [quizJson,    setQuizJson]    = useState(JSON.stringify(content?.quiz ?? [], null, 2));
-  const [quizMdFile,  setQuizMdFile]  = useState<File | null>(null);
-  const [quizParsing, setQuizParsing] = useState(false);
-  const [quizMsg,     setQuizMsg]     = useState("");
+  const [quizJson,     setQuizJson]     = useState(JSON.stringify(content?.quiz ?? [], null, 2));
+  const [quizJsonFile, setQuizJsonFile] = useState<File | null>(null);
+  const [quizMdFile,   setQuizMdFile]   = useState<File | null>(null);
+  const [quizParsing,  setQuizParsing]  = useState(false);
+  const [quizMsg,      setQuizMsg]      = useState("");
 
   // Goals & Access
   const [goalsText,  setGoalsText]  = useState((content?.goals ?? []).join("\n"));
@@ -576,6 +603,25 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
     }
   }
 
+  // ── Load quiz JSON file ───────────────────────────────────────────────────
+  async function loadQuizJsonFile() {
+    if (!quizJsonFile) return;
+    setQuizMsg("");
+    try {
+      const parsed = JSON.parse(await quizJsonFile.text());
+      const result = validateQuizQuestions(parsed);
+      if (!result.ok) {
+        setQuizMsg(`Error: ${result.error}`);
+        return;
+      }
+      setQuizJson(JSON.stringify(result.questions, null, 2));
+      setQuizMsg(`✓ ${result.questions.length} question(s) loaded from JSON`);
+      setQuizJsonFile(null);
+    } catch {
+      setQuizMsg("Error: invalid JSON file");
+    }
+  }
+
   // ── Parse quiz .md with Claude ────────────────────────────────────────────
   async function parseQuizMd() {
     if (!quizMdFile) return;
@@ -614,8 +660,24 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
   async function saveAll() {
     setSaving(true); setSaveMsg("");
     const slides = await uploadImages();
-    let quiz = [];
-    try { quiz = JSON.parse(quizJson); } catch {}
+    let quiz: QuizQuestion[] = [];
+    try {
+      const parsed = JSON.parse(quizJson);
+      const result = validateQuizQuestions(parsed);
+      if (result.ok) {
+        quiz = result.questions;
+      } else if (quizJson.trim() && quizJson.trim() !== "[]") {
+        setSaveMsg(`Quiz JSON error: ${result.error}`);
+        setSaving(false);
+        return;
+      }
+    } catch {
+      if (quizJson.trim() && quizJson.trim() !== "[]") {
+        setSaveMsg("Quiz JSON error: invalid JSON");
+        setSaving(false);
+        return;
+      }
+    }
 
     const payload = {
       activity_id:   activity.id,
@@ -1196,15 +1258,33 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
           {tab === "quiz" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={sectionBox}>
-                <div style={sectionHead}><span>🤖</span><b>Upload quiz .md — Claude auto-extracts questions</b></div>
+                <div style={sectionHead}><span>📄</span><b>Upload quiz JSON</b></div>
                 <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ fontSize: 12.5, color: "#6B6B6B", lineHeight: 1.5 }}>
+                    Upload a <code style={{ fontSize: 11.5 }}>.json</code> file with an array of questions. Each item needs{" "}
+                    <code style={{ fontSize: 11.5 }}>question</code>, <code style={{ fontSize: 11.5 }}>options</code>, and{" "}
+                    <code style={{ fontSize: 11.5 }}>correct_index</code> (0-based).
+                  </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <input type="file" accept=".md,.txt" onChange={e => { setQuizMdFile(e.target.files?.[0] ?? null); setQuizMsg(""); }} style={{ fontSize: 13, flex: 1 }} />
-                    <button onClick={parseQuizMd} disabled={quizParsing || !quizMdFile} style={{ ...btnAmber, opacity: (!quizMdFile || quizParsing) ? .4 : 1 }}>
-                      {quizParsing ? "Parsing…" : "Parse with AI"}
+                    <input
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={e => { setQuizJsonFile(e.target.files?.[0] ?? null); setQuizMsg(""); }}
+                      style={{ fontSize: 13, flex: 1 }}
+                    />
+                    <button
+                      onClick={() => void loadQuizJsonFile()}
+                      disabled={!quizJsonFile}
+                      style={{ ...btnAmber, opacity: !quizJsonFile ? .4 : 1 }}
+                    >
+                      Load JSON
                     </button>
                   </div>
-                  {quizMsg && <div style={{ fontSize: 12.5, fontWeight: 700, color: quizMsg.startsWith("✓") ? "#17A855" : "#EF4444" }}>{quizMsg}</div>}
+                  {quizMsg && (
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: quizMsg.startsWith("✓") ? "#17A855" : "#EF4444" }}>
+                      {quizMsg}
+                    </div>
+                  )}
                 </div>
               </div>
               {/* Preview */}
@@ -1215,9 +1295,9 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
                   return (
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6B6B" }}>{qs.length} question(s) ready</div>
-                      {qs.map((q: any, i: number) => (
+                      {qs.map((q: QuizQuestion, i: number) => (
                         <div key={i} style={{ border: "1px solid #E8E6DC", borderRadius: 11, padding: 12 }}>
-                          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>{i+1}. {q.question}</div>
+                          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>{i + 1}. {q.question}</div>
                           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                             {(q.options ?? []).map((opt: string, oi: number) => (
                               <div key={oi} style={{ fontSize: 12.5, padding: "5px 10px", borderRadius: 8,
@@ -1236,10 +1316,35 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
                   );
                 } catch { return null; }
               })()}
-              <details>
-                <summary style={{ fontSize: 12, color: "#B0ABA5", cursor: "pointer", fontWeight: 600 }}>Edit raw JSON manually</summary>
-                <textarea value={quizJson} onChange={e => setQuizJson(e.target.value)} rows={10}
-                  style={{ ...inp, resize: "vertical", fontFamily: "monospace", fontSize: 11.5, marginTop: 8 }} />
+              <div style={sectionBox}>
+                <div style={sectionHead}><span>{`{ }`}</span><b>Edit quiz JSON</b></div>
+                <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                  <textarea
+                    value={quizJson}
+                    onChange={e => { setQuizJson(e.target.value); setQuizMsg(""); }}
+                    rows={12}
+                    style={{ ...inp, resize: "vertical", fontFamily: "monospace", fontSize: 11.5 }}
+                  />
+                  <details>
+                    <summary style={{ fontSize: 12, color: "#B0ABA5", cursor: "pointer", fontWeight: 600 }}>JSON format example</summary>
+                    <pre style={{ margin: "8px 0 0", padding: 12, borderRadius: 10, background: "#FAFAF8", border: "1px solid #E8E6DC", fontSize: 11, overflow: "auto" }}>
+                      {QUIZ_JSON_EXAMPLE}
+                    </pre>
+                  </details>
+                </div>
+              </div>
+              <details style={sectionBox}>
+                <summary style={{ ...sectionHead, cursor: "pointer", listStyle: "none" }}>
+                  <span>🤖</span><b>Optional: upload quiz .md — Claude auto-extracts JSON</b>
+                </summary>
+                <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <input type="file" accept=".md,.txt" onChange={e => { setQuizMdFile(e.target.files?.[0] ?? null); setQuizMsg(""); }} style={{ fontSize: 13, flex: 1 }} />
+                    <button onClick={parseQuizMd} disabled={quizParsing || !quizMdFile} style={{ ...btnAmber, opacity: (!quizMdFile || quizParsing) ? .4 : 1 }}>
+                      {quizParsing ? "Parsing…" : "Parse with AI"}
+                    </button>
+                  </div>
+                </div>
               </details>
             </div>
           )}

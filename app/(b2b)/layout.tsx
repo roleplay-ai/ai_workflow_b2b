@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { userNeedsOnboarding } from "@/lib/auth/onboardingGate";
 import { redirect } from "next/navigation";
 import B2BSidebar from "@/components/B2BSidebar";
 
@@ -30,10 +31,9 @@ export default async function B2BLayout({ children }: { children: React.ReactNod
     .eq("id", user.id)
     .single();
 
-  // Fail open (don't gate) if the query itself errored — e.g. the
-  // onboarding_completed_at column doesn't exist yet because the migration
-  // hasn't been applied. Only gate when we can positively confirm it's unset.
-  if (!profileError && profile && !profile.onboarding_completed_at) redirect("/onboarding");
+  if (!profileError && profile && await userNeedsOnboarding(supabase, user.id)) {
+    redirect("/onboarding");
+  }
 
   let companyName: string | null = null;
   if (profile?.company_id) {
