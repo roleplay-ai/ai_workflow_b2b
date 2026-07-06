@@ -11,6 +11,7 @@ const LABELS: Record<string, string> = {
   "/updates": "AI Updates",
   "/team": "Team Dashboard",
   "/analytics": "Analytics",
+  "/profile": "My Progress",
 };
 
 const TOOL_COLORS: Record<string, string> = {

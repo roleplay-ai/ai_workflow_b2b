@@ -194,6 +194,16 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
           }
         />
 
+        <NavItem
+          href="/profile"
+          label="My Progress"
+          icon={
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12V8M6 12V5M10 12V3M14 12v-4"/>
+            </svg>
+          }
+        />
+
       </nav>
 
       {/* Free guide card */}
@@ -284,6 +294,26 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: "#fff", marginBottom: 2 }}>{userName ?? "User"}</div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", fontWeight: 500 }}>{userEmail}</div>
               </div>
+              <Link
+                href="/profile"
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8, width: "100%",
+                  padding: "9px 10px", borderRadius: 7,
+                  background: "transparent",
+                  color: "rgba(255,255,255,.8)", fontSize: 13, fontWeight: 700, textAlign: "left",
+                  fontFamily: "inherit", textDecoration: "none",
+                  transition: "background .12s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="8" cy="5.5" r="3"/>
+                  <path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/>
+                </svg>
+                View Profile
+              </Link>
               <button
                 onClick={handleSignOut}
                 disabled={signingOut}

@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import QuizModal from "@/components/QuizModal";
+import CompletionQuizModal from "@/components/CompletionQuizModal";
 import CelebrationModal from "@/components/CelebrationModal";
 import VideoModal from "@/components/VideoModal";
 import RotatingTools from "@/components/RotatingTools";
@@ -12,6 +12,7 @@ import MdText from "@/components/MdText";
 import SlideZoom from "@/components/SlideZoom";
 import type { WorkflowStep, Quiz } from "@/types";
 import { buildCoachChatMessage } from "@/types";
+import { quizBonusPoints } from "@/lib/points";
 import type { Profile, Activity, ActivityContent, ActivityStep, UserProgress } from "@/lib/supabase/types";
 import s from "./activity-panel.module.css";
 
@@ -49,14 +50,19 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     }));
   }, [activitySteps, content?.slide_images]);
 
-  const quizForStep = useMemo((): Record<number, Quiz> => {
-    const q = content?.quiz ?? [];
-    const map: Record<number, Quiz> = {};
-    q.forEach((question, i) => {
-      map[i] = { question: question.question, options: question.options, correct: question.correct_index, successMsg: "Correct! Well done.", wrongMsg: "Review this step and try again.", badge: "✓ Got it" };
-    });
-    return map;
+  const completionQuizzes = useMemo((): Quiz[] => {
+    return (content?.quiz ?? []).map(q => ({
+      question: q.question,
+      options: q.options,
+      correct: q.correct_index,
+      successMsg: "Correct! Well done.",
+      wrongMsg: "Review the workflow and try again.",
+      badge: "✓",
+    }));
   }, [content?.quiz]);
+
+  const maxQuizBonus = quizBonusPoints(Number(activity.points ?? 0), 100);
+  const hasCompletionQuiz = completionQuizzes.length > 0;
 
   type Msg = { role: "user" | "assistant"; content: string };
 
@@ -72,12 +78,13 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   const [stepLoading, setStepLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [pendingQuiz, setPendingQuiz] = useState<Quiz | null>(null);
+  const [showCompletionQuiz, setShowCompletionQuiz] = useState(false);
+  const [earnedQuizBonus, setEarnedQuizBonus] = useState(() =>
+    quizBonusPoints(Number(activity.points ?? 0), initProgress?.quiz_score ?? null),
+  );
   const [showCelebration, setShowCelebration] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
   const [videoThumb, setVideoThumb] = useState<string | null>(null);
-  const finishPendingRef = useRef(false);
   const [jumpToast, setJumpToast] = useState<string | null>(null);
   const [progress, setProgress] = useState(initProgress);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -169,6 +176,25 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     setShowCelebration(true);
   };
 
+  const saveQuizResult = async (scorePercent: number, bonusEarned: number) => {
+    const payload = { quiz_score: scorePercent, updated_at: new Date().toISOString() };
+    if (progress) {
+      const { data } = await supabase.from("user_progress").update(payload).eq("id", progress.id).select().single();
+      if (data) setProgress(data as UserProgress);
+    } else if (profile) {
+      const { data } = await supabase.from("user_progress")
+        .update(payload)
+        .eq("user_id", profile.id)
+        .eq("activity_id", activity.id)
+        .select()
+        .single();
+      if (data) setProgress(data as UserProgress);
+    }
+    setEarnedQuizBonus(bonusEarned);
+  };
+
+  const goToWorkflows = () => { window.location.href = "/workflows"; };
+
   const handleVideoCompleted = async () => {
     setShowVideo(false);
     const payload = { status: "completed" as const, video_watched: true, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() };
@@ -182,21 +208,13 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     setShowCelebration(true);
   };
 
-  const handleQuizClose = () => {
-    setShowQuiz(false); setPendingQuiz(null);
-    if (finishPendingRef.current) { finishPendingRef.current = false; void finishActivity(); }
-  };
-
   const goNext = async () => {
     if (current >= steps.length - 1) {
       if (loading || stepLoading || initializing || hasInput || showCelebration) return;
-      const quiz = quizForStep[current];
-      if (quiz) { finishPendingRef.current = true; setPendingQuiz(quiz); setShowQuiz(true); return; }
-      await finishActivity(); return;
+      await finishActivity();
+      return;
     }
     if (loading || stepLoading || initializing || hasInput) return;
-    const quiz = quizForStep[current];
-    if (quiz) { setPendingQuiz(quiz); setShowQuiz(true); }
     setSlideOpen(false);
     const completedSteps = Array.from(new Set([...(progress?.completed_steps ?? []), current]));
     if (progress) supabase.from("user_progress").update({ completed_steps: completedSteps, updated_at: new Date().toISOString() }).eq("id", progress.id);
@@ -561,8 +579,26 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         </div>
       </aside>
 
-      {showQuiz && pendingQuiz && <QuizModal quiz={pendingQuiz} onClose={handleQuizClose} />}
-      {showCelebration && <CelebrationModal activityTitle={activity.title} points={activity.points} onContinue={() => { window.location.href = "/workflows"; }} />}
+      {showCompletionQuiz && hasCompletionQuiz && (
+        <CompletionQuizModal
+          activityTitle={activity.title}
+          questions={completionQuizzes}
+          maxBonusPoints={maxQuizBonus}
+          onComplete={(score, bonus) => { void saveQuizResult(score, bonus); }}
+          onSkip={() => { setShowCompletionQuiz(false); goToWorkflows(); }}
+        />
+      )}
+      {showCelebration && (
+        <CelebrationModal
+          activityTitle={activity.title}
+          points={Number(activity.points ?? 0)}
+          bonusPoints={earnedQuizBonus}
+          maxQuizBonus={maxQuizBonus}
+          showQuizOffer={hasCompletionQuiz && progress?.quiz_score == null}
+          onTakeQuiz={() => { setShowCelebration(false); setShowCompletionQuiz(true); }}
+          onContinue={goToWorkflows}
+        />
+      )}
       {showVideo && content?.video_url && <VideoModal src={content.video_url} activityTitle={activity.title} alreadyWatched={!!progress?.video_watched} onClose={() => setShowVideo(false)} onCompleted={handleVideoCompleted} />}
 
       {jumpToast && (

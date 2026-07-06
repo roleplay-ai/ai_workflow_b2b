@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getPostLoginPath } from "@/lib/auth/postLogin";
-import type { Role } from "@/lib/supabase/types";
 import ToolIcon from "@/components/ToolIcon";
 import { formatToolLabel } from "@/lib/tools";
 import type { ToolLogoMap } from "@/lib/toolLogos";
@@ -166,13 +164,7 @@ export default function LoginPageClient({ toolLogos, featuredTags }: Props) {
       return;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: profile } = user
-      ? await supabase.from("profiles").select("role").eq("id", user.id).single()
-      : { data: null };
-
-    const role = (profile?.role ?? "user") as Role;
-    window.location.href = getPostLoginPath(role, redirectTo);
+    window.location.href = `/api/auth/entry?redirect=${encodeURIComponent(redirectTo)}`;
   }
 
   const marqueeTags = featuredTags.length > 0 ? [...featuredTags, ...featuredTags] : [];

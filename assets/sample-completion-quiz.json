@@ -1,0 +1,42 @@
+[
+  {
+    "question": "What is the main goal of completing a guided workflow in this platform?",
+    "options": [
+      "Learn a practical AI skill you can apply at work",
+      "Memorize tool keyboard shortcuts only",
+      "Replace your job with automation",
+      "Skip documentation entirely"
+    ],
+    "correct_index": 0
+  },
+  {
+    "question": "When you get stuck on a step, what should you do first?",
+    "options": [
+      "Close the browser and start over",
+      "Ask Nudgie (the coach) for help in the chat panel",
+      "Skip every remaining step",
+      "Change your onboarding preferences"
+    ],
+    "correct_index": 1
+  },
+  {
+    "question": "How do you earn bonus points after finishing a workflow?",
+    "options": [
+      "By taking the optional completion quiz",
+      "By refreshing the page repeatedly",
+      "By completing the same workflow ten times in a row",
+      "Bonus points are not available"
+    ],
+    "correct_index": 0
+  },
+  {
+    "question": "What happens to your base workflow points if you skip the bonus quiz?",
+    "options": [
+      "You lose all points from the workflow",
+      "You keep the base completion points; the quiz is optional",
+      "Your progress is reset to in-progress",
+      "You must retake every step"
+    ],
+    "correct_index": 1
+  }
+]

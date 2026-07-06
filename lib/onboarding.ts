@@ -24,6 +24,8 @@ export function onboardingExperienceToLevels(experience: string): NonNullable<Ac
       return ["Intermediate"];
     case "Advanced":
       return ["Advanced"];
+    case "Not sure":
+      return [];
     default:
       return [];
   }

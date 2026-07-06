@@ -1,7 +1,16 @@
 export type PointsProgressRow = {
   activity_id: string;
   status: string;
+  quiz_score?: number | null;
 };
+
+/** Max bonus is 25% of base activity points, scaled by quiz score (0–100). */
+export const QUIZ_BONUS_RATIO = 0.25;
+
+export function quizBonusPoints(activityPoints: number, quizScore: number | null | undefined): number {
+  if (quizScore == null || quizScore <= 0 || activityPoints <= 0) return 0;
+  return Math.round(activityPoints * QUIZ_BONUS_RATIO * (quizScore / 100));
+}
 
 export function sumPointsFromProgress(
   progress: PointsProgressRow[],
@@ -9,7 +18,10 @@ export function sumPointsFromProgress(
 ): number {
   return progress
     .filter(p => p.status === "completed")
-    .reduce((sum, p) => sum + (activityPoints[p.activity_id] ?? 0), 0);
+    .reduce((sum, p) => {
+      const base = activityPoints[p.activity_id] ?? 0;
+      return sum + base + quizBonusPoints(base, p.quiz_score);
+    }, 0);
 }
 
 /** Share of company users with fewer total points (0–100). */
@@ -33,3 +45,24 @@ export type PointsStats = {
   company_avg_points: number;
   company_size: number;
 };
+
+const AI_LEVELS = [
+  { min: 0, label: "Explorer" },
+  { min: 50, label: "Builder" },
+  { min: 150, label: "Operator" },
+  { min: 300, label: "Strategist" },
+  { min: 500, label: "Master" },
+] as const;
+
+/** Point-tier label derived from total points earned, with the next tier's name (if any). */
+export function aiLevelForPoints(points: number): { label: string; next: string | null } {
+  let current: (typeof AI_LEVELS)[number] = AI_LEVELS[0];
+  let next: (typeof AI_LEVELS)[number] | null = null;
+  for (let i = 0; i < AI_LEVELS.length; i++) {
+    if (points >= AI_LEVELS[i].min) {
+      current = AI_LEVELS[i];
+      next = AI_LEVELS[i + 1] ?? null;
+    }
+  }
+  return { label: current.label, next: next?.label ?? null };
+}

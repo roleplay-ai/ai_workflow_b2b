@@ -54,8 +54,6 @@ function StatCard({ label, value, delta, deltaColor, labelColor, dark = false, v
 
 // ── Filter tab chip ───────────────────────────────────────────────────────
 
-type FilterTab = "new" | "essentials" | "continue" | null;
-
 type MainTab = "my" | "all";
 
 function MainTabSwitch({ active, onChange }: {
@@ -85,28 +83,6 @@ function MainTabSwitch({ active, onChange }: {
         All Workflows
       </button>
     </div>
-  );
-}
-
-function TabChip({ label, icon, active, count, onClick }: { label: string; icon: string; active: boolean; count?: number; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      className={`tab-chip${active ? " active" : ""}`}
-      onClick={onClick}
-    >
-      <span className="tab-chip-icon">{icon}</span>
-      {label}
-      {count !== undefined && (
-        <span style={{
-          fontSize: 10.5, fontWeight: 800, borderRadius: 999, padding: "1px 7px",
-          background: active ? "rgba(255,206,0,.18)" : "rgba(34,29,35,.06)",
-          color: active ? "var(--amber)" : "#746F78",
-        }}>
-          {count}
-        </span>
-      )}
-    </button>
   );
 }
 
@@ -457,7 +433,6 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
   const [confirmingPreferences, setConfirmingPreferences] = useState(false);
   const [navigatingToPreferences, setNavigatingToPreferences] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-  const [selectedTab, setSelectedTab] = useState<FilterTab>(null);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -506,7 +481,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
     router.replace("/workflows", { scroll: false });
   }
 
-  const showActivities = selectedTab !== null || !!selectedCategory || !!searchQuery.trim() || !!selectedTool || !!selectedTag;
+  const showActivities = !!selectedCategory || !!searchQuery.trim() || !!selectedTool || !!selectedTag;
 
   const allTools = useMemo(() => {
     const s = new Set<string>();
@@ -522,9 +497,6 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
 
   const filtered = useMemo(() => {
     let result = activities;
-    if (selectedTab === "new") result = result.filter(a => a.is_featured);
-    if (selectedTab === "essentials") result = result.filter(a => (a as any).is_mastery);
-    if (selectedTab === "continue") result = result.filter(a => inProgressIds.has(a.id));
     if (selectedTool) result = result.filter(a => normalizeActivityTools(a.tools).includes(selectedTool));
     if (selectedCategory) result = result.filter(a => (a.categories ?? []).some(c => c.toLowerCase() === selectedCategory.toLowerCase()));
     if (selectedTag) result = result.filter(a => activityHasTag(a, selectedTag));
@@ -535,13 +507,13 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
       normalizeActivityTools(a.tools).some(t => formatToolLabel(t).toLowerCase().includes(q))
     );
     return result;
-  }, [activities, selectedTab, selectedTool, selectedCategory, selectedTag, searchQuery, completedIds, inProgressIds]);
+  }, [activities, selectedTool, selectedCategory, selectedTag, searchQuery, completedIds, inProgressIds]);
 
   const visibleCount = COLS * (2 + extraRows);
   const visible = filtered.slice(0, visibleCount);
   const hasMore = visibleCount < filtered.length;
 
-  useEffect(() => { setExtraRows(0); }, [selectedTab, selectedTool, selectedCategory, selectedTag, searchQuery]);
+  useEffect(() => { setExtraRows(0); }, [selectedTool, selectedCategory, selectedTag, searchQuery]);
 
   useEffect(() => {
     if (!selectedTag) return;
@@ -554,28 +526,17 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
     ? `Company avg: ${companyAvgPoints} pts`
     : "Points rank within your company";
 
-  function handleTabToggle(tab: Exclude<FilterTab, null>) {
-    clearTagFilter();
-    setSelectedTab(prev => prev === tab ? null : tab);
-    setSelectedCategory(null);
-  }
-
   const sectionTitle = selectedTag
     ? selectedTag
     : selectedCategory
       ? selectedCategory
-      : selectedTab === "new" ? "New This Week"
-        : selectedTab === "essentials" ? "Start Here"
-          : selectedTab === "continue" ? "Continue"
-            : "All Workflows";
+      : "All Workflows";
 
   const sectionDesc = selectedTag
     ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} tagged with ${selectedTag}`
     : selectedCategory
       ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} in ${selectedCategory}`
-      : selectedTab
-        ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} match your filters.`
-        : "Browse every guided workflow in the library. Filter by tool or category to find what fits your work.";
+      : "Browse every guided workflow in the library. Filter by tool or category to find what fits your work.";
 
   return (
     <>
@@ -591,7 +552,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
         <div style={{ background: "var(--bg)", padding: "22px 28px 0" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 18 }}>
             <div>
-              <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-.03em", color: "#1C1820", lineHeight: 1.1 }}>Progress</h1>
+              <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-.03em", color: "#1C1820", lineHeight: 1.1 }}>Workflows</h1>
               <p style={{ fontSize: 13.5, color: "#746F78", fontWeight: 600, marginTop: 4 }}>Guided AI automations tailored to your tool stack and job category.</p>
             </div>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", borderRadius: 999, padding: "5px 12px", background: "rgba(98,60,234,.08)", color: "#623CEA", border: "1px solid rgba(98,60,234,.18)", whiteSpace: "nowrap" }}>
@@ -662,8 +623,6 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
               <div className="ndb-root" style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 {/* Chips — scrollable row */}
                 <div className="workflows-filter-bar" style={{ flex: 1, minWidth: 0 }}>
-                  <TabChip label="New" icon="🔥" active={selectedTab === "new"} onClick={() => handleTabToggle("new")} />
-                  <TabChip label="Start Here" icon="🤖" active={selectedTab === "essentials"} onClick={() => handleTabToggle("essentials")} />
                   {allTools.map(tool => (
                     <ToolChip
                       key={tool}
@@ -673,16 +632,13 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
                       onClick={() => { clearTagFilter(); setSelectedTool(selectedTool === tool ? null : tool); setSelectedCategory(null); }}
                     />
                   ))}
-                  {inProgressCount > 0 && (
-                    <TabChip label="Continue" icon="⏩" active={selectedTab === "continue"} onClick={() => handleTabToggle("continue")} />
-                  )}
                 </div>
                 {/* Categories dropdown — always visible on the right, outside the scroll container */}
                 <div style={{ flexShrink: 0, position: "relative", zIndex: 200 }}>
                   <CategoryDropdown
                     categories={allCategories}
                     selected={selectedCategory}
-                    onChange={cat => { clearTagFilter(); setSelectedCategory(cat); setSelectedTab(null); }}
+                    onChange={cat => { clearTagFilter(); setSelectedCategory(cat); }}
                   />
                 </div>
               </div>
@@ -704,7 +660,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
                   <CategoriesGrid
                     activities={activities}
                     selectedTool={selectedTool}
-                    onSelect={cat => { clearTagFilter(); setSelectedCategory(cat); setSelectedTab(null); }}
+                    onSelect={cat => { clearTagFilter(); setSelectedCategory(cat); }}
                     categoryThumbnails={categoryThumbnails}
                     categoryDescriptions={categoryDescriptions}
                   />
@@ -730,7 +686,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
                     )}
                     {selectedCategory && !selectedTag && (
                       <button
-                        onClick={() => { setSelectedCategory(null); setSelectedTab(null); }}
+                        onClick={() => setSelectedCategory(null)}
                         style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 700, color: "#623CEA", background: "rgba(98,60,234,.07)", border: "1px solid rgba(98,60,234,.18)", borderRadius: 7, cursor: "pointer", padding: "7px 13px", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0, marginTop: 4 }}
                       >
                         ← All Categories
