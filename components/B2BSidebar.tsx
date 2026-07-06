@@ -158,6 +158,16 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
         <SectionLabel>Practice</SectionLabel>
 
         <NavItem
+          href="/ask-ai"
+          label="Ask AI"
+          icon={
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 1.5L9.3 5.5 13.5 6.8 9.3 8.1 8 12.1 6.7 8.1 2.5 6.8 6.7 5.5z" />
+            </svg>
+          }
+        />
+
+        <NavItem
           href="/workflows"
           badge="New"
           label="Workflows"

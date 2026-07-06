@@ -132,6 +132,60 @@ export type ActivityView = {
   created_at: string;
 };
 
+export type KbDocumentStatus = "pending" | "processing" | "ready" | "error";
+
+export type KbDocument = {
+  id: string;
+  title: string;
+  description: string | null;
+  storage_path: string;
+  page_count: number | null;
+  status: KbDocumentStatus;
+  next_page: number;
+  error_message: string | null;
+  uploaded_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KbDocumentPage = {
+  id: string;
+  document_id: string;
+  page_number: number;
+  raw_text: string | null;
+};
+
+export type KbDocumentImage = {
+  id: string;
+  document_id: string;
+  page_number: number;
+  image_path: string;
+  width: number | null;
+  height: number | null;
+  created_at: string;
+};
+
+export type KbChunk = {
+  id: string;
+  document_id: string;
+  page_start: number;
+  page_end: number;
+  content: string;
+  embedding: number[] | null;
+  token_count: number | null;
+  created_at: string;
+};
+
+export type KbChatMessage = {
+  id: string;
+  user_id: string | null;
+  session_id: string;
+  role: "user" | "assistant";
+  content: string;
+  cited_chunks: string[];
+  created_at: string;
+};
+
 export type FluencyEntityType = "video" | "tool" | "tool_guide" | "deep_dive" | "module" | "page";
 
 export type FluencyView = {
