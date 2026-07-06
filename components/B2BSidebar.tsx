@@ -194,6 +194,16 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
           }
         />
 
+        <NavItem
+          href="/profile"
+          label="My Progress"
+          icon={
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12V8M6 12V5M10 12V3M14 12v-4"/>
+            </svg>
+          }
+        />
+
       </nav>
 
       {/* Free guide card */}
