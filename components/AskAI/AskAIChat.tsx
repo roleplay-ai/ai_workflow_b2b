@@ -46,7 +46,14 @@ type Citation = {
   images: { imageUrl: string; width: number | null; height: number | null }[];
 };
 
-type ChatMessage = { role: "user" | "assistant"; content: string; citations?: Citation[] };
+type SuggestedWorkflow = { id: string; title: string };
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  citations?: Citation[];
+  suggestedWorkflows?: SuggestedWorkflow[];
+};
 
 const SUGGESTIONS = [
   "Can I read PDF attachments in Gmail with this tool?",
@@ -124,7 +131,12 @@ export default function AskAIChat({
       if (!res.ok) {
         setMessages((prev) => [...prev, { role: "assistant", content: body.error ?? "Something went wrong." }]);
       } else {
-        setMessages((prev) => [...prev, { role: "assistant", content: body.answer, citations: body.citations ?? [] }]);
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: body.answer,
+          citations: body.citations ?? [],
+          suggestedWorkflows: body.suggestedWorkflows ?? [],
+        }]);
       }
     } catch {
       setMessages((prev) => [...prev, { role: "assistant", content: "Couldn't reach the assistant — try again in a moment." }]);
@@ -428,6 +440,27 @@ export default function AskAIChat({
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {m.suggestedWorkflows && m.suggestedWorkflows.length > 0 && (
+                <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8, width: "100%" }}>
+                  {m.suggestedWorkflows.map((w) => (
+                    <a
+                      key={w.id}
+                      href={`/activity/${w.id}`}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        padding: "8px 14px", borderRadius: 999,
+                        border: "1.5px solid #FFCE00", background: "#FFFBEB",
+                        color: "#221D23", fontSize: 13, fontWeight: 700,
+                        textDecoration: "none",
+                      }}
+                    >
+                      ✦ {w.title}
+                      <span aria-hidden="true">→</span>
+                    </a>
+                  ))}
                 </div>
               )}
             </div>

@@ -4,6 +4,7 @@ import { embedText } from "@/lib/embeddings";
 import { anthropic } from "@/lib/anthropic";
 
 const MATCH_COUNT = 6;
+const WORKFLOW_MATCH_COUNT = 4;
 const IMAGES_BUCKET = "kb-extracted-images";
 
 type WorkflowContext = { title?: string; description?: string; tools?: string[] };
@@ -16,6 +17,8 @@ type MatchedChunk = {
   content: string;
   similarity: number;
 };
+
+type MatchedActivity = { id: string; title: string; description: string | null; similarity: number };
 
 export async function POST(req: NextRequest) {
   const { supabase, sessionResponse } = createRouteHandlerClient(req);
@@ -84,6 +87,18 @@ export async function POST(req: NextRequest) {
 
   const matched = (chunks ?? []) as MatchedChunk[];
 
+  // Same query embedding, second search — the app's own workflow catalog (activities),
+  // synced on demand from the superadmin Activities page ("Sync to Ask AI"). Lets Claude
+  // recommend a relevant workflow with a clickable link alongside the knowledge-base answer.
+  const { data: activityMatches } = await supabase.rpc("match_activities", {
+    query_embedding: embedding,
+    match_count: WORKFLOW_MATCH_COUNT,
+  });
+  const matchedActivities = (activityMatches ?? []) as MatchedActivity[];
+  const workflowsBlock = matchedActivities.length > 0
+    ? matchedActivities.map((a, i) => `[${i + 1}] "${a.title}"${a.description ? ` — ${a.description}` : ""}`).join("\n")
+    : "(no workflows in the catalog matched this question closely)";
+
   const documentIds = [...new Set(matched.map((c) => c.document_id))];
   const { data: docs } = await supabase.from("kb_documents").select("id, title").in("id", documentIds);
   const titleById = new Map((docs ?? []).map((d) => [d.id, d.title as string]));
@@ -134,23 +149,34 @@ but I found this on the web..." or "This isn't in the knowledge base — general
 speaking...". When you use web search, mention the source (site or publication name) in
 your answer text, since it won't otherwise be shown separately.
 
+Separately, below the excerpts is a list of workflows from this app's own catalog that may
+be relevant to what the user is asking. If one or more genuinely relate to their question,
+recommend it by name in your answer — the app turns your reference into a clickable link
+automatically. Don't recommend one that isn't actually relevant just to fill space; it's
+fine to recommend none.
+
 The conversation may include earlier turns. Use them to interpret follow-up questions
 (e.g. "what about PDF instead?" referring back to the previous topic) — but every
-excerpt list is scoped to the *current* question only, so judge whether *these* excerpts
-cover it, not what may have been cited earlier.
+excerpt/workflow list is scoped to the *current* question only, so judge whether *these*
+lists cover it, not what may have been cited earlier.
 
 Rules:
 - Prefer the excerpts below when they answer the question — answer strictly from them and cite which ones you used.
 - If they don't answer the question, search the web before answering from memory alone. Say briefly that it's not in the knowledge base first.
+- If any of the Suggested Workflows are genuinely relevant, mention it/them by name in your answer.
 - Format the answer in structured markdown (it will be rendered, not shown as raw text):
   - Lead with a direct one- or two-sentence answer, **bolding** the key fact (e.g. a yes/no or the core capability/limitation).
   - If there's more than one relevant point, list them as bullet points rather than one long paragraph.
   - Use a short bold sub-label before a bullet group only if it genuinely aids scanning (e.g. **Limitations:**) — skip it for simple answers.
   - No filler sentences, no restating the question, no closing summary.
-- On the first line, output CITED:<excerpt numbers you actually used, comma-separated> (e.g. CITED:2,4). These numbers refer *only* to the numbered items in the Excerpts list below — never to web search results or anything else. If your answer did not use any numbered excerpt from that list (e.g. you used web search or general knowledge instead), you must output CITED:none.
+- On the first line, output CITED:<excerpt numbers you actually used, comma-separated> (e.g. CITED:2,4). These numbers refer *only* to the numbered items in the Excerpts list — never to web search results, workflows, or anything else. If your answer did not use any numbered excerpt (e.g. you used web search or general knowledge instead), you must output CITED:none.
+- On the second line, output WORKFLOWS:<numbers of any relevant workflows, comma-separated> (e.g. WORKFLOWS:1,3), referring *only* to the numbered Suggested Workflows list below. Output WORKFLOWS:none if none are relevant.
 
 Excerpts:
-${excerptsBlock}`;
+${excerptsBlock}
+
+Suggested workflows (from this app's own catalog — recommend only if genuinely relevant):
+${workflowsBlock}`;
 
   let response;
   try {
@@ -181,10 +207,10 @@ ${excerptsBlock}`;
     .join("");
   const citedMatch = raw.match(/^CITED:(.+)\n?/);
   let citedIndexes: number[] = [];
-  let answer = raw;
+  let rest = raw;
 
   if (citedMatch) {
-    answer = raw.slice(citedMatch[0].length).trim();
+    rest = raw.slice(citedMatch[0].length);
     if (citedMatch[1].trim() !== "none") {
       citedIndexes = citedMatch[1]
         .split(",")
@@ -193,7 +219,25 @@ ${excerptsBlock}`;
     }
   }
 
+  const workflowsMatch = rest.match(/^\s*WORKFLOWS:(.+)\n?/);
+  let workflowIndexes: number[] = [];
+  let answer = rest.trim();
+
+  if (workflowsMatch) {
+    answer = rest.slice(workflowsMatch[0].length).trim();
+    if (workflowsMatch[1].trim() !== "none") {
+      workflowIndexes = workflowsMatch[1]
+        .split(",")
+        .map((s) => parseInt(s.trim(), 10) - 1)
+        .filter((i) => i >= 0 && i < matchedActivities.length);
+    }
+  }
+
   const citedExcerpts = citedIndexes.map((i) => excerpts[i]);
+  const suggestedWorkflows = workflowIndexes.map((i) => {
+    const a = matchedActivities[i];
+    return { id: a.id, title: a.title };
+  });
 
   let imagesByPage: Record<string, { imageUrl: string; width: number | null; height: number | null }[]> = {};
   if (citedExcerpts.length > 0) {
@@ -229,5 +273,5 @@ ${excerptsBlock}`;
     cited_chunks: [...new Set(citedExcerpts.map((e) => e.sourceChunkId))],
   });
 
-  return jsonWithSessionCookies(sessionResponse, { answer, citations });
+  return jsonWithSessionCookies(sessionResponse, { answer, citations, suggestedWorkflows });
 }
