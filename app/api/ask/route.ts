@@ -84,14 +84,6 @@ export async function POST(req: NextRequest) {
 
   const matched = (chunks ?? []) as MatchedChunk[];
 
-  if (matched.length === 0) {
-    const answer = "I don't have anything in the knowledge base yet to answer that from — ask a superadmin to upload the relevant document.";
-    await supabase.from("kb_chat_messages").insert({
-      user_id: user.id, session_id: sessionId, role: "assistant", content: answer, cited_chunks: [],
-    });
-    return jsonWithSessionCookies(sessionResponse, { answer, citations: [] });
-  }
-
   const documentIds = [...new Set(matched.map((c) => c.document_id))];
   const { data: docs } = await supabase.from("kb_documents").select("id, title").in("id", documentIds);
   const titleById = new Map((docs ?? []).map((d) => [d.id, d.title as string]));
@@ -123,25 +115,39 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const excerptsBlock = excerpts
-    .map((e, i) => `[${i + 1}] (Doc: "${e.title}", p. ${e.pageNumber})\n${e.text}`)
-    .join("\n\n");
+  const excerptsBlock = excerpts.length > 0
+    ? excerpts.map((e, i) => `[${i + 1}] (Doc: "${e.title}", p. ${e.pageNumber})\n${e.text}`).join("\n\n")
+    : "(no excerpts were retrieved for this question — the knowledge base may not cover this topic yet)";
 
-  const systemPrompt = `You are the AI Workflow Assistant. Users ask whether they can build a specific workflow, or ask general questions, using only the knowledge base excerpts below.
+  const systemPrompt = `You are the AI Workflow Assistant. Users ask whether they can build a specific workflow, or ask general questions.
+
+You have three sources of information, in priority order:
+1. Knowledge base excerpts below, specific to this company's uploaded documents — always
+   prefer these when they cover the question; they're more authoritative and specific than
+   anything else you have access to.
+2. If the excerpts don't cover the question (or none were retrieved), use the web_search
+   tool to find a current, accurate answer.
+3. Only fall back to your own general knowledge if neither of the above covers it.
+
+Always tell the user plainly which source you used, e.g. "This isn't in the knowledge base,
+but I found this on the web..." or "This isn't in the knowledge base — generally
+speaking...". When you use web search, mention the source (site or publication name) in
+your answer text, since it won't otherwise be shown separately.
 
 The conversation may include earlier turns. Use them to interpret follow-up questions
 (e.g. "what about PDF instead?" referring back to the previous topic) — but every
-excerpt list is scoped to the *current* question only, so answer strictly from the
-excerpts given below this message, not from what may have been cited earlier.
+excerpt list is scoped to the *current* question only, so judge whether *these* excerpts
+cover it, not what may have been cited earlier.
 
 Rules:
-- Answer only using the excerpts provided. If they don't contain the answer, say "I don't have that in the knowledge base yet" — never guess or use outside knowledge.
+- Prefer the excerpts below when they answer the question — answer strictly from them and cite which ones you used.
+- If they don't answer the question, search the web before answering from memory alone. Say briefly that it's not in the knowledge base first.
 - Format the answer in structured markdown (it will be rendered, not shown as raw text):
   - Lead with a direct one- or two-sentence answer, **bolding** the key fact (e.g. a yes/no or the core capability/limitation).
   - If there's more than one relevant point, list them as bullet points rather than one long paragraph.
   - Use a short bold sub-label before a bullet group only if it genuinely aids scanning (e.g. **Limitations:**) — skip it for simple answers.
   - No filler sentences, no restating the question, no closing summary.
-- On the first line, output CITED:<excerpt numbers you actually used, comma-separated> (e.g. CITED:2,4). If you used none, output CITED:none.
+- On the first line, output CITED:<excerpt numbers you actually used, comma-separated> (e.g. CITED:2,4). These numbers refer *only* to the numbered items in the Excerpts list below — never to web search results or anything else. If your answer did not use any numbered excerpt from that list (e.g. you used web search or general knowledge instead), you must output CITED:none.
 
 Excerpts:
 ${excerptsBlock}`;
@@ -157,16 +163,22 @@ ${excerptsBlock}`;
       output_config: { effort: "medium" },
       system: systemPrompt,
       messages: [...history, { role: "user", content: question }],
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 3 }],
     });
   } catch (err) {
     console.error("[/api/ask] Anthropic error:", err);
     return jsonWithSessionCookies(sessionResponse, { error: "AI service unavailable" }, { status: 503 });
   }
 
-  // Sonnet 5 runs adaptive thinking by default when `thinking` is omitted, which can
-  // put a `thinking` block before the `text` block — don't assume content[0] is text.
-  const textBlock = response.content.find((b) => b.type === "text");
-  const raw = textBlock?.type === "text" ? textBlock.text : "";
+  // Sonnet 5 runs adaptive thinking by default when `thinking` is omitted, which can put
+  // a `thinking` block before the `text` block. With web_search enabled, the response can
+  // also carry server_tool_use/web_search_tool_result blocks interleaved with *multiple*
+  // text blocks (citations split the answer up) — concatenate every text block in order
+  // rather than assuming there's exactly one.
+  const raw = response.content
+    .filter((b): b is Extract<typeof b, { type: "text" }> => b.type === "text")
+    .map((b) => b.text)
+    .join("");
   const citedMatch = raw.match(/^CITED:(.+)\n?/);
   let citedIndexes: number[] = [];
   let answer = raw;
