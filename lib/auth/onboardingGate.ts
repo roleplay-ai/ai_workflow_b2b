@@ -25,7 +25,12 @@ export async function userNeedsOnboarding(
   return false;
 }
 
-/** Post-login destination for B2B learners — onboarding first when preferences/workflows are missing. */
+/**
+ * Post-login destination for B2B learners — onboarding first when preferences/workflows
+ * are missing. Onboarding itself is now asked conversationally on the Ask AI page (see
+ * components/AskAI/OnboardingFlow.tsx), not the standalone /onboarding page — that page
+ * still exists, but only for the user-initiated "retake preferences" flow from Workflows.
+ */
 export async function getB2BEntryPath(
   supabase: SupabaseClient,
   userId: string,
@@ -37,7 +42,7 @@ export async function getB2BEntryPath(
   }
 
   if (await userNeedsOnboarding(supabase, userId)) {
-    return "/onboarding";
+    return "/ask-ai";
   }
 
   return getPostLoginPath(role, requestedPath);

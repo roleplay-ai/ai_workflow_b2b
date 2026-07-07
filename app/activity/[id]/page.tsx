@@ -44,7 +44,7 @@ export default async function ActivityPage({ params }: Props) {
       .select("name, try_url"),
   ]);
 
-  if (profile && await userNeedsOnboarding(supabase, user.id)) redirect("/onboarding");
+  if (profile && await userNeedsOnboarding(supabase, user.id)) redirect("/ask-ai");
   if (!activity) redirect("/workflows");
 
   const { data: progress } = await supabase

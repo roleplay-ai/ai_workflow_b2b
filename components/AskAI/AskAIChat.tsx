@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import OnboardingFlow, { type ChipsState, type OnboardingExistingAnswers } from "./OnboardingFlow";
 
 /** Renders an assistant answer's markdown (bold, bullets, etc.) with the app's chat typography. */
 function MarkdownAnswer({ content }: { content: string }) {
@@ -53,14 +54,29 @@ const SUGGESTIONS = [
   "Which AI tool handles this best?",
 ];
 
+type Props = {
+  needsOnboarding?: boolean;
+  functionOptions?: string[];
+  categoryOptions?: string[];
+  existingAnswers?: OnboardingExistingAnswers | null;
+};
+
 /** Full-page, ChatGPT/Claude-style "Ask AI" assistant. Grounded entirely in the superadmin-managed knowledge base. */
-export default function AskAIChat() {
+export default function AskAIChat({
+  needsOnboarding = false,
+  functionOptions = [],
+  categoryOptions = [],
+  existingAnswers = null,
+}: Props) {
   const searchParams = useSearchParams();
+  const forceOnboarding = searchParams.get("onboarding") === "update";
+  const effectiveNeedsOnboarding = needsOnboarding || forceOnboarding;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
   const [openInfoKey, setOpenInfoKey] = useState<string | null>(null);
+  const [onboardingChips, setOnboardingChips] = useState<ChipsState | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -159,6 +175,135 @@ export default function AskAIChat() {
       </button>
     </div>
   );
+
+  const onboardingComposer = () => (
+    <div>
+      {onboardingChips && (
+        <div style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 8,
+          alignItems: "center",
+          marginBottom: 10,
+        }}>
+          {onboardingChips.options.map((opt) => {
+            const isSelected = onboardingChips.selected.includes(opt);
+            return (
+              <button
+                key={opt}
+                onClick={() => onboardingChips.onPick(opt)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  border: `1.5px solid ${isSelected ? "#221D23" : "#E8E6DC"}`,
+                  background: isSelected ? "#FFCE00" : "white",
+                  color: "#221D23",
+                  fontSize: 12.5,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  boxShadow: "0 10px 24px rgba(34,29,35,.10)",
+                }}
+              >
+                {onboardingChips.multi && (isSelected ? "✓ " : "+ ")}
+                {opt}
+              </button>
+            );
+          })}
+          {onboardingChips.onContinue && (
+            <button
+              onClick={onboardingChips.onContinue}
+              disabled={onboardingChips.continueDisabled}
+              style={{
+                ...(onboardingChips.continueStyle ?? {
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  border: "1.5px solid #E8B800",
+                  background: "#FFCE00",
+                  color: "#221D23",
+                  fontSize: 12.5,
+                  fontWeight: 900,
+                  cursor: onboardingChips.continueDisabled ? "default" : "pointer",
+                  fontFamily: "inherit",
+                  boxShadow: "0 10px 24px rgba(34,29,35,.12)",
+                  marginLeft: 4,
+                }),
+                cursor: onboardingChips.continueDisabled ? "default" : "pointer",
+                opacity: onboardingChips.continueDisabled ? 0.45 : 1,
+              }}
+            >
+              {onboardingChips.continueLabel ?? "Continue →"}
+            </button>
+          )}
+        </div>
+      )}
+
+      <div style={{ opacity: 0.8, pointerEvents: "none", userSelect: "none" }}>
+        <div style={{
+          display: "flex", alignItems: "flex-end", gap: 10,
+          width: "100%", padding: "12px 14px", borderRadius: 20,
+          background: "white", border: "1.5px solid #E8E6DC",
+          boxShadow: "0 8px 28px rgba(34,29,35,.07)",
+        }}>
+          <textarea
+            value=""
+            placeholder="Ask about a workflow…"
+            rows={1}
+            disabled
+            style={{
+              flex: 1, resize: "none", border: "none", outline: "none",
+              fontSize: 15, fontFamily: "inherit", lineHeight: 1.5,
+              maxHeight: MAX_COMPOSER_HEIGHT, overflowY: "auto",
+              background: "transparent", color: "#221D23",
+            }}
+          />
+          <button
+            disabled
+            aria-label="Send"
+            style={{
+              width: 38, height: 38, borderRadius: "50%", border: "none",
+              background: "#221D23", color: "white",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "default",
+              opacity: 0.35, flexShrink: 0,
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="19" x2="12" y2="5" />
+              <polyline points="5 12 12 5 19 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (effectiveNeedsOnboarding) {
+    return (
+      <div style={{ height: "calc(100vh - var(--topbar-h))", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{
+          display: "flex", alignItems: "center",
+          padding: "9px 24px", borderBottom: "1px solid #EEEAE4", flexShrink: 0,
+        }}>
+          <div style={{ fontSize: 13.5, fontWeight: 900, color: "#221D23", letterSpacing: "-.02em" }}>Ask AI</div>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+          <OnboardingFlow
+            functionOptions={functionOptions}
+            categoryOptions={categoryOptions}
+            existingAnswers={existingAnswers}
+            uiMode="composer-chips"
+            onChipsChange={setOnboardingChips}
+          />
+        </div>
+
+        {/* Disabled composer, blurred, with floating chips for options */}
+        <div style={{ position: "relative", zIndex: 20, background: "var(--bg)", padding: "16px 24px 22px", flexShrink: 0 }}>
+          <div style={{ maxWidth: 760, margin: "0 auto" }}>{onboardingComposer()}</div>
+        </div>
+      </div>
+    );
+  }
 
   if (messages.length === 0) {
     return (

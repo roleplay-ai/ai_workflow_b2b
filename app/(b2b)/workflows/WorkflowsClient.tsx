@@ -593,7 +593,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
           <div className="workflows-main-tab-bar-end">
             {activeMainTab === "my" && (
               <Link
-                href="/onboarding"
+                href="/ask-ai?onboarding=update"
                 className="workflows-main-tab-action"
                 onClick={() => setNavigatingToPreferences(true)}
                 style={navigatingToPreferences ? { opacity: 0.75, pointerEvents: "none" } : undefined}

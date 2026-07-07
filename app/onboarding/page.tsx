@@ -26,6 +26,14 @@ export default async function OnboardingPage() {
   const hasSavedWorkflows = (savedWorkflowCount ?? 0) > 0;
   const mode: "mandatory" | "update" = hasSavedWorkflows ? "update" : "mandatory";
 
+  // "Update preferences" should use the AskAI onboarding interface (chat-style),
+  // not the standalone onboarding screen.
+  // Also route any "already onboarded" user through AskAI so the experience
+  // is consistent even if they have 0 saved workflows.
+  if (mode === "update" || !!profile?.onboarding_completed_at) {
+    redirect("/ask-ai?onboarding=update");
+  }
+
   return (
     <OnboardingClient
       mode={mode}
