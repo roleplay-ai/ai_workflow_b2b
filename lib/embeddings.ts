@@ -9,7 +9,13 @@
  * Server-side only: uses the service role key, never expose this to the client.
  */
 
-const EDGE_FUNCTION_BATCH_LIMIT = 64;
+// Small on purpose: each Edge Function invocation runs the gte-small model on a
+// resource-constrained free-tier worker. Batching many texts into one call risks
+// WORKER_RESOURCE_LIMIT (546) — fewer texts per invocation keeps peak memory/CPU
+// per call low, at the cost of more round trips.
+const EDGE_FUNCTION_BATCH_LIMIT = 6;
+const MAX_RETRIES = 3;
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504, 546]);
 
 function functionUrl(): string {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -17,26 +23,40 @@ function functionUrl(): string {
   return `${base}/functions/v1/embed`;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function callEmbedFunction(texts: string[]): Promise<number[][]> {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceRoleKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
 
-  const res = await fetch(functionUrl(), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${serviceRoleKey}`,
-    },
-    body: JSON.stringify({ texts }),
-  });
+  let lastError = "";
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const res = await fetch(functionUrl(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({ texts }),
+    });
 
-  if (!res.ok) {
+    if (res.ok) {
+      const data = (await res.json()) as { embeddings: number[][] };
+      return data.embeddings;
+    }
+
     const detail = await res.text().catch(() => "");
-    throw new Error(`embed function failed (${res.status}): ${detail}`);
+    lastError = `embed function failed (${res.status}): ${detail}`;
+
+    // WORKER_RESOURCE_LIMIT and other transient errors can succeed on a retry —
+    // a fresh worker instance may have headroom the last one didn't.
+    if (!RETRYABLE_STATUSES.has(res.status) || attempt === MAX_RETRIES) break;
+    await sleep(500 * 2 ** attempt); // 500ms, 1s, 2s
   }
 
-  const data = (await res.json()) as { embeddings: number[][] };
-  return data.embeddings;
+  throw new Error(lastError);
 }
 
 /** Embed a single string. */

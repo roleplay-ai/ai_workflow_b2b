@@ -7,10 +7,15 @@
 // Called from lib/embeddings.ts (server-side only) with the project's
 // SUPABASE_SERVICE_ROLE_KEY as the Authorization bearer token.
 //
-// Request:  { texts: string[] }               (max 64 per call — see MAX_BATCH)
+// Request:  { texts: string[] }               (max 16 per call — see MAX_BATCH)
 // Response: { embeddings: number[][] }        (384-dim per text, same order as input)
+//
+// Caller (lib/embeddings.ts) actually sends batches of 6 — this constant is just a
+// defensive ceiling. Free-tier Edge Function workers have tight memory/CPU limits,
+// and this function loads + runs the gte-small model per invocation, so large
+// batches risk a WORKER_RESOURCE_LIMIT (546) error. Keep this low.
 
-const MAX_BATCH = 64;
+const MAX_BATCH = 16;
 const MAX_TEXT_LENGTH = 4000; // gte-small's ~512-token window; this is a generous char-level guard
 
 const model = new Supabase.ai.Session("gte-small");
