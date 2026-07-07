@@ -35,13 +35,41 @@ export async function POST(req: NextRequest) {
     return jsonWithSessionCookies(sessionResponse, { error: "question and sessionId are required" }, { status: 400 });
   }
 
+  // Fetch prior turns *before* inserting the current question, so this naturally
+  // excludes it. Capped to the last few turns — enough for follow-up questions
+  // ("what about PDF instead?") to resolve, without growing cost unbounded.
+  const HISTORY_TURN_LIMIT = 10;
+  const { data: historyRows } = await supabase
+    .from("kb_chat_messages")
+    .select("role, content, created_at")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: false })
+    .limit(HISTORY_TURN_LIMIT);
+  // Map to a clean {role, content} shape — don't let created_at (needed only for
+  // ordering) leak into the Anthropic messages payload.
+  const history = (historyRows ?? [])
+    .reverse()
+    .map((h) => ({ role: h.role as "user" | "assistant", content: h.content as string }));
+
   await supabase.from("kb_chat_messages").insert({
     user_id: user.id, session_id: sessionId, role: "user", content: question,
   });
 
-  const queryText = body.workflowContext?.title
-    ? `Workflow: ${body.workflowContext.title}. ${body.workflowContext.description ?? ""}\n\nQuestion: ${question}`
-    : question;
+  // Fold recent *questions* into the retrieval query too — a bare follow-up like
+  // "what about PDF instead?" has almost no signal on its own for the embedding
+  // search. Deliberately excludes prior answers: a long multi-point answer about
+  // the previous topic would dominate the embedding and drown out the new topic
+  // word the follow-up actually introduces.
+  const historyForQuery = history
+    .filter((h) => h.role === "user")
+    .slice(-3)
+    .map((h) => `Q: ${h.content}`)
+    .join("\n");
+  const queryText = [
+    body.workflowContext?.title ? `Workflow: ${body.workflowContext.title}. ${body.workflowContext.description ?? ""}` : null,
+    historyForQuery || null,
+    `Q: ${question}`,
+  ].filter(Boolean).join("\n");
 
   const embedding = await embedText(queryText);
 
@@ -101,6 +129,11 @@ export async function POST(req: NextRequest) {
 
   const systemPrompt = `You are the AI Workflow Assistant. Users ask whether they can build a specific workflow, or ask general questions, using only the knowledge base excerpts below.
 
+The conversation may include earlier turns. Use them to interpret follow-up questions
+(e.g. "what about PDF instead?" referring back to the previous topic) — but every
+excerpt list is scoped to the *current* question only, so answer strictly from the
+excerpts given below this message, not from what may have been cited earlier.
+
 Rules:
 - Answer only using the excerpts provided. If they don't contain the answer, say "I don't have that in the knowledge base yet" — never guess or use outside knowledge.
 - Format the answer in structured markdown (it will be rendered, not shown as raw text):
@@ -123,7 +156,7 @@ ${excerptsBlock}`;
       thinking: { type: "adaptive" },
       output_config: { effort: "medium" },
       system: systemPrompt,
-      messages: [{ role: "user", content: question }],
+      messages: [...history, { role: "user", content: question }],
     });
   } catch (err) {
     console.error("[/api/ask] Anthropic error:", err);
