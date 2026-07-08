@@ -844,7 +844,7 @@ export default function UpdatesClient({ brief, videos, tools, toolGuides, toolLo
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
             <div>
               <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-.03em", color: "#1C1820", lineHeight: 1.1 }}>
-                AI Updates
+                News
               </h1>
               <p style={{ fontSize: 13.5, color: "#746F78", fontWeight: 600, marginTop: 4 }}>
                 Latest AI news, short launch videos, and practical perspectives — curated weekly for your team.
