@@ -2,6 +2,14 @@ import { NextRequest } from "next/server";
 import { createRouteHandlerClient, jsonWithSessionCookies } from "@/lib/supabase/route-handler";
 import { embedText } from "@/lib/embeddings";
 import { anthropic } from "@/lib/anthropic";
+import {
+  ASK_LIMITS,
+  enforceAnswerLength,
+  guardrailPromptSection,
+  validateQuestion,
+  validateSessionId,
+  validateWorkflowContext,
+} from "@/lib/ask/guardrails";
 
 const MATCH_COUNT = 6;
 const WORKFLOW_MATCH_COUNT = 4;
@@ -32,20 +40,92 @@ export async function POST(req: NextRequest) {
     workflowContext?: WorkflowContext;
   };
 
-  const question = body.question?.trim();
+  if (!validateSessionId(body.sessionId)) {
+    return jsonWithSessionCookies(sessionResponse, { error: "Invalid sessionId" }, { status: 400 });
+  }
   const sessionId = body.sessionId;
-  if (!question || !sessionId) {
-    return jsonWithSessionCookies(sessionResponse, { error: "question and sessionId are required" }, { status: 400 });
+
+  const questionResult = validateQuestion(body.question);
+  if (!questionResult.ok) {
+    return jsonWithSessionCookies(sessionResponse, { error: questionResult.error }, { status: questionResult.status });
+  }
+  const question = questionResult.question;
+
+  const workflowResult = validateWorkflowContext(body.workflowContext);
+  if (!workflowResult.ok) {
+    return jsonWithSessionCookies(sessionResponse, { error: workflowResult.error }, { status: workflowResult.status });
+  }
+  const workflowContext = workflowResult;
+
+  const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const [{ count: hourlyCount }, { count: dailyCount }] = await Promise.all([
+    supabase
+      .from("kb_chat_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("role", "user")
+      .gte("created_at", hourAgo),
+    supabase
+      .from("kb_chat_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("role", "user")
+      .gte("created_at", dayAgo),
+  ]);
+
+  if ((hourlyCount ?? 0) >= ASK_LIMITS.hourlyUserMessages) {
+    return jsonWithSessionCookies(
+      sessionResponse,
+      { error: "Hourly limit reached. Try again later." },
+      { status: 429 },
+    );
+  }
+  if ((dailyCount ?? 0) >= ASK_LIMITS.dailyUserMessages) {
+    return jsonWithSessionCookies(
+      sessionResponse,
+      { error: "Daily limit reached. Try again tomorrow." },
+      { status: 429 },
+    );
+  }
+
+  const { data: lastUserMessage } = await supabase
+    .from("kb_chat_messages")
+    .select("content, created_at")
+    .eq("user_id", user.id)
+    .eq("role", "user")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (lastUserMessage?.content === question) {
+    return jsonWithSessionCookies(
+      sessionResponse,
+      { error: "Duplicate question — wait a moment or rephrase." },
+      { status: 429 },
+    );
+  }
+  if (
+    lastUserMessage?.created_at &&
+    Date.now() - new Date(lastUserMessage.created_at).getTime() < ASK_LIMITS.minRepeatIntervalMs
+  ) {
+    return jsonWithSessionCookies(
+      sessionResponse,
+      { error: "Please wait a moment before sending another question." },
+      { status: 429 },
+    );
   }
 
   // Fetch prior turns *before* inserting the current question, so this naturally
-  // excludes it. Capped to the last few turns — enough for follow-up questions
-  // ("what about PDF instead?") to resolve, without growing cost unbounded.
+  // excludes it. Scoped to this user + session so one account cannot attach to
+  // another user's conversation.
   const HISTORY_TURN_LIMIT = 10;
   const { data: historyRows } = await supabase
     .from("kb_chat_messages")
     .select("role, content, created_at")
     .eq("session_id", sessionId)
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(HISTORY_TURN_LIMIT);
   // Map to a clean {role, content} shape — don't let created_at (needed only for
@@ -69,7 +149,7 @@ export async function POST(req: NextRequest) {
     .map((h) => `Q: ${h.content}`)
     .join("\n");
   const queryText = [
-    body.workflowContext?.title ? `Workflow: ${body.workflowContext.title}. ${body.workflowContext.description ?? ""}` : null,
+    workflowContext?.title ? `Workflow: ${workflowContext.title}. ${workflowContext.description ?? ""}` : null,
     historyForQuery || null,
     `Q: ${question}`,
   ].filter(Boolean).join("\n");
@@ -134,20 +214,14 @@ export async function POST(req: NextRequest) {
     ? excerpts.map((e, i) => `[${i + 1}] (Doc: "${e.title}", p. ${e.pageNumber})\n${e.text}`).join("\n\n")
     : "(no excerpts were retrieved for this question — the knowledge base may not cover this topic yet)";
 
-  const systemPrompt = `You are the AI Workflow Assistant. Users ask whether they can build a specific workflow, or ask general questions.
+  const systemPrompt = `You are Nudgie, an authoritative AI coach. Users ask whether they can build a specific workflow, or ask general questions. Speak like a confident human expert — direct, clear, no fluff.
 
 You have three sources of information, in priority order:
-1. Knowledge base excerpts below, specific to this company's uploaded documents — always
-   prefer these when they cover the question; they're more authoritative and specific than
-   anything else you have access to.
-2. If the excerpts don't cover the question (or none were retrieved), use the web_search
-   tool to find a current, accurate answer.
-3. Only fall back to your own general knowledge if neither of the above covers it.
+1. Knowledge base excerpts below — prefer these when they cover the question.
+2. If excerpts don't cover it, use web_search for a current answer.
+3. Only fall back to general knowledge if neither covers it.
 
-Always tell the user plainly which source you used, e.g. "This isn't in the knowledge base,
-but I found this on the web..." or "This isn't in the knowledge base — generally
-speaking...". When you use web search, mention the source (site or publication name) in
-your answer text, since it won't otherwise be shown separately.
+Say plainly which source you used. For web search, name the source in your answer.
 
 Separately, below the excerpts is a list of workflows from this app's own catalog that may
 be relevant to what the user is asking. If one or more genuinely relate to their question,
@@ -155,22 +229,19 @@ recommend it by name in your answer — the app turns your reference into a clic
 automatically. Don't recommend one that isn't actually relevant just to fill space; it's
 fine to recommend none.
 
-The conversation may include earlier turns. Use them to interpret follow-up questions
-(e.g. "what about PDF instead?" referring back to the previous topic) — but every
-excerpt/workflow list is scoped to the *current* question only, so judge whether *these*
-lists cover it, not what may have been cited earlier.
+Use prior turns to interpret follow-ups, but judge only the current excerpt and workflow lists.
 
 Rules:
-- Prefer the excerpts below when they answer the question — answer strictly from them and cite which ones you used.
-- If they don't answer the question, search the web before answering from memory alone. Say briefly that it's not in the knowledge base first.
-- If any of the Suggested Workflows are genuinely relevant, mention it/them by name in your answer.
-- Format the answer in structured markdown (it will be rendered, not shown as raw text):
-  - Lead with a direct one- or two-sentence answer, **bolding** the key fact (e.g. a yes/no or the core capability/limitation).
-  - If there's more than one relevant point, list them as bullet points rather than one long paragraph.
-  - Use a short bold sub-label before a bullet group only if it genuinely aids scanning (e.g. **Limitations:**) — skip it for simple answers.
-  - No filler sentences, no restating the question, no closing summary.
-- On the first line, output CITED:<excerpt numbers you actually used, comma-separated> (e.g. CITED:2,4). These numbers refer *only* to the numbered items in the Excerpts list — never to web search results, workflows, or anything else. If your answer did not use any numbered excerpt (e.g. you used web search or general knowledge instead), you must output CITED:none.
+- Hard limit: ${ASK_LIMITS.maxAnswerChars} characters for your answer (the CITED: and WORKFLOWS: lines do not count).
+- Get to the point immediately. No filler, no restating the question, no closing summary.
+- Prefer excerpts when they answer — cite which ones you used.
+- If excerpts don't cover it, search the web first; say briefly it's not in the knowledge base.
+- If any Suggested Workflows are genuinely relevant, mention them by name in your answer.
+- Lead with the direct answer; **bold** the key fact. Bullets only if truly needed.
+- On the first line, output CITED:<excerpt numbers you actually used, comma-separated> (e.g. CITED:2,4). These numbers refer *only* to the numbered items in the Excerpts list below — never to web search results, workflows, or anything else. If your answer did not use any numbered excerpt from that list (e.g. you used web search or general knowledge instead), you must output CITED:none.
 - On the second line, output WORKFLOWS:<numbers of any relevant workflows, comma-separated> (e.g. WORKFLOWS:1,3), referring *only* to the numbered Suggested Workflows list below. Output WORKFLOWS:none if none are relevant.
+
+${guardrailPromptSection()}
 
 Excerpts:
 ${excerptsBlock}
@@ -182,14 +253,14 @@ ${workflowsBlock}`;
   try {
     response = await anthropic.messages.create({
       model: "claude-sonnet-5",
-      max_tokens: 1024,
+      max_tokens: 500,
       // Adaptive thinking on: even when the excerpt has a direct answer, Sonnet reasons
       // over it before answering rather than just echoing the excerpt back verbatim.
       thinking: { type: "adaptive" },
       output_config: { effort: "medium" },
       system: systemPrompt,
       messages: [...history, { role: "user", content: question }],
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 3 }],
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: ASK_LIMITS.maxWebSearchUses }],
     });
   } catch (err) {
     console.error("[/api/ask] Anthropic error:", err);
@@ -232,6 +303,8 @@ ${workflowsBlock}`;
         .filter((i) => i >= 0 && i < matchedActivities.length);
     }
   }
+
+  answer = enforceAnswerLength(answer);
 
   const citedExcerpts = citedIndexes.map((i) => excerpts[i]);
   const suggestedWorkflows = workflowIndexes.map((i) => {
