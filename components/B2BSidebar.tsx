@@ -183,7 +183,7 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
 
         <NavItem
           href="/mastery"
-          label="AI Mastery"
+          label="Course"
           icon={
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M8 1.5L10 6h4.5L11 9l1.5 4.5L8 11l-4.5 2.5L5 9 1.5 6H6z"/>
@@ -193,7 +193,7 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
 
         <NavItem
           href="/updates"
-          label="AI Updates"
+          label="News"
           badge={3}
           badgeColor="red"
           icon={

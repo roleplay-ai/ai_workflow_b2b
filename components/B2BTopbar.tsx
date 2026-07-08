@@ -1,14 +1,14 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 import { createClient } from "@/lib/supabase/client";
 
 const LABELS: Record<string, string> = {
   "/workflows": "Workflows",
-  "/mastery": "AI Mastery",
-  "/updates": "AI Updates",
+  "/mastery": "Course",
+  "/updates": "News",
   "/team": "Team Dashboard",
   "/analytics": "Analytics",
   "/profile": "My Progress",
@@ -45,6 +45,7 @@ type Props = {
 
 export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = [], activeTag = null }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
   const [localQ, setLocalQ] = useState(searchQuery);
   const [notifOpen, setNotifOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
@@ -53,8 +54,20 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
   const pageLabel = LABELS[pathname] ?? "AI Practice Lab";
   const hasNew = newActivities.length > 0;
   const hasFeaturedTags = featuredTags.length > 0;
+  const isAskAi = pathname === "/ask-ai";
 
-  function submit() { onSearch?.(localQ.trim()); }
+  useEffect(() => { setLocalQ(searchQuery); }, [searchQuery]);
+
+  function submit() {
+    const q = localQ.trim();
+    if (onSearch) {
+      onSearch(q);
+      return;
+    }
+    // From other pages, search workflows via the workflows route.
+    if (q) router.push(`/workflows?q=${encodeURIComponent(q)}`);
+    else router.push("/workflows");
+  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -158,23 +171,46 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
           />
         </div>
 
-        {/* Ask AI */}
-        <Link
-          href="/ask-ai"
-          title="Ask AI"
-          style={{
-            display: "flex", alignItems: "center", gap: 7,
-            height: 36, padding: "0 14px", borderRadius: 10,
-            border: `1.5px solid ${pathname === "/ask-ai" ? "#FFCE00" : "rgba(255,206,0,.4)"}`,
-            background: pathname === "/ask-ai" ? "#FFCE00" : "#FFFBEB",
-            color: "#7A5F00", fontSize: 12.5, fontWeight: 800,
-            textDecoration: "none", flexShrink: 0,
-            transition: "all .15s ease",
-          }}
-        >
-          <span style={{ fontSize: 14 }}>✦</span>
-          Ask AI
-        </Link>
+        {/* Ask AI — inactive/blurred when already on the Ask AI page */}
+        {isAskAi ? (
+          <span
+            title="You're on Ask AI"
+            aria-disabled="true"
+            style={{
+              display: "flex", alignItems: "center", gap: 7,
+              height: 36, padding: "0 14px", borderRadius: 10,
+              border: "1.5px solid #FFCE00",
+              background: "#FFCE00",
+              color: "#7A5F00", fontSize: 12.5, fontWeight: 800,
+              flexShrink: 0,
+              opacity: 0.45,
+              filter: "blur(1.5px)",
+              cursor: "default",
+              pointerEvents: "none",
+              userSelect: "none",
+            }}
+          >
+            <span style={{ fontSize: 14 }}>✦</span>
+            Ask AI
+          </span>
+        ) : (
+          <Link
+            href="/ask-ai"
+            title="Ask AI"
+            style={{
+              display: "flex", alignItems: "center", gap: 7,
+              height: 36, padding: "0 14px", borderRadius: 10,
+              border: "1.5px solid rgba(255,206,0,.4)",
+              background: "#FFFBEB",
+              color: "#7A5F00", fontSize: 12.5, fontWeight: 800,
+              textDecoration: "none", flexShrink: 0,
+              transition: "all .15s ease",
+            }}
+          >
+            <span style={{ fontSize: 14 }}>✦</span>
+            Ask AI
+          </Link>
+        )}
 
         {/* Featured agents */}
         <div style={{ position: "relative" }}>

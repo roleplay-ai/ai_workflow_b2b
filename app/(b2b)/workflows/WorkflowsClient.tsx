@@ -428,15 +428,27 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedTag = searchParams.get("tag");
-  const [activeMainTab, setActiveMainTab] = useState<"my" | "all">("my");
+  const qParam = searchParams.get("q") ?? "";
+  const [activeMainTab, setActiveMainTab] = useState<"my" | "all">(qParam.trim() ? "all" : "my");
   const [preferencesConfirmed, setPreferencesConfirmed] = useState(workflowsConfirmedInitial);
   const [confirmingPreferences, setConfirmingPreferences] = useState(false);
   const [navigatingToPreferences, setNavigatingToPreferences] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(qParam);
   const [extraRows, setExtraRows] = useState(0);
+
+  // Apply top-bar search navigations that land on /workflows?q=…
+  // Always open the All Workflows tab and show only matching results.
+  useEffect(() => {
+    setSearchQuery(qParam);
+    if (qParam.trim()) {
+      setActiveMainTab("all");
+      setSelectedCategory(null);
+      setSelectedTool(null);
+    }
+  }, [qParam]);
   const COLS = 4;
 
   const myWorkflows = useMemo(
@@ -478,7 +490,20 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
   }, [workflowsConfirmedInitial]);
 
   function clearTagFilter() {
-    router.replace("/workflows", { scroll: false });
+    const q = searchQuery.trim();
+    router.replace(q ? `/workflows?q=${encodeURIComponent(q)}` : "/workflows", { scroll: false });
+  }
+
+  function handleSearch(q: string) {
+    setSelectedCategory(null);
+    setSelectedTool(null);
+    setSearchQuery(q);
+    if (q) {
+      setActiveMainTab("all");
+      router.replace(`/workflows?q=${encodeURIComponent(q)}`, { scroll: false });
+    } else {
+      router.replace("/workflows", { scroll: false });
+    }
   }
 
   const showActivities = !!selectedCategory || !!searchQuery.trim() || !!selectedTool || !!selectedTag;
@@ -516,10 +541,11 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
   useEffect(() => { setExtraRows(0); }, [selectedTool, selectedCategory, selectedTag, searchQuery]);
 
   useEffect(() => {
-    if (!selectedTag) return;
+    if (!selectedTag && !searchQuery.trim()) return;
+    if (activeMainTab !== "all") return;
     const el = document.getElementById("all-workflows");
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [selectedTag]);
+  }, [selectedTag, searchQuery, activeMainTab]);
 
   const topPercentileLabel = formatTopPercentile(companyPercentile, companySize);
   const percentileDelta = companySize > 0
@@ -542,7 +568,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
     <>
       <B2BTopbar
         searchQuery={searchQuery}
-        onSearch={q => { clearTagFilter(); setSearchQuery(q); setSelectedCategory(null); }}
+        onSearch={handleSearch}
         newActivities={activities.filter(a => a.is_featured).slice(0, 8).map(a => ({ id: a.id, title: a.title, tools: a.tools, description: (a as any).description ?? null }))}
         activeTag={selectedTag}
       />
