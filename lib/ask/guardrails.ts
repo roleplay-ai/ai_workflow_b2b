@@ -112,3 +112,32 @@ export function enforceAnswerLength(answer: string): string {
   if (answer.length <= ASK_LIMITS.maxAnswerChars) return answer;
   return `${answer.slice(0, ASK_LIMITS.maxAnswerChars - 1).trimEnd()}…`;
 }
+
+/** Remove in-body workflow mentions — chips are rendered separately and must not be capped. */
+export function stripWorkflowMentionsFromAnswer(
+  answer: string,
+  workflows: { title: string }[],
+): string {
+  if (workflows.length === 0) return answer;
+
+  let result = answer;
+  for (const { title } of workflows) {
+    if (!title) continue;
+    const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // Drop trailing CTAs like "Check out **Build a Website with Lovable**"
+    result = result.replace(
+      new RegExp(
+        `[\\s\\n]*(?:Check out|See|Try|Explore|Look at)\\s+\\*\\*${escaped}\\*\\*[^\\n]*$`,
+        "i",
+      ),
+      "",
+    );
+    // Drop any sentence that bolds the workflow title
+    result = result.replace(
+      new RegExp(`[^.!?\\n]*\\*\\*${escaped}\\*\\*[^.!?\\n]*[.!?]?\\s*`, "gi"),
+      "",
+    );
+  }
+
+  return result.replace(/\n{3,}/g, "\n\n").trim();
+}

@@ -6,6 +6,7 @@ import {
   ASK_LIMITS,
   enforceAnswerLength,
   guardrailPromptSection,
+  stripWorkflowMentionsFromAnswer,
   validateQuestion,
   validateSessionId,
   validateWorkflowContext,
@@ -224,19 +225,18 @@ You have three sources of information, in priority order:
 Say plainly which source you used. For web search, name the source in your answer.
 
 Separately, below the excerpts is a list of workflows from this app's own catalog that may
-be relevant to what the user is asking. If one or more genuinely relate to their question,
-recommend it by name in your answer — the app turns your reference into a clickable link
-automatically. Don't recommend one that isn't actually relevant just to fill space; it's
-fine to recommend none.
+be relevant to what the user is asking. Select relevant ones via the WORKFLOWS: line only —
+do not mention workflow names in the answer body. The app renders them as separate clickable
+links below your answer automatically. Don't recommend one that isn't actually relevant just
+to fill space; it's fine to recommend none.
 
 Use prior turns to interpret follow-ups, but judge only the current excerpt and workflow lists.
 
 Rules:
-- Hard limit: ${ASK_LIMITS.maxAnswerChars} characters for your answer (the CITED: and WORKFLOWS: lines do not count).
+- Hard limit: ${ASK_LIMITS.maxAnswerChars} characters for your explanatory answer only (the CITED: and WORKFLOWS: lines do not count; workflow links are shown separately and must not appear in the answer body).
 - Get to the point immediately. No filler, no restating the question, no closing summary.
 - Prefer excerpts when they answer — cite which ones you used.
 - If excerpts don't cover it, search the web first; say briefly it's not in the knowledge base.
-- If any Suggested Workflows are genuinely relevant, mention them by name in your answer.
 - Lead with the direct answer; **bold** the key fact. Bullets only if truly needed.
 - On the first line, output CITED:<excerpt numbers you actually used, comma-separated> (e.g. CITED:2,4). These numbers refer *only* to the numbered items in the Excerpts list below — never to web search results, workflows, or anything else. If your answer did not use any numbered excerpt from that list (e.g. you used web search or general knowledge instead), you must output CITED:none.
 - On the second line, output WORKFLOWS:<numbers of any relevant workflows, comma-separated> (e.g. WORKFLOWS:1,3), referring *only* to the numbered Suggested Workflows list below. Output WORKFLOWS:none if none are relevant.
@@ -304,13 +304,14 @@ ${workflowsBlock}`;
     }
   }
 
-  answer = enforceAnswerLength(answer);
-
   const citedExcerpts = citedIndexes.map((i) => excerpts[i]);
   const suggestedWorkflows = workflowIndexes.map((i) => {
     const a = matchedActivities[i];
     return { id: a.id, title: a.title };
   });
+
+  answer = stripWorkflowMentionsFromAnswer(answer, suggestedWorkflows);
+  answer = enforceAnswerLength(answer);
 
   let imagesByPage: Record<string, { imageUrl: string; width: number | null; height: number | null }[]> = {};
   if (citedExcerpts.length > 0) {
