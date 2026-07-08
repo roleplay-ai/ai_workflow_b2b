@@ -12,6 +12,7 @@ const LABELS: Record<string, string> = {
   "/team": "Team Dashboard",
   "/analytics": "Analytics",
   "/profile": "My Progress",
+  "/ask-ai": "Ask AI",
 };
 
 const TOOL_COLORS: Record<string, string> = {
@@ -57,15 +58,19 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
 
   useEffect(() => {
     const supabase = createClient();
-    supabase
-      .from("activity_tags")
-      .select("id, name, icon_url, featured_description")
-      .eq("is_featured", true)
-      .order("featured_position")
-      .order("name")
-      .then(({ data }) => {
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("activity_tags")
+          .select("id, name, icon_url, featured_description")
+          .eq("is_featured", true)
+          .order("featured_position")
+          .order("name");
         if (data) setFeaturedTags(data as FeaturedTag[]);
-      });
+      } catch {
+        // Ignore transient network/auth errors during featured-tag fetch.
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -152,6 +157,24 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
             }}
           />
         </div>
+
+        {/* Ask AI */}
+        <Link
+          href="/ask-ai"
+          title="Ask AI"
+          style={{
+            display: "flex", alignItems: "center", gap: 7,
+            height: 36, padding: "0 14px", borderRadius: 10,
+            border: `1.5px solid ${pathname === "/ask-ai" ? "#FFCE00" : "rgba(255,206,0,.4)"}`,
+            background: pathname === "/ask-ai" ? "#FFCE00" : "#FFFBEB",
+            color: "#7A5F00", fontSize: 12.5, fontWeight: 800,
+            textDecoration: "none", flexShrink: 0,
+            transition: "all .15s ease",
+          }}
+        >
+          <span style={{ fontSize: 14 }}>✦</span>
+          Ask AI
+        </Link>
 
         {/* Featured agents */}
         <div style={{ position: "relative" }}>

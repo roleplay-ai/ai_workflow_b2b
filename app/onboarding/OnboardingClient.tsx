@@ -283,6 +283,7 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
               nextDisabled={!q4Experience}
               nextLabel="See My Journey →"
               nextLoading={submitting}
+              nextStyle={finalNextBtnStyle}
               onNext={submitOnboarding}
               onBack={() => goTo(3)}
               backLabel="← Back"
@@ -384,8 +385,21 @@ const ghostBtnStyle: React.CSSProperties = {
   padding: "12px 8px", fontFamily: "inherit", fontWeight: 600, fontSize: 14, cursor: "pointer",
 };
 
+const finalNextBtnStyle: React.CSSProperties = {
+  border: `1px solid ${SHADOW}`,
+  borderRadius: 999,
+  padding: "12px 28px",
+  fontFamily: "inherit",
+  fontWeight: 800,
+  fontSize: 14,
+  cursor: "pointer",
+  background: SHADOW,
+  color: AMBER,
+};
+
 function QuestionScreen({
   title, sub, children, nextDisabled, nextLabel = "Next", nextLoading = false, onNext, onBack, backLabel,
+  nextStyle,
 }: {
   title: string;
   sub: string;
@@ -396,6 +410,7 @@ function QuestionScreen({
   onNext: () => void;
   onBack?: () => void;
   backLabel?: string;
+  nextStyle?: React.CSSProperties;
 }) {
   const disabled = nextDisabled || nextLoading;
   return (
@@ -408,7 +423,7 @@ function QuestionScreen({
         <button
           onClick={onNext}
           disabled={disabled}
-          style={{ ...primaryBtnStyle, opacity: disabled ? 0.6 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
+          style={{ ...(nextStyle ?? primaryBtnStyle), opacity: disabled ? 0.6 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
         >
           {nextLoading ? (
             <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>

@@ -1,5 +1,7 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { userNeedsOnboarding } from "@/lib/auth/onboardingGate";
 import { sumPointsFromProgress, type PointsStats } from "@/lib/points";
 import { rowsToToolLogoMap, rowsToTagLogoMap } from "@/lib/toolLogos";
 import { onboardingToolToSlug } from "@/lib/onboarding";
@@ -10,6 +12,8 @@ export const dynamic = "force-dynamic";
 export default async function WorkflowsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  if (await userNeedsOnboarding(supabase, user.id)) redirect("/ask-ai");
 
   const [
     { data: activities },

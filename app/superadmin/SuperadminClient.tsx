@@ -69,6 +69,24 @@ export default function SuperadminClient({ companies, activities: initActivities
   const [tool,     setTool]     = useState<string>(availableTools[0] ?? DEFAULT_TOOLS[0]);
   const [contentType, setContentType] = useState("chat");
   const [creating, setCreating] = useState(false);
+  const [syncingAskAI, setSyncingAskAI] = useState(false);
+
+  async function syncToAskAI() {
+    setSyncingAskAI(true);
+    try {
+      const res = await fetch("/api/superadmin/sync-activities", { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) {
+        alert(`Sync failed: ${body.error ?? "unknown error"}`);
+      } else {
+        alert(`Synced ${body.synced} published ${body.synced === 1 ? "activity" : "activities"} to Ask AI.`);
+      }
+    } catch {
+      alert("Sync failed — try again in a moment.");
+    } finally {
+      setSyncingAskAI(false);
+    }
+  }
 
   async function createActivity(e: React.FormEvent) {
     e.preventDefault();
@@ -216,6 +234,9 @@ export default function SuperadminClient({ companies, activities: initActivities
             <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 13 }}>{activities.length} total · create, edit content, assign to companies</p>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <button onClick={syncToAskAI} disabled={syncingAskAI} style={{ ...btnGhost, opacity: syncingAskAI ? .6 : 1 }} title="Recompute embeddings so Ask AI can suggest published workflows">
+              {syncingAskAI ? "Syncing…" : "↻ Sync to Ask AI"}
+            </button>
             <button onClick={() => setShowForm(v => !v)} style={btnAmber}>+ New Activity</button>
           </div>
         </div>

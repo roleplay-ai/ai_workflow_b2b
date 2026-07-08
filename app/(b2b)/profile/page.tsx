@@ -1,5 +1,7 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { userNeedsOnboarding } from "@/lib/auth/onboardingGate";
 import { sumPointsFromProgress, aiLevelForPoints, quizBonusPoints, type PointsStats } from "@/lib/points";
 import ProfileClient from "./ProfileClient";
 
@@ -26,6 +28,8 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 export default async function ProfilePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  if (await userNeedsOnboarding(supabase, user.id)) redirect("/ask-ai");
 
   const [
     { data: activities },

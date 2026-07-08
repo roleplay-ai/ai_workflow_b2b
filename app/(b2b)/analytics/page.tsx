@@ -1,6 +1,16 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { userNeedsOnboarding } from "@/lib/auth/onboardingGate";
 import B2BTopbar from "@/components/B2BTopbar";
 
-export default function AnalyticsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function AnalyticsPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  if (await userNeedsOnboarding(supabase, user.id)) redirect("/ask-ai");
+
   return (
     <>
       <B2BTopbar />
