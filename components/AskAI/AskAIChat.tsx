@@ -5,7 +5,9 @@ import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import OnboardingFlow, { type ChipsState, type OnboardingExistingAnswers } from "./OnboardingFlow";
+import SuggestedWorkflowCard from "./SuggestedWorkflowCard";
 import { ASK_LIMITS } from "@/lib/ask/guardrails";
+import "@/app/card-styles.css";
 
 /** Renders an assistant answer's markdown (bold, bullets, etc.) with the app's chat typography. */
 function MarkdownAnswer({ content }: { content: string }) {
@@ -55,7 +57,12 @@ type Citation = {
   images: { imageUrl: string; width: number | null; height: number | null }[];
 };
 
-type SuggestedWorkflow = { id: string; title: string };
+type SuggestedWorkflow = {
+  id: string;
+  title: string;
+  description?: string | null;
+  thumbnailUrl?: string | null;
+};
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -461,22 +468,15 @@ export default function AskAIChat({
                   }}>
                     Recommended workflows
                   </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  <div className="ndb-root" style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
                     {m.suggestedWorkflows.map((w) => (
-                      <a
+                      <SuggestedWorkflowCard
                         key={w.id}
-                        href={`/activity/${w.id}`}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 6,
-                          padding: "8px 14px", borderRadius: 999,
-                          border: "1.5px solid #FFCE00", background: "#FFFBEB",
-                          color: "#221D23", fontSize: 13, fontWeight: 700,
-                          textDecoration: "none",
-                        }}
-                      >
-                        ✦ {w.title}
-                        <span aria-hidden="true">→</span>
-                      </a>
+                        id={w.id}
+                        title={w.title}
+                        description={w.description}
+                        thumbnailUrl={w.thumbnailUrl}
+                      />
                     ))}
                   </div>
                 </div>

@@ -269,10 +269,27 @@ ${workflowsBlock}`;
   );
 
   const citedExcerpts = citedIndexes.map((i) => excerpts[i]);
-  const suggestedWorkflows = workflowIndexes
+  const pickedActivities = workflowIndexes
     .map((i) => matchedActivities[i])
-    .filter((a): a is MatchedActivity => a != null)
-    .map((a) => ({ id: a.id, title: a.title }));
+    .filter((a): a is MatchedActivity => a != null);
+
+  const thumbById = new Map<string, string | null>();
+  if (pickedActivities.length > 0) {
+    const { data: thumbRows } = await supabase
+      .from("activities")
+      .select("id, thumbnail_url")
+      .in("id", pickedActivities.map((a) => a.id));
+    for (const row of thumbRows ?? []) {
+      thumbById.set(row.id, row.thumbnail_url);
+    }
+  }
+
+  const suggestedWorkflows = pickedActivities.map((a) => ({
+    id: a.id,
+    title: a.title,
+    description: a.description,
+    thumbnailUrl: thumbById.get(a.id) ?? null,
+  }));
 
   const answer = parsedAnswer;
 
