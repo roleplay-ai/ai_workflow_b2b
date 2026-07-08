@@ -454,23 +454,31 @@ export default function AskAIChat({
               )}
 
               {m.suggestedWorkflows && m.suggestedWorkflows.length > 0 && (
-                <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8, width: "100%" }}>
-                  {m.suggestedWorkflows.map((w) => (
-                    <a
-                      key={w.id}
-                      href={`/activity/${w.id}`}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 6,
-                        padding: "8px 14px", borderRadius: 999,
-                        border: "1.5px solid #FFCE00", background: "#FFFBEB",
-                        color: "#221D23", fontSize: 13, fontWeight: 700,
-                        textDecoration: "none",
-                      }}
-                    >
-                      ✦ {w.title}
-                      <span aria-hidden="true">→</span>
-                    </a>
-                  ))}
+                <div style={{ marginTop: 14, width: "100%" }}>
+                  <div style={{
+                    fontSize: 11, fontWeight: 800, letterSpacing: ".08em",
+                    textTransform: "uppercase", color: "#A09AA6", marginBottom: 8,
+                  }}>
+                    Recommended workflows
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {m.suggestedWorkflows.map((w) => (
+                      <a
+                        key={w.id}
+                        href={`/activity/${w.id}`}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 6,
+                          padding: "8px 14px", borderRadius: 999,
+                          border: "1.5px solid #FFCE00", background: "#FFFBEB",
+                          color: "#221D23", fontSize: 13, fontWeight: 700,
+                          textDecoration: "none",
+                        }}
+                      >
+                        ✦ {w.title}
+                        <span aria-hidden="true">→</span>
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
