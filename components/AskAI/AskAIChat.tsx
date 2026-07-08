@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import OnboardingFlow, { type ChipsState, type OnboardingExistingAnswers } from "./OnboardingFlow";
+import { ASK_LIMITS } from "@/lib/ask/guardrails";
 
 /** Renders an assistant answer's markdown (bold, bullets, etc.) with the app's chat typography. */
 function MarkdownAnswer({ content }: { content: string }) {
@@ -14,9 +15,17 @@ function MarkdownAnswer({ content }: { content: string }) {
         remarkPlugins={[remarkGfm]}
         components={{
           p: ({ children }) => <p style={{ margin: "0 0 10px" }}>{children}</p>,
-          ul: ({ children }) => <ul style={{ margin: "4px 0 10px", paddingLeft: 20 }}>{children}</ul>,
-          ol: ({ children }) => <ol style={{ margin: "4px 0 10px", paddingLeft: 20 }}>{children}</ol>,
-          li: ({ children }) => <li style={{ marginBottom: 4 }}>{children}</li>,
+          ul: ({ children }) => (
+            <ul style={{ margin: "4px 0 10px", paddingLeft: 22, listStyleType: "disc", listStylePosition: "outside" }}>
+              {children}
+            </ul>
+          ),
+          ol: ({ children }) => (
+            <ol style={{ margin: "4px 0 10px", paddingLeft: 22, listStyleType: "decimal", listStylePosition: "outside" }}>
+              {children}
+            </ol>
+          ),
+          li: ({ children }) => <li style={{ marginBottom: 4, display: "list-item" }}>{children}</li>,
           strong: ({ children }) => <strong style={{ fontWeight: 800 }}>{children}</strong>,
           h1: ({ children }) => <div style={{ fontSize: 17, fontWeight: 800, margin: "6px 0 8px" }}>{children}</div>,
           h2: ({ children }) => <div style={{ fontSize: 16, fontWeight: 800, margin: "6px 0 8px" }}>{children}</div>,
@@ -148,6 +157,7 @@ export default function AskAIChat({
         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
         placeholder="Ask about a workflow…"
         rows={1}
+        maxLength={ASK_LIMITS.maxQuestionChars}
         style={{
           flex: 1, resize: "none", border: "none", outline: "none",
           fontSize: 15, fontFamily: "inherit", lineHeight: 1.5,
