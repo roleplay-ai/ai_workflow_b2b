@@ -7,14 +7,13 @@ import AskAIChat from "@/components/AskAI/AskAIChat";
 
 export const dynamic = "force-dynamic";
 
-export default async function AskAIPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
+export default async function AskAIPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // We always fetch onboarding-support data so the client can force-show the
-  // AskAI onboarding UI (e.g. for "?onboarding=update") even if the server-side
-  // searchParams are unavailable in a given rendering path.
+  // Onboarding-support data is always fetched; the client handles ?onboarding=update
+  // via useSearchParams so we don't need server-side searchParams here.
   const [{ data: profile }, { data: functionRows }, { data: categoryRows }] = await Promise.all([
     supabase
       .from("profiles")
@@ -38,11 +37,7 @@ export default async function AskAIPage({ searchParams }: { searchParams?: { [ke
     experience: profile?.onboarding_experience ?? null,
   };
 
-  const onboardingParam = searchParams?.onboarding;
-  const onboardingMode = Array.isArray(onboardingParam) ? onboardingParam[0] : onboardingParam;
-  const forceOnboarding = onboardingMode === "update";
-
-  const needsOnboarding = forceOnboarding || await userNeedsOnboarding(supabase, user.id);
+  const needsOnboarding = await userNeedsOnboarding(supabase, user.id);
 
   return (
     <>

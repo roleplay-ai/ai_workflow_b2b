@@ -66,7 +66,8 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
       .order("name")
       .then(({ data }) => {
         if (data) setFeaturedTags(data as FeaturedTag[]);
-      });
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
