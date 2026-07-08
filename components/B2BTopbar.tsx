@@ -58,16 +58,19 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
 
   useEffect(() => {
     const supabase = createClient();
-    supabase
-      .from("activity_tags")
-      .select("id, name, icon_url, featured_description")
-      .eq("is_featured", true)
-      .order("featured_position")
-      .order("name")
-      .then(({ data }) => {
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("activity_tags")
+          .select("id, name, icon_url, featured_description")
+          .eq("is_featured", true)
+          .order("featured_position")
+          .order("name");
         if (data) setFeaturedTags(data as FeaturedTag[]);
-      })
-      .catch(() => {});
+      } catch {
+        // Ignore transient network/auth errors during featured-tag fetch.
+      }
+    })();
   }, []);
 
   useEffect(() => {
