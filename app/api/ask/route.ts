@@ -4,8 +4,8 @@ import { embedText } from "@/lib/embeddings";
 import { anthropic } from "@/lib/anthropic";
 import {
   ASK_LIMITS,
-  enforceAnswerLength,
   guardrailPromptSection,
+  parseAskResponseTags,
   stripWorkflowMentionsFromAnswer,
   validateQuestion,
   validateSessionId,
@@ -233,13 +233,13 @@ to fill space; it's fine to recommend none.
 Use prior turns to interpret follow-ups, but judge only the current excerpt and workflow lists.
 
 Rules:
-- Hard limit: ${ASK_LIMITS.maxAnswerChars} characters for your explanatory answer only (the CITED: and WORKFLOWS: lines do not count; workflow links are shown separately and must not appear in the answer body).
+- Keep your explanatory answer concise — aim for roughly ${ASK_LIMITS.maxAnswerChars} characters or less (the CITED: and WORKFLOWS: lines do not count; workflow links are shown separately and must not appear in the answer body). This is guidance only: always finish your last sentence cleanly — never stop mid-word or mid-sentence.
 - Get to the point immediately. No filler, no restating the question, no closing summary.
 - Prefer excerpts when they answer — cite which ones you used.
 - If excerpts don't cover it, search the web first; say briefly it's not in the knowledge base.
 - Lead with the direct answer; **bold** the key fact. Bullets only if truly needed.
 - On the first line, output CITED:<excerpt numbers you actually used, comma-separated> (e.g. CITED:2,4). These numbers refer *only* to the numbered items in the Excerpts list below — never to web search results, workflows, or anything else. If your answer did not use any numbered excerpt from that list (e.g. you used web search or general knowledge instead), you must output CITED:none.
-- On the second line, output WORKFLOWS:<numbers of any relevant workflows, comma-separated> (e.g. WORKFLOWS:1,3), referring *only* to the numbered Suggested Workflows list below. Output WORKFLOWS:none if none are relevant.
+- On the second line (before your answer text), output WORKFLOWS:<numbers of any relevant workflows, comma-separated> (e.g. WORKFLOWS:1,3), referring *only* to the numbered Suggested Workflows list below. Output WORKFLOWS:none if none are relevant. Never put WORKFLOWS: inside or after your answer — only on its own line at the top.
 
 ${guardrailPromptSection()}
 
@@ -276,42 +276,20 @@ ${workflowsBlock}`;
     .filter((b): b is Extract<typeof b, { type: "text" }> => b.type === "text")
     .map((b) => b.text)
     .join("");
-  const citedMatch = raw.match(/^CITED:(.+)\n?/);
-  let citedIndexes: number[] = [];
-  let rest = raw;
 
-  if (citedMatch) {
-    rest = raw.slice(citedMatch[0].length);
-    if (citedMatch[1].trim() !== "none") {
-      citedIndexes = citedMatch[1]
-        .split(",")
-        .map((s) => parseInt(s.trim(), 10) - 1)
-        .filter((i) => i >= 0 && i < excerpts.length);
-    }
-  }
-
-  const workflowsMatch = rest.match(/^\s*WORKFLOWS:(.+)\n?/);
-  let workflowIndexes: number[] = [];
-  let answer = rest.trim();
-
-  if (workflowsMatch) {
-    answer = rest.slice(workflowsMatch[0].length).trim();
-    if (workflowsMatch[1].trim() !== "none") {
-      workflowIndexes = workflowsMatch[1]
-        .split(",")
-        .map((s) => parseInt(s.trim(), 10) - 1)
-        .filter((i) => i >= 0 && i < matchedActivities.length);
-    }
-  }
+  const { citedIndexes, workflowIndexes, answer: parsedAnswer } = parseAskResponseTags(
+    raw,
+    excerpts.length,
+    matchedActivities.length,
+  );
 
   const citedExcerpts = citedIndexes.map((i) => excerpts[i]);
-  const suggestedWorkflows = workflowIndexes.map((i) => {
-    const a = matchedActivities[i];
-    return { id: a.id, title: a.title };
-  });
+  const suggestedWorkflows = workflowIndexes
+    .map((i) => matchedActivities[i])
+    .filter((a): a is MatchedActivity => a != null)
+    .map((a) => ({ id: a.id, title: a.title }));
 
-  answer = stripWorkflowMentionsFromAnswer(answer, suggestedWorkflows);
-  answer = enforceAnswerLength(answer);
+  let answer = stripWorkflowMentionsFromAnswer(parsedAnswer, suggestedWorkflows);
 
   let imagesByPage: Record<string, { imageUrl: string; width: number | null; height: number | null }[]> = {};
   if (citedExcerpts.length > 0) {

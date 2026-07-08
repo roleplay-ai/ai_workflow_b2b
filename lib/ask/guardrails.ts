@@ -108,11 +108,6 @@ export function guardrailPromptSection(): string {
 - If a question is off-topic, say you are built for workflow and knowledge-base questions only.`.trim();
 }
 
-export function enforceAnswerLength(answer: string): string {
-  if (answer.length <= ASK_LIMITS.maxAnswerChars) return answer;
-  return `${answer.slice(0, ASK_LIMITS.maxAnswerChars - 1).trimEnd()}…`;
-}
-
 /** Remove in-body workflow mentions — chips are rendered separately and must not be capped. */
 export function stripWorkflowMentionsFromAnswer(
   answer: string,
@@ -140,4 +135,37 @@ export function stripWorkflowMentionsFromAnswer(
   }
 
   return result.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function parseIndexList(value: string, max: number): number[] {
+  if (value.trim() === "none") return [];
+  return value
+    .split(",")
+    .map((s) => parseInt(s.trim(), 10) - 1)
+    .filter((i) => i >= 0 && i < max);
+}
+
+/** Parse CITED:/WORKFLOWS: tags wherever the model placed them and strip from visible answer. */
+export function parseAskResponseTags(
+  raw: string,
+  excerptCount: number,
+  activityCount: number,
+): { citedIndexes: number[]; workflowIndexes: number[]; answer: string } {
+  let citedIndexes: number[] = [];
+  let workflowIndexes: number[] = [];
+  let answer = raw;
+
+  const citedMatch = answer.match(/^\s*CITED:(.+)$/m);
+  if (citedMatch) {
+    citedIndexes = parseIndexList(citedMatch[1], excerptCount);
+    answer = answer.replace(citedMatch[0], "");
+  }
+
+  const workflowsMatch = answer.match(/^\s*WORKFLOWS:(.+)$/m);
+  if (workflowsMatch) {
+    workflowIndexes = parseIndexList(workflowsMatch[1], activityCount);
+    answer = answer.replace(workflowsMatch[0], "");
+  }
+
+  return { citedIndexes, workflowIndexes, answer: answer.trim() };
 }
