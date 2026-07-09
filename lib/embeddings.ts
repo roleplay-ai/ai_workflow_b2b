@@ -13,7 +13,7 @@
 // resource-constrained free-tier worker. Batching many texts into one call risks
 // WORKER_RESOURCE_LIMIT (546) — fewer texts per invocation keeps peak memory/CPU
 // per call low, at the cost of more round trips.
-const EDGE_FUNCTION_BATCH_LIMIT = 6;
+const EDGE_FUNCTION_BATCH_LIMIT = 3;
 const MAX_RETRIES = 3;
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504, 546]);
 
