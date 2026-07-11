@@ -1274,3 +1274,62 @@
   text-decoration: none;
   display: inline-block;
 }
+
+/* ── Ask AI — "thinking" indicator ────────────────────────────────────────── */
+
+.askai-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 2px 0;
+}
+
+.askai-thinking-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: #FFCE00;
+  animation: askaiSparklePulse 1.6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes askaiSparklePulse {
+  0%, 100% { transform: scale(0.82) rotate(0deg); opacity: 0.55; }
+  50% { transform: scale(1.08) rotate(90deg); opacity: 1; }
+}
+
+.askai-thinking-text {
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  background-image: linear-gradient(
+    100deg,
+    #B7B2BA 0%,
+    #B7B2BA 38%,
+    #221D23 50%,
+    #B7B2BA 62%,
+    #B7B2BA 100%
+  );
+  background-size: 220% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: askaiTextShimmer 2.1s linear infinite;
+}
+
+@keyframes askaiTextShimmer {
+  0% { background-position: 130% 0; }
+  100% { background-position: -130% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .askai-thinking-icon,
+  .askai-thinking-text {
+    animation: none;
+  }
+  .askai-thinking-text {
+    color: #746F78;
+    background: none;
+  }
+}
