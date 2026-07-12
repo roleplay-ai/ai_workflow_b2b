@@ -61,12 +61,12 @@ export default function AskAIThinking() {
 
   return (
     <div className="askai-thinking-block">
+      <div className="askai-thinking-elapsed">Working for {elapsedSeconds}s</div>
       <div className="askai-thinking">
         <svg className="askai-thinking-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M12 2c.6 3.4 1.4 5.6 2.6 6.9 1.3 1.3 3.5 2.1 6.9 2.6-3.4.6-5.6 1.4-6.9 2.6-1.3 1.3-2.1 3.5-2.6 6.9-.6-3.4-1.4-5.6-2.6-6.9C8.1 12.8 5.9 12 2.5 11.4c3.4-.5 5.6-1.3 6.9-2.6C10.6 7.6 11.4 5.4 12 2z" />
         </svg>
         <span className="askai-thinking-text">{STAGES[stageIndex].label}</span>
-        <span className="askai-thinking-elapsed">Working for {elapsedSeconds}s</span>
       </div>
       {showFact && <div className="askai-thinking-fact">{fact}</div>}
     </div>

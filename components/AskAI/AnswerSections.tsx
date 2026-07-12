@@ -21,12 +21,12 @@ export default function AnswerSections({ content }: { content: string }) {
             style={isShortAnswer ? { borderLeft: "4px solid #FFCE00", paddingLeft: 14 } : undefined}
           >
             {section.title && (
-              <div style={{
-                fontSize: 11, fontWeight: 800, letterSpacing: ".06em",
-                textTransform: "uppercase", color: "#A09AA6", marginBottom: 6,
+              <h2 style={{
+                margin: "0 0 8px", fontSize: 18, fontWeight: 800,
+                letterSpacing: "-.02em", color: "#221D23", lineHeight: 1.25,
               }}>
                 {section.title}
-              </div>
+              </h2>
             )}
             <MarkdownAnswer content={section.body} />
           </div>
