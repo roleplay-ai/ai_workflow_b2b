@@ -2,53 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import OnboardingFlow, { type ChipsState, type OnboardingExistingAnswers } from "./OnboardingFlow";
 import SuggestedWorkflowCard from "./SuggestedWorkflowCard";
+import AnswerSections from "./AnswerSections";
+import AskTeamDialog from "./AskTeamDialog";
+import AskAIThinking from "./AskAIThinking";
 import { ASK_LIMITS } from "@/lib/ask/guardrails";
 import "@/app/card-styles.css";
-
-/** Renders an assistant answer's markdown (bold, bullets, etc.) with the app's chat typography. */
-function MarkdownAnswer({ content }: { content: string }) {
-  return (
-    <div style={{ fontSize: 15, lineHeight: 1.65, color: "#221D23" }}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          p: ({ children }) => <p style={{ margin: "0 0 10px" }}>{children}</p>,
-          ul: ({ children }) => (
-            <ul style={{ margin: "4px 0 10px", paddingLeft: 22, listStyleType: "disc", listStylePosition: "outside" }}>
-              {children}
-            </ul>
-          ),
-          ol: ({ children }) => (
-            <ol style={{ margin: "4px 0 10px", paddingLeft: 22, listStyleType: "decimal", listStylePosition: "outside" }}>
-              {children}
-            </ol>
-          ),
-          li: ({ children }) => <li style={{ marginBottom: 4, display: "list-item" }}>{children}</li>,
-          strong: ({ children }) => <strong style={{ fontWeight: 800 }}>{children}</strong>,
-          h1: ({ children }) => <div style={{ fontSize: 17, fontWeight: 800, margin: "6px 0 8px" }}>{children}</div>,
-          h2: ({ children }) => <div style={{ fontSize: 16, fontWeight: 800, margin: "6px 0 8px" }}>{children}</div>,
-          h3: ({ children }) => <div style={{ fontSize: 15, fontWeight: 800, margin: "6px 0 6px" }}>{children}</div>,
-          code: ({ children }) => (
-            <code style={{ background: "#F0EEE8", padding: "1px 6px", borderRadius: 4, fontSize: "0.9em", fontFamily: "ui-monospace, monospace" }}>
-              {children}
-            </code>
-          ),
-          a: ({ children, href }) => (
-            <a href={href} target="_blank" rel="noreferrer" style={{ color: "#623CEA", textDecoration: "underline" }}>
-              {children}
-            </a>
-          ),
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
-  );
-}
 
 type Citation = {
   documentTitle: string;
@@ -156,6 +116,17 @@ const COACH_HELP_ITEMS = [
   },
 ] as const;
 
+function feedbackBtnStyle(active: boolean): React.CSSProperties {
+  return {
+    display: "inline-flex", alignItems: "center", gap: 6,
+    padding: "6px 12px", borderRadius: 999,
+    border: `1.5px solid ${active ? "#221D23" : "#E8E6DC"}`,
+    background: active ? "#221D23" : "white",
+    color: active ? "white" : "#221D23",
+    fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+  };
+}
+
 type Props = {
   needsOnboarding?: boolean;
   functionOptions?: string[];
@@ -179,6 +150,8 @@ export default function AskAIChat({
   const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
   const [openInfoKey, setOpenInfoKey] = useState<string | null>(null);
   const [onboardingChips, setOnboardingChips] = useState<ChipsState | null>(null);
+  const [teamDialogFor, setTeamDialogFor] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<Record<number, "up" | "down">>({});
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -553,7 +526,7 @@ export default function AskAIChat({
                 </div>
               ) : (
                 <div style={{ maxWidth: "100%", width: "100%" }}>
-                  <MarkdownAnswer content={m.content} />
+                  <AnswerSections content={m.content} />
                 </div>
               )}
 
@@ -614,16 +587,50 @@ export default function AskAIChat({
                   </div>
                 </div>
               )}
+
+              {m.role === "assistant" && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+                  marginTop: 14, paddingTop: 14, borderTop: "1px solid #EEEAE4", width: "100%",
+                }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: "#746F78", marginRight: 2 }}>Was this helpful?</span>
+                  <button
+                    onClick={() => setFeedback((prev) => ({ ...prev, [i]: "up" }))}
+                    aria-pressed={feedback[i] === "up"}
+                    style={feedbackBtnStyle(feedback[i] === "up")}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M7 10v11" />
+                      <path d="M15 5.88 14 10h6.5a1.5 1.5 0 0 1 1.45 1.87l-1.9 7.5A2 2 0 0 1 18.13 21H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" />
+                    </svg>
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setFeedback((prev) => ({ ...prev, [i]: "down" }))}
+                    aria-pressed={feedback[i] === "down"}
+                    style={feedbackBtnStyle(feedback[i] === "down")}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 14V3" />
+                      <path d="M9 18.12 10 14H3.5a1.5 1.5 0 0 1-1.45-1.87l1.9-7.5A2 2 0 0 1 5.87 3H20a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z" />
+                    </svg>
+                    No
+                  </button>
+                  <button
+                    onClick={() => setTeamDialogFor(messages[i - 1]?.content ?? "")}
+                    style={{ ...feedbackBtnStyle(false), marginLeft: "auto" }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="6" width="20" height="12" rx="2" />
+                      <path d="M2 7l10 6 10-6" />
+                    </svg>
+                    Ask our team
+                  </button>
+                </div>
+              )}
             </div>
           ))}
-          {loading && (
-            <div className="askai-thinking">
-              <svg className="askai-thinking-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M12 2c.6 3.4 1.4 5.6 2.6 6.9 1.3 1.3 3.5 2.1 6.9 2.6-3.4.6-5.6 1.4-6.9 2.6-1.3 1.3-2.1 3.5-2.6 6.9-.6-3.4-1.4-5.6-2.6-6.9C8.1 12.8 5.9 12 2.5 11.4c3.4-.5 5.6-1.3 6.9-2.6C10.6 7.6 11.4 5.4 12 2z" />
-              </svg>
-              <span className="askai-thinking-text">Thinking</span>
-            </div>
-          )}
+          {loading && <AskAIThinking />}
         </div>
       </div>
 
@@ -634,6 +641,13 @@ export default function AskAIChat({
       <div style={{ position: "relative", zIndex: 20, background: "var(--bg)", padding: "16px 24px 22px", flexShrink: 0 }}>
         <div style={{ maxWidth: 760, margin: "0 auto" }}>{composer(false)}</div>
       </div>
+
+      <AskTeamDialog
+        open={teamDialogFor != null}
+        question={teamDialogFor ?? ""}
+        sessionId={sessionId}
+        onClose={() => setTeamDialogFor(null)}
+      />
     </div>
   );
 }
