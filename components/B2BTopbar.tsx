@@ -106,13 +106,13 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
 
   const agentsBtnStyle = (open: boolean): React.CSSProperties => ({
     width: 36, height: 36, borderRadius: 10,
-    border: `1.5px solid ${open ? "#623CEA" : "rgba(98,60,234,.22)"}`,
-    background: open ? "#623CEA" : "var(--bg)",
+    border: `1.5px solid ${open ? "#1C1820" : "#E9E4DC"}`,
+    background: open ? "#1C1820" : "var(--bg)",
     display: "flex", alignItems: "center", justifyContent: "center",
     cursor: "pointer",
-    color: open ? "#FFCE00" : "#623CEA",
+    color: open ? "#FFCE00" : "#1C1820",
     position: "relative", padding: 0, fontFamily: "inherit",
-    boxShadow: open ? "0 4px 14px rgba(98,60,234,.28)" : "none",
+    boxShadow: "none",
     transition: "all .15s ease",
   });
 
@@ -220,7 +220,10 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
             style={agentsBtnStyle(tagsOpen)}
           >
             <svg width="16" height="16" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2.5 2.5h4.2L8.5 6.3l2.8-1.1 1.1 2.8-3.8 1.8-1.8 3.8-1.1-2.8-2.8-1.1 1.8-3.8z"/>
+              <rect x="1.5" y="1.5" width="5" height="5" rx="1.2"/>
+              <rect x="8.5" y="1.5" width="5" height="5" rx="1.2"/>
+              <rect x="1.5" y="8.5" width="5" height="5" rx="1.2"/>
+              <rect x="8.5" y="8.5" width="5" height="5" rx="1.2"/>
             </svg>
           </button>
 
