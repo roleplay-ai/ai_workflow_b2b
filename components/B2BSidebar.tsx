@@ -121,8 +121,8 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/nudgeable-logo.png" alt="Nudgeable" style={{ width: 28, height: 28, objectFit: "contain", flexShrink: 0 }} />
         <div>
-          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#fff", letterSpacing: "-.01em" }}>Nudgeable</div>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,.4)", marginTop: 1 }}>AI Practice Lab</div>
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#fff", letterSpacing: "-.01em" }}>AI Practice Lab</div>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,.4)", marginTop: 1 }}></div>
         </div>
       </div>
 
@@ -173,10 +173,10 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
           label="Workflows"
           icon={
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2"/>
-              <rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2"/>
-              <rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2"/>
-              <rect x="9" y="9" width="5.5" height="5.5" rx="1.2"/>
+              <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2" />
+              <rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2" />
+              <rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2" />
+              <rect x="9" y="9" width="5.5" height="5.5" rx="1.2" />
             </svg>
           }
         />
@@ -186,7 +186,7 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
           label="Course"
           icon={
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 1.5L10 6h4.5L11 9l1.5 4.5L8 11l-4.5 2.5L5 9 1.5 6H6z"/>
+              <path d="M8 1.5L10 6h4.5L11 9l1.5 4.5L8 11l-4.5 2.5L5 9 1.5 6H6z" />
             </svg>
           }
         />
@@ -194,12 +194,12 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
         <NavItem
           href="/updates"
           label="News"
-          badge={3}
+
           badgeColor="red"
           icon={
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="8" cy="8" r="6.5"/>
-              <path d="M8 5v3l2 2"/>
+              <circle cx="8" cy="8" r="6.5" />
+              <path d="M8 5v3l2 2" />
             </svg>
           }
         />
@@ -209,7 +209,7 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
           label="My Progress"
           icon={
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2 12V8M6 12V5M10 12V3M14 12v-4"/>
+              <path d="M2 12V8M6 12V5M10 12V3M14 12v-4" />
             </svg>
           }
         />
@@ -218,69 +218,69 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
 
       {/* Free guide card */}
       {showGuideCard && (
-      <div style={{ margin: "0 10px 12px", background: "#0F0D12", border: "1px solid rgba(255,255,255,.1)", borderRadius: 8, padding: "10px", position: "relative" }}>
-        <button
-          type="button"
-          onClick={dismissGuideCard}
-          aria-label="Dismiss download card"
-          style={{
-            position: "absolute",
-            top: 6,
-            right: 6,
-            width: 22,
-            height: 22,
-            borderRadius: 6,
-            border: "none",
-            background: "rgba(255,255,255,.08)",
-            color: "rgba(255,255,255,.55)",
-            display: "grid",
-            placeItems: "center",
-            cursor: "pointer",
-            padding: 0,
-            fontFamily: "inherit",
-            transition: "background .12s, color .12s",
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,.14)";
-            (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,.9)";
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,.08)";
-            (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,.55)";
-          }}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
+        <div style={{ margin: "0 10px 12px", background: "#0F0D12", border: "1px solid rgba(255,255,255,.1)", borderRadius: 8, padding: "10px", position: "relative" }}>
+          <button
+            type="button"
+            onClick={dismissGuideCard}
+            aria-label="Dismiss download card"
+            style={{
+              position: "absolute",
+              top: 6,
+              right: 6,
+              width: 22,
+              height: 22,
+              borderRadius: 6,
+              border: "none",
+              background: "rgba(255,255,255,.08)",
+              color: "rgba(255,255,255,.55)",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+              padding: 0,
+              fontFamily: "inherit",
+              transition: "background .12s, color .12s",
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,.14)";
+              (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,.9)";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,.08)";
+              (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,.55)";
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
 
-        {/* Label + title row */}
-        <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: ".1em", textTransform: "uppercase", color: "#FFCE00", marginBottom: 3, paddingRight: 20 }}>
-          Free Download
-        </div>
-        <div style={{ fontSize: 11.5, fontWeight: 900, color: "#fff", lineHeight: 1.3, marginBottom: 6, letterSpacing: "-.01em" }}>
-          Prompt Engineering for AI Agents
-        </div>
+          {/* Label + title row */}
+          <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: ".1em", textTransform: "uppercase", color: "#FFCE00", marginBottom: 3, paddingRight: 20 }}>
+            Free Download
+          </div>
+          <div style={{ fontSize: 11.5, fontWeight: 900, color: "#fff", lineHeight: 1.3, marginBottom: 6, letterSpacing: "-.01em" }}>
+            Prompt Engineering for AI Agents
+          </div>
 
-        {/* Description */}
-        <div style={{ fontSize: 10.5, color: "rgba(255,255,255,.45)", fontWeight: 500, lineHeight: 1.45, marginBottom: 8 }}>
-          30 techniques, 4 modules &amp; a 12-step workflow for writing AI agent prompts that work.
-        </div>
+          {/* Description */}
+          <div style={{ fontSize: 10.5, color: "rgba(255,255,255,.45)", fontWeight: 500, lineHeight: 1.45, marginBottom: 8 }}>
+            30 techniques, 4 modules &amp; a 12-step workflow for writing AI agent prompts that work.
+          </div>
 
-        {/* Download button */}
-        <a
-          href="/prompt-engineering-guide.pdf"
-          download="PromptEngineering_FieldGuide.pdf"
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", padding: "7px 0", background: "#FFCE00", color: "#1C1820", borderRadius: 6, fontSize: 11, fontWeight: 900, textDecoration: "none", boxSizing: "border-box" }}
-        >
-          Download Guide
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-        </a>
-      </div>
+          {/* Download button */}
+          <a
+            href="/prompt-engineering-guide.pdf"
+            download="PromptEngineering_FieldGuide.pdf"
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", padding: "7px 0", background: "#FFCE00", color: "#1C1820", borderRadius: 6, fontSize: 11, fontWeight: 900, textDecoration: "none", boxSizing: "border-box" }}
+          >
+            Download Guide
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </a>
+        </div>
       )}
 
       {/* User footer */}
@@ -319,8 +319,8 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="8" cy="5.5" r="3"/>
-                  <path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/>
+                  <circle cx="8" cy="5.5" r="3" />
+                  <path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
                 </svg>
                 View Profile
               </Link>
@@ -339,9 +339,9 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 3H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3"/>
-                  <path d="M11 11l3-3-3-3"/>
-                  <path d="M14 8H6"/>
+                  <path d="M6 3H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3" />
+                  <path d="M11 11l3-3-3-3" />
+                  <path d="M14 8H6" />
                 </svg>
                 {signingOut ? "Signing out…" : "Sign out"}
               </button>
@@ -381,7 +381,7 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
             style={{ color: "rgba(255,255,255,.3)", flexShrink: 0, transition: "transform .15s", transform: menuOpen ? "rotate(180deg)" : "rotate(0deg)" }}
             width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8"
           >
-            <path d="M3 5l4 4 4-4"/>
+            <path d="M3 5l4 4 4-4" />
           </svg>
         </button>
       </div>

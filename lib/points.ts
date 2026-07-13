@@ -46,6 +46,20 @@ export type PointsStats = {
   company_size: number;
 };
 
+export type LeaderboardEntry = {
+  user_id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  points: number;
+  rank: number;
+};
+
+export type LeaderboardStats = {
+  company_size: number;
+  top: LeaderboardEntry[];
+  me: LeaderboardEntry | null;
+};
+
 const AI_LEVELS = [
   { min: 0, label: "Explorer" },
   { min: 50, label: "Builder" },

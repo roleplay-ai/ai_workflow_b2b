@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { userNeedsOnboarding } from "@/lib/auth/onboardingGate";
-import { sumPointsFromProgress, aiLevelForPoints, quizBonusPoints, type PointsStats } from "@/lib/points";
+import { sumPointsFromProgress, aiLevelForPoints, quizBonusPoints, type PointsStats, type LeaderboardStats } from "@/lib/points";
 import ProfileClient from "./ProfileClient";
 
 export const dynamic = "force-dynamic";
@@ -104,13 +104,20 @@ export default async function ProfilePage() {
   let companyPercentile: number | null = null;
   let companySize = 0;
   let companyAvgPoints = 0;
+  let leaderboard: LeaderboardStats = { company_size: 0, top: [], me: null };
   if (user) {
-    const { data: pointsStats } = await supabase.rpc("get_my_points_stats");
+    const [{ data: pointsStats }, { data: leaderboardStats }] = await Promise.all([
+      supabase.rpc("get_my_points_stats"),
+      supabase.rpc("get_company_leaderboard"),
+    ]);
     if (pointsStats && typeof pointsStats === "object") {
       const stats = pointsStats as PointsStats;
       companyPercentile = stats.company_percentile ?? null;
       companySize = stats.company_size ?? 0;
       companyAvgPoints = stats.company_avg_points ?? 0;
+    }
+    if (leaderboardStats && typeof leaderboardStats === "object") {
+      leaderboard = leaderboardStats as LeaderboardStats;
     }
   }
 
@@ -188,6 +195,7 @@ export default async function ProfilePage() {
         proficiency={proficiency}
         certificates={certificates}
         recommended={recommended}
+        leaderboard={leaderboard}
       />
     </Suspense>
   );

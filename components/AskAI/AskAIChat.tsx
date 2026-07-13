@@ -219,7 +219,7 @@ export default function AskAIChat({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
-          placeholder={landing ? "For example: Help me compare the free and paid versions of Gemini" : "Ask about a workflow…"}
+          placeholder={landing ? "For example: I want to [task] using [tool] so that [desired result]" : "Ask about a workflow…"}
           rows={landing ? 2 : 1}
           maxLength={ASK_LIMITS.maxQuestionChars}
           style={composerTextareaStyle}
@@ -403,9 +403,9 @@ export default function AskAIChat({
 
           <div style={{ width: "100%", maxWidth: 640 }}>
             {composer(true, true)}
-            <p style={{ margin: "10px 2px 0", fontSize: 12.5, color: "#A09AA6", lineHeight: 1.5 }}>
+            {/* <p style={{ margin: "10px 2px 0", fontSize: 12.5, color: "#A09AA6", lineHeight: 1.5 }}>
               <strong style={{ color: "#746F78" }}>I want to</strong> [task] <strong style={{ color: "#746F78" }}>using</strong> [tool or information] <strong style={{ color: "#746F78" }}>so that</strong> [desired result]
-            </p>
+            </p> */}
           </div>
 
           <div style={{ width: "100%", maxWidth: 640, marginTop: 28 }}>

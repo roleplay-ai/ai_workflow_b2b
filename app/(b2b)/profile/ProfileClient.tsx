@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { formatTopPercentile } from "@/lib/points";
+import { formatTopPercentile, type LeaderboardStats, type LeaderboardEntry } from "@/lib/points";
 import B2BTopbar from "@/components/B2BTopbar";
 import "@/app/card-styles.css";
 import type { HistoryRow, CategoryProficiency, Certificate, RecommendedActivity } from "./page";
@@ -166,25 +166,58 @@ function ProficiencyPanel({ proficiency }: { proficiency: CategoryProficiency[] 
   );
 }
 
-function RankPanel({ companyPercentile, companySize, userTotalPoints, companyAvgPoints }: { companyPercentile: number | null; companySize: number; userTotalPoints: number; companyAvgPoints: number }) {
-  const topPercentileLabel = formatTopPercentile(companyPercentile, companySize);
-  const delta = userTotalPoints - companyAvgPoints;
-  const deltaLabel = companySize > 0 ? (delta >= 0 ? `${delta} pts above avg` : `${Math.abs(delta)} pts below avg`) : "—";
+function leaderboardInitials(name: string | null): string {
+  if (!name) return "?";
+  return name.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("") || "?";
+}
+
+function LeaderboardRow({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid #332C3A" }}>
+      <span style={{ width: 20, textAlign: "center", fontWeight: 900, fontSize: 13, color: isMe ? "#FFCE00" : "rgba(255,255,255,.45)" }}>
+        {entry.rank}
+      </span>
+      <span style={{ width: 30, height: 30, borderRadius: "50%", display: "grid", placeItems: "center", background: isMe ? "#FFCE00" : "#332C3A", color: isMe ? "#1C1820" : "#fff", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
+        {leaderboardInitials(entry.full_name)}
+      </span>
+      <span style={{ flex: 1, fontWeight: 800, fontSize: 13.5, color: isMe ? "#FFCE00" : "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {isMe ? "You" : (entry.full_name || "Teammate")}
+      </span>
+      <span style={{ fontWeight: 900, fontSize: 13.5, color: isMe ? "#FFCE00" : "#C8C1D0", whiteSpace: "nowrap" }}>
+        {entry.points} pts
+      </span>
+    </div>
+  );
+}
+
+function LeaderboardPanel({ leaderboard }: { leaderboard: LeaderboardStats }) {
+  const meId = leaderboard.me?.user_id;
+  const meInTop = leaderboard.top.some(e => e.user_id === meId);
 
   return (
     <div style={{ background: "#1C1820", color: "#fff", borderRadius: 18, padding: 24 }}>
-      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: "rgba(255,255,255,.45)" }}>Company Benchmark</div>
-      <div style={{ color: "#FFCE00", fontSize: 38, fontWeight: 900, letterSpacing: "-.03em", margin: "8px 0 12px" }}>{topPercentileLabel}</div>
-      {[
-        ["Your points", String(userTotalPoints)],
-        ["Company avg points", String(companyAvgPoints)],
-        ["Vs. company avg", deltaLabel],
-      ].map(([label, value]) => (
-        <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "12px 0", borderTop: "1px solid #332C3A", color: "#C8C1D0", fontWeight: 700, fontSize: 13.5 }}>
-          <span>{label}</span>
-          <strong style={{ color: "#fff", whiteSpace: "nowrap" }}>{value}</strong>
+      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: "rgba(255,255,255,.45)" }}>Company Leaderboard</div>
+      <div style={{ color: "#FFCE00", fontSize: 19, fontWeight: 900, letterSpacing: "-.02em", margin: "8px 0 4px" }}>
+        Top 5{leaderboard.company_size > 0 ? ` of ${leaderboard.company_size} teammates` : ""}
+      </div>
+
+      {leaderboard.top.length === 0 ? (
+        <div style={{ color: "rgba(255,255,255,.5)", fontSize: 13, fontWeight: 600, padding: "16px 0" }}>
+          No teammates have earned points yet.
         </div>
-      ))}
+      ) : (
+        <div style={{ marginTop: 8 }}>
+          {leaderboard.top.map(entry => (
+            <LeaderboardRow key={entry.user_id} entry={entry} isMe={entry.user_id === meId} />
+          ))}
+          {leaderboard.me && !meInTop && (
+            <>
+              <div style={{ textAlign: "center", color: "rgba(255,255,255,.3)", fontSize: 12, padding: "6px 0", borderTop: "1px solid #332C3A" }}>⋯</div>
+              <LeaderboardRow entry={leaderboard.me} isMe />
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -245,12 +278,14 @@ type Props = {
   proficiency: CategoryProficiency[];
   certificates: Certificate[];
   recommended: RecommendedActivity[];
+  leaderboard: LeaderboardStats;
 };
 
-export default function ProfileClient({ history, userTotalPoints, completedCount, inProgressCount, thisWeekCount, bestCategory, companyPercentile, companySize, companyAvgPoints, streakCount, aiLevel, proficiency, certificates, recommended }: Props) {
+export default function ProfileClient({ history, userTotalPoints, completedCount, inProgressCount, thisWeekCount, bestCategory, companyPercentile, companySize, companyAvgPoints, streakCount, aiLevel, proficiency, certificates, recommended, leaderboard }: Props) {
   const [activeTab, setActiveTab] = useState<ProfileTab>("history");
   const topPercentileLabel = formatTopPercentile(companyPercentile, companySize);
   const percentileDelta = companySize > 0 ? `Company avg: ${companyAvgPoints} pts` : "Points rank within your company";
+  const rankLabel = leaderboard.me ? `Among ${leaderboard.company_size} teammates` : "Unranked";
 
   return (
     <>
@@ -286,7 +321,7 @@ export default function ProfileClient({ history, userTotalPoints, completedCount
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 12, paddingBottom: 18, borderBottom: "1px solid #E9E4DC" }}>
               <StatCard label="💰 My Points" value={String(userTotalPoints)} delta={companySize > 0 ? `${Math.max(userTotalPoints - companyAvgPoints, 0)} pts above company avg` : "Earned from completed workflows"} />
-              <StatCard label="✅ Completed" value={String(completedCount)} delta={`${inProgressCount} in progress`} deltaColor={inProgressCount > 0 ? "#F68A29" : undefined} />
+              <StatCard label="🎖️ Rank" value={String(completedCount)} delta={rankLabel} deltaColor="#623CEA" />
               <StatCard label="🧠 AI Level" value={aiLevel.label} delta={aiLevel.next ? `Next: ${aiLevel.next}` : "Highest level reached"} deltaColor="#623CEA" />
               <StatCard label="🔥 Weekly Streak" value={String(streakCount)} delta={streakCount > 0 ? "Active this week" : "Complete a workflow to start"} deltaColor="#F68A29" />
               <StatCard label="Company Rank" value={topPercentileLabel} delta={percentileDelta} dark />
@@ -306,7 +341,7 @@ export default function ProfileClient({ history, userTotalPoints, completedCount
               <section className="rail">
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.2fr) minmax(280px, 0.8fr)", gap: 18 }}>
                   <ProficiencyPanel proficiency={proficiency} />
-                  <RankPanel companyPercentile={companyPercentile} companySize={companySize} userTotalPoints={userTotalPoints} companyAvgPoints={companyAvgPoints} />
+                  <LeaderboardPanel leaderboard={leaderboard} />
                 </div>
               </section>
               <CertificatesSection certificates={certificates} />
