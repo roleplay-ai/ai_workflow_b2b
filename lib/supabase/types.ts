@@ -84,10 +84,13 @@ export type ActivityFunction = {
   created_at: string;
 };
 
+export type SavedWorkflowSource = "onboarding" | "liked";
+
 export type UserSavedWorkflow = {
   id: string;
   user_id: string;
   activity_id: string;
+  source: SavedWorkflowSource;
   created_at: string;
 };
 
@@ -325,7 +328,7 @@ export type Database = {
       };
       user_saved_workflows: {
         Row: UserSavedWorkflow;
-        Insert: { user_id: string; activity_id: string };
+        Insert: { user_id: string; activity_id: string; source?: SavedWorkflowSource };
         Update: Record<string, never>;
         Relationships: [];
       };

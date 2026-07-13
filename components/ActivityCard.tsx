@@ -85,6 +85,21 @@ function EyeIcon() {
   );
 }
 
+function HeartIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"
+        fill={filled ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth={filled ? 1.75 : 1.9}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function formatViewCount(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
   return String(n);
@@ -144,20 +159,50 @@ type Props = {
   isCompleted?: boolean;
   /** When set, RotatingTools shows only this tool (if the activity has it) instead of all of them. */
   onlyTool?: string | null;
+  /** Whether this workflow is in My Workflows (hearted / onboarding-saved). */
+  isSaved?: boolean;
+  /** Toggle save to My Workflows. When omitted, the heart is hidden. */
+  onToggleSave?: (activityId: string) => void;
 };
 
-export default function ActivityCard({ activity, toolLogos, tagLogos = {}, viewCount = 0, isCompleted = false, onlyTool = null }: Props) {
+export default function ActivityCard({
+  activity,
+  toolLogos,
+  tagLogos = {},
+  viewCount = 0,
+  isCompleted = false,
+  onlyTool = null,
+  isSaved = false,
+  onToggleSave,
+}: Props) {
   const theme = getTheme(activity.id);
   const allTools = normalizeActivityTools(activity.tools);
   const preferredOnly = onlyTool ? allTools.filter(t => t.toLowerCase() === onlyTool.toLowerCase()) : [];
   const tools = preferredOnly.length > 0 ? preferredOnly : allTools;
   const [navigating, setNavigating] = useState(false);
+  const showHeart = !!onToggleSave;
 
   const inner = (
     <>
       {/* Poster */}
-      <div className={`card-poster ${theme.posterColor}${activity.thumbnail_url ? " has-thumbnail" : ""}`}>
+      <div className={`card-poster ${theme.posterColor}${activity.thumbnail_url ? " has-thumbnail" : ""}${showHeart ? " has-like" : ""}`}>
         {activity.is_featured && <span className="new-badge">New</span>}
+        {showHeart && (
+          <button
+            type="button"
+            className={`card-like-btn${isSaved ? " is-saved" : ""}`}
+            title={isSaved ? "Remove from My Workflows" : "Save to My Workflows"}
+            aria-label={isSaved ? "Remove from My Workflows" : "Save to My Workflows"}
+            aria-pressed={isSaved}
+            onClick={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleSave(activity.id);
+            }}
+          >
+            <HeartIcon filled={isSaved} />
+          </button>
+        )}
         {activity.thumbnail_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img className="card-thumbnail" src={activity.thumbnail_url} alt={activity.title} />

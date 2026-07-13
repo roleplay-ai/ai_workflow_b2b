@@ -79,20 +79,33 @@ export async function POST(req: NextRequest) {
     return jsonWithSessionCookies(sessionResponse, { error: matchError.message }, { status: 500 });
   }
 
-  // Replace the whole snapshot — full recompute on every onboarding completion.
+  // Replace onboarding suggestions only — keep workflows the user hearted.
   const { error: deleteError } = await supabase
     .from("user_saved_workflows")
     .delete()
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("source", "onboarding");
   if (deleteError) {
     return jsonWithSessionCookies(sessionResponse, { error: deleteError.message }, { status: 500 });
   }
 
+  const { data: keptLiked } = await supabase
+    .from("user_saved_workflows")
+    .select("activity_id")
+    .eq("user_id", user.id)
+    .eq("source", "liked");
+  const likedIds = new Set((keptLiked ?? []).map(r => r.activity_id));
+
   const matchedActivities = matched ?? [];
-  if (matchedActivities.length > 0) {
+  const toInsert = matchedActivities.filter(a => !likedIds.has(a.id));
+  if (toInsert.length > 0) {
     const { error: insertError } = await supabase
       .from("user_saved_workflows")
-      .insert(matchedActivities.map(a => ({ user_id: user.id, activity_id: a.id })));
+      .insert(toInsert.map(a => ({
+        user_id: user.id,
+        activity_id: a.id,
+        source: "onboarding",
+      })));
     if (insertError) {
       return jsonWithSessionCookies(sessionResponse, { error: insertError.message }, { status: 500 });
     }
