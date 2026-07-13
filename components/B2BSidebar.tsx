@@ -1,8 +1,9 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useNavigationLoading } from "@/components/NavigationLoading";
 
 type Props = {
   companyName: string | null;
@@ -26,11 +27,22 @@ function NavItem({
   badgeColor?: "amber" | "red";
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { startNavigating } = useNavigationLoading();
   const active = pathname === href || pathname.startsWith(href + "/");
 
   return (
     <Link
       href={href}
+      onClick={(e) => {
+        if (pathname === href) {
+          e.preventDefault();
+          return;
+        }
+        e.preventDefault();
+        startNavigating(href);
+        router.push(href);
+      }}
       style={{
         display: "flex", alignItems: "center", gap: 10,
         padding: "8px 12px", margin: "1px 8px",
@@ -85,6 +97,9 @@ const GUIDE_CARD_DISMISSED_KEY = "b2b-sidebar-guide-dismissed";
 
 export default function B2BSidebar({ companyName, companyInitials, userName, userEmail, userInitials }: Props) {
   const supabase = createClient();
+  const pathname = usePathname();
+  const router = useRouter();
+  const { startNavigating } = useNavigationLoading();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [signingOut, setSigningOut] = React.useState(false);
   const [showGuideCard, setShowGuideCard] = React.useState(false);
@@ -306,7 +321,16 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
               </div>
               <Link
                 href="/profile"
-                onClick={() => setMenuOpen(false)}
+                onClick={(e) => {
+                  setMenuOpen(false);
+                  if (pathname === "/profile") {
+                    e.preventDefault();
+                    return;
+                  }
+                  e.preventDefault();
+                  startNavigating("/profile");
+                  router.push("/profile");
+                }}
                 style={{
                   display: "flex", alignItems: "center", gap: 8, width: "100%",
                   padding: "9px 10px", borderRadius: 7,

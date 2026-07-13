@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import NavigationLoadingProvider from "@/components/NavigationLoading";
 
 export const metadata: Metadata = {
   title: "Nudgeable — AI Practice Lab",
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <NavigationLoadingProvider>{children}</NavigationLoadingProvider>
+      </body>
     </html>
   );
 }
