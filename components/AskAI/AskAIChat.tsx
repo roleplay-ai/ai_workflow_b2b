@@ -94,6 +94,16 @@ function feedbackBtnStyle(active: boolean): React.CSSProperties {
   };
 }
 
+const askTeamBtnStyle: React.CSSProperties = {
+  display: "inline-flex", alignItems: "center", gap: 6,
+  padding: "6px 12px", borderRadius: 999,
+  border: "1.5px solid #FFCE00",
+  background: "#FFCE00",
+  color: "#221D23",
+  fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+  marginLeft: "auto",
+};
+
 type Props = {
   needsOnboarding?: boolean;
   functionOptions?: string[];
@@ -559,12 +569,12 @@ export default function AskAIChat({
 
               {m.suggestedWorkflows && m.suggestedWorkflows.length > 0 && (
                 <div style={{ marginTop: 14, width: "100%" }}>
-                  <div style={{
-                    fontSize: 11, fontWeight: 800, letterSpacing: ".08em",
-                    textTransform: "uppercase", color: "#A09AA6", marginBottom: 8,
+                  <h2 style={{
+                    margin: "0 0 8px", fontSize: 18, fontWeight: 800,
+                    letterSpacing: "-.02em", color: "#221D23", lineHeight: 1.25,
                   }}>
                     Recommended workflows
-                  </div>
+                  </h2>
                   <div className="ndb-root" style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
                     {m.suggestedWorkflows.map((w) => (
                       <SuggestedWorkflowCard
@@ -586,6 +596,7 @@ export default function AskAIChat({
                 }}>
                   <span style={{ fontSize: 12.5, fontWeight: 700, color: "#746F78", marginRight: 2 }}>Was this helpful?</span>
                   <button
+                    type="button"
                     onClick={() => setFeedback((prev) => ({ ...prev, [i]: "up" }))}
                     aria-pressed={feedback[i] === "up"}
                     style={feedbackBtnStyle(feedback[i] === "up")}
@@ -597,6 +608,7 @@ export default function AskAIChat({
                     Yes
                   </button>
                   <button
+                    type="button"
                     onClick={() => setFeedback((prev) => ({ ...prev, [i]: "down" }))}
                     aria-pressed={feedback[i] === "down"}
                     style={feedbackBtnStyle(feedback[i] === "down")}
@@ -608,8 +620,9 @@ export default function AskAIChat({
                     No
                   </button>
                   <button
+                    type="button"
                     onClick={() => setTeamDialogFor(messages[i - 1]?.content ?? "")}
-                    style={{ ...feedbackBtnStyle(false), marginLeft: "auto" }}
+                    style={askTeamBtnStyle}
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="2" y="6" width="20" height="12" rx="2" />
