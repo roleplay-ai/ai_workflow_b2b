@@ -23,37 +23,6 @@ function StatCard({ label, value, delta, deltaColor, dark = false }: { label: st
   );
 }
 
-// ── Tab switch ────────────────────────────────────────────────────────────
-
-type ProfileTab = "history" | "progress";
-
-function TabSwitch({ active, onChange }: { active: ProfileTab; onChange: (tab: ProfileTab) => void }) {
-  return (
-    <div className="workflows-main-tab-switch" role="tablist" aria-label="Profile views">
-      <button
-        type="button"
-        role="tab"
-        aria-selected={active === "history"}
-        className={`workflows-main-tab${active === "history" ? " active" : ""}`}
-        onClick={() => onChange("history")}
-      >
-        <span className="workflows-main-tab-icon" aria-hidden="true">▦</span>
-        History
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={active === "progress"}
-        className={`workflows-main-tab${active === "progress" ? " active" : ""}`}
-        onClick={() => onChange("progress")}
-      >
-        <span className="workflows-main-tab-icon" aria-hidden="true">✦</span>
-        Progress
-      </button>
-    </div>
-  );
-}
-
 // ── Formatting helpers ────────────────────────────────────────────────────
 
 function formatDate(iso: string): string {
@@ -76,7 +45,7 @@ function SectionHeader({ label, title, desc }: { label: string; title: string; d
   );
 }
 
-// ── History tab ───────────────────────────────────────────────────────────
+// ── History ───────────────────────────────────────────────────────────────
 
 function HistorySection({ history }: { history: HistoryRow[] }) {
   return (
@@ -190,54 +159,197 @@ function LeaderboardRow({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolea
   );
 }
 
-function LeaderboardPanel({ leaderboard }: { leaderboard: LeaderboardStats }) {
+function LeaderboardModal({
+  leaderboard,
+  onClose,
+}: {
+  leaderboard: LeaderboardStats;
+  onClose: () => void;
+}) {
   const meId = leaderboard.me?.user_id;
-  const meInTop = leaderboard.top.some(e => e.user_id === meId);
+  const entries = leaderboard.all.length > 0 ? leaderboard.all : leaderboard.top;
 
   return (
-    <div style={{ background: "#1C1820", color: "#fff", borderRadius: 18, padding: 24 }}>
-      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: "rgba(255,255,255,.45)" }}>Company Leaderboard</div>
-      <div style={{ color: "#FFCE00", fontSize: 19, fontWeight: 900, letterSpacing: "-.02em", margin: "8px 0 4px" }}>
-        Top 5{leaderboard.company_size > 0 ? ` of ${leaderboard.company_size} teammates` : ""}
-      </div>
-
-      {leaderboard.top.length === 0 ? (
-        <div style={{ color: "rgba(255,255,255,.5)", fontSize: 13, fontWeight: 600, padding: "16px 0" }}>
-          No teammates have earned points yet.
+    <div
+      role="dialog"
+      aria-modal
+      aria-labelledby="leaderboard-modal-title"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1100,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        background: "rgba(28, 24, 32, 0.55)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+      }}
+    >
+      <style>{`
+        .leaderboard-modal-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255,255,255,.3) transparent;
+        }
+        .leaderboard-modal-scroll::-webkit-scrollbar {
+          width: 2px;
+        }
+        .leaderboard-modal-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .leaderboard-modal-scroll::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,.3);
+          border-radius: 999px;
+        }
+        .leaderboard-modal-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(255,255,255,.5);
+        }
+      `}</style>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: "100%",
+          maxWidth: 640,
+          maxHeight: "min(80vh, 640px)",
+          display: "flex",
+          flexDirection: "column",
+          background: "#1C1820",
+          color: "#fff",
+          borderRadius: 18,
+          border: "1px solid rgba(255,255,255,.1)",
+          boxShadow: "0 24px 64px rgba(0,0,0,.45)",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, padding: "20px 22px 14px", borderBottom: "1px solid #332C3A" }}>
+          <div>
+            <div id="leaderboard-modal-title" style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: "rgba(255,255,255,.45)" }}>
+              Company Leaderboard
+            </div>
+            <div style={{ color: "#FFCE00", fontSize: 18, fontWeight: 900, letterSpacing: "-.02em", marginTop: 6 }}>
+              All {leaderboard.company_size} teammates
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close leaderboard"
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              border: "none",
+              background: "rgba(255,255,255,.08)",
+              color: "rgba(255,255,255,.7)",
+              cursor: "pointer",
+              display: "grid",
+              placeItems: "center",
+              flexShrink: 0,
+              fontFamily: "inherit",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-      ) : (
-        <div style={{ marginTop: 8 }}>
-          {leaderboard.top.map(entry => (
-            <LeaderboardRow key={entry.user_id} entry={entry} isMe={entry.user_id === meId} />
-          ))}
-          {leaderboard.me && !meInTop && (
-            <>
-              <div style={{ textAlign: "center", color: "rgba(255,255,255,.3)", fontSize: 12, padding: "6px 0", borderTop: "1px solid #332C3A" }}>⋯</div>
-              <LeaderboardRow entry={leaderboard.me} isMe />
-            </>
+
+        <div className="leaderboard-modal-scroll" style={{ overflowY: "auto", padding: "4px 22px 18px" }}>
+          {entries.length === 0 ? (
+            <div style={{ color: "rgba(255,255,255,.5)", fontSize: 13, fontWeight: 600, padding: "16px 0" }}>
+              No teammates have earned points yet.
+            </div>
+          ) : (
+            entries.map(entry => (
+              <LeaderboardRow key={entry.user_id} entry={entry} isMe={entry.user_id === meId} />
+            ))
           )}
         </div>
-      )}
+      </div>
     </div>
+  );
+}
+
+function LeaderboardPanel({ leaderboard }: { leaderboard: LeaderboardStats }) {
+  const [open, setOpen] = useState(false);
+  const meId = leaderboard.me?.user_id;
+  const topEntries = leaderboard.top.slice(0, 5);
+  const showViewMore = leaderboard.company_size > 5 || leaderboard.all.length > 5;
+
+  return (
+    <>
+      <div style={{ background: "#1C1820", color: "#fff", borderRadius: 18, padding: 24 }}>
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: "rgba(255,255,255,.45)" }}>Company Leaderboard</div>
+        <div style={{ color: "#FFCE00", fontSize: 19, fontWeight: 900, letterSpacing: "-.02em", margin: "8px 0 4px" }}>
+          Top 5{leaderboard.company_size > 0 ? ` of ${leaderboard.company_size} teammates` : ""}
+        </div>
+
+        {topEntries.length === 0 ? (
+          <div style={{ color: "rgba(255,255,255,.5)", fontSize: 13, fontWeight: 600, padding: "16px 0" }}>
+            No teammates have earned points yet.
+          </div>
+        ) : (
+          <div style={{ marginTop: 8 }}>
+            {topEntries.map(entry => (
+              <LeaderboardRow key={entry.user_id} entry={entry} isMe={entry.user_id === meId} />
+            ))}
+          </div>
+        )}
+
+        {showViewMore && (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            style={{
+              marginTop: 14,
+              width: "100%",
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,206,0,.28)",
+              background: "rgba(255,206,0,.1)",
+              color: "#FFCE00",
+              fontSize: 13,
+              fontWeight: 800,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            View more
+          </button>
+        )}
+      </div>
+
+      {open && <LeaderboardModal leaderboard={leaderboard} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 
 function CertificatesSection({ certificates }: { certificates: Certificate[] }) {
   return (
-    <section className="rail">
-      <SectionHeader label="Achievements" title="Certificates" desc="Milestones earned as you complete more workflows." />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 14 }}>
+    <div style={{ background: "#fff", border: "1px solid #E9E4DC", borderRadius: 16, padding: 22 }}>
+      <div style={{ marginBottom: 16 }}>
+        {/* <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: "#746F78", marginBottom: 4 }}>
+          Achievements
+        </div> */}
+        <h3 style={{ margin: 0, fontSize: 19, fontWeight: 900, letterSpacing: "-.02em", color: "#1C1820" }}>Certificates</h3>
+        {/* <p style={{ margin: "6px 0 0", color: "#746F78", fontSize: 13, fontWeight: 600, lineHeight: 1.45 }}>
+          Milestones earned as you complete more workflows.
+        </p> */}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
         {certificates.map(c => (
-          <div key={c.title} style={{ border: "1px solid #E9E4DC", borderRadius: 14, padding: 18, background: "#fff" }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, display: "grid", placeItems: "center", background: "#FFF6CF", marginBottom: 14, fontSize: 20 }}>{c.icon}</div>
-            <strong style={{ display: "block", fontSize: 15.5, color: "#1C1820" }}>{c.title}</strong>
-            <span style={{ display: "block", color: "#746F78", fontSize: 12.5, fontWeight: 700, marginTop: 6 }}>
+          <div key={c.title} style={{ border: "1px solid #E9E4DC", borderRadius: 14, padding: 16, background: "#FFFDF8" }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, display: "grid", placeItems: "center", background: "#FFF6CF", marginBottom: 12, fontSize: 18 }}>{c.icon}</div>
+            <strong style={{ display: "block", fontSize: 14.5, color: "#1C1820" }}>{c.title}</strong>
+            <span style={{ display: "block", color: "#746F78", fontSize: 12, fontWeight: 700, marginTop: 6 }}>
               {c.earnedAt ? `Earned on ${formatDate(c.earnedAt)}` : `${c.percent}% complete`}
             </span>
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -267,9 +379,6 @@ type Props = {
   history: HistoryRow[];
   userTotalPoints: number;
   completedCount: number;
-  inProgressCount: number;
-  thisWeekCount: number;
-  bestCategory: { name: string; points: number } | null;
   companyPercentile: number | null;
   companySize: number;
   companyAvgPoints: number;
@@ -281,73 +390,54 @@ type Props = {
   leaderboard: LeaderboardStats;
 };
 
-export default function ProfileClient({ history, userTotalPoints, completedCount, inProgressCount, thisWeekCount, bestCategory, companyPercentile, companySize, companyAvgPoints, streakCount, aiLevel, proficiency, certificates, recommended, leaderboard }: Props) {
-  const [activeTab, setActiveTab] = useState<ProfileTab>("history");
+export default function ProfileClient({ history, userTotalPoints, completedCount, companyPercentile, companySize, companyAvgPoints, streakCount, aiLevel, proficiency, certificates, recommended, leaderboard }: Props) {
   const topPercentileLabel = formatTopPercentile(companyPercentile, companySize);
   const percentileDelta = companySize > 0 ? `Company avg: ${companyAvgPoints} pts` : "Points rank within your company";
   const rankLabel = leaderboard.me ? `Among ${leaderboard.company_size} teammates` : "Unranked";
+  const rankValue = leaderboard.me ? String(leaderboard.me.rank) : "—";
 
   return (
     <>
-      <B2BTopbar />
+      <B2BTopbar points={userTotalPoints} />
 
       <div style={{ flex: 1, background: "var(--bg)" }}>
         <div style={{ padding: "22px 28px 0" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 18 }}>
             <div>
               <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-.03em", color: "#1C1820", lineHeight: 1.1 }}>
-                {activeTab === "history" ? "History" : "Progress"}
+                My Progress
               </h1>
               <p style={{ fontSize: 13.5, color: "#746F78", fontWeight: 600, marginTop: 4 }}>
-                {activeTab === "history"
-                  ? "Completed workflows, points earned, category, and completion date."
-                  : "Your AI proficiency, achievements, and company benchmark."}
+                Your AI proficiency, achievements, and company benchmark.
               </p>
             </div>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", borderRadius: 999, padding: "5px 12px", background: "rgba(98,60,234,.08)", color: "#623CEA", border: "1px solid rgba(98,60,234,.18)", whiteSpace: "nowrap" }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#623CEA", display: "inline-block" }} />
-              {activeTab === "history" ? `${completedCount} completed workflows` : "Updated this week"}
+              {completedCount} completed workflows
             </span>
           </div>
 
-          {activeTab === "history" ? (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 12, paddingBottom: 18, borderBottom: "1px solid #E9E4DC" }}>
-              <StatCard label="💰 Total Points" value={String(userTotalPoints)} delta="Earned from completed workflows" />
-              <StatCard label="✅ Completed" value={String(completedCount)} delta={`${inProgressCount} in progress`} deltaColor={inProgressCount > 0 ? "#F68A29" : undefined} />
-              <StatCard label="🔥 This Week" value={String(thisWeekCount)} delta="Workflows completed" deltaColor="#F68A29" />
-              <StatCard label="⭐ Best Category" value={bestCategory?.name ?? "—"} delta={bestCategory ? `${bestCategory.points} points earned` : "Complete a workflow to start"} deltaColor="#623CEA" />
-              <StatCard label="Company Rank" value={topPercentileLabel} delta={percentileDelta} dark />
-            </div>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 12, paddingBottom: 18, borderBottom: "1px solid #E9E4DC" }}>
-              <StatCard label="💰 My Points" value={String(userTotalPoints)} delta={companySize > 0 ? `${Math.max(userTotalPoints - companyAvgPoints, 0)} pts above company avg` : "Earned from completed workflows"} />
-              <StatCard label="🎖️ Rank" value={String(completedCount)} delta={rankLabel} deltaColor="#623CEA" />
-              <StatCard label="🧠 AI Level" value={aiLevel.label} delta={aiLevel.next ? `Next: ${aiLevel.next}` : "Highest level reached"} deltaColor="#623CEA" />
-              <StatCard label="🔥 Weekly Streak" value={String(streakCount)} delta={streakCount > 0 ? "Active this week" : "Complete a workflow to start"} deltaColor="#F68A29" />
-              <StatCard label="Company Rank" value={topPercentileLabel} delta={percentileDelta} dark />
-            </div>
-          )}
-        </div>
-
-        <div className="ndb-root workflows-main-tab-bar" style={{ padding: "18px 28px 0" }}>
-          <TabSwitch active={activeTab} onChange={setActiveTab} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 12, paddingBottom: 18, borderBottom: "1px solid #E9E4DC" }}>
+            <StatCard label="💰 My Points" value={String(userTotalPoints)} delta={companySize > 0 ? `${Math.max(userTotalPoints - companyAvgPoints, 0)} pts above company avg` : "Earned from completed workflows"} />
+            <StatCard label="🎖️ Rank" value={rankValue} delta={rankLabel} deltaColor="#623CEA" />
+            <StatCard label="🧠 AI Level" value={aiLevel.label} delta={aiLevel.next ? `Next: ${aiLevel.next}` : "Highest level reached"} deltaColor="#623CEA" />
+            <StatCard label="🔥 Weekly Streak" value={String(streakCount)} delta={streakCount > 0 ? "Active this week" : "Complete a workflow to start"} deltaColor="#F68A29" />
+            <StatCard label="Company Rank" value={topPercentileLabel} delta={percentileDelta} dark />
+          </div>
         </div>
 
         <div className="ndb-root" style={{ padding: "18px 28px 40px", display: "flex", flexDirection: "column", gap: 8 }}>
-          {activeTab === "history" ? (
-            <HistorySection history={history} />
-          ) : (
-            <>
-              <section className="rail">
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.2fr) minmax(280px, 0.8fr)", gap: 18 }}>
-                  <ProficiencyPanel proficiency={proficiency} />
-                  <LeaderboardPanel leaderboard={leaderboard} />
-                </div>
-              </section>
-              <CertificatesSection certificates={certificates} />
-              <RecommendedSection recommended={recommended} />
-            </>
-          )}
+          <section className="rail">
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.55fr) minmax(260px, 0.7fr)", gap: 18, alignItems: "start" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 18, minWidth: 0 }}>
+                <ProficiencyPanel proficiency={proficiency} />
+                <CertificatesSection certificates={certificates} />
+              </div>
+              <LeaderboardPanel leaderboard={leaderboard} />
+            </div>
+          </section>
+          <RecommendedSection recommended={recommended} />
+          <HistorySection history={history} />
         </div>
       </div>
     </>

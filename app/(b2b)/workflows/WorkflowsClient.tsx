@@ -413,6 +413,7 @@ type Props = {
   completedCount: number;
   inProgressCount: number;
   userTotalPoints: number;
+  leaderboardRank: number | null;
   companyPercentile: number | null;
   companySize: number;
   companyAvgPoints: number;
@@ -424,7 +425,7 @@ type Props = {
   preferredToolSlug: string | null;
 };
 
-export default function WorkflowsClient({ activities, toolLogos, tagLogos, userId, viewCounts, completedIds, inProgressIds, savedWorkflowIds, totalAvailable, completedCount, inProgressCount, userTotalPoints, companyPercentile, companySize, companyAvgPoints, streakCount, modules, categoryThumbnails, categoryDescriptions, workflowsConfirmed: workflowsConfirmedInitial, preferredToolSlug }: Props) {
+export default function WorkflowsClient({ activities, toolLogos, tagLogos, userId, viewCounts, completedIds, inProgressIds, savedWorkflowIds, totalAvailable, completedCount, inProgressCount, userTotalPoints, leaderboardRank, companyPercentile, companySize, companyAvgPoints, streakCount, modules, categoryThumbnails, categoryDescriptions, workflowsConfirmed: workflowsConfirmedInitial, preferredToolSlug }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedTag = searchParams.get("tag");
@@ -569,6 +570,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
       <B2BTopbar
         searchQuery={searchQuery}
         onSearch={handleSearch}
+        points={userTotalPoints}
         newActivities={activities.filter(a => a.is_featured).slice(0, 8).map(a => ({ id: a.id, title: a.title, tools: a.tools, description: (a as any).description ?? null }))}
         activeTag={selectedTag}
       />
@@ -590,9 +592,10 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
           {/* Stats */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 12, paddingBottom: 18, borderBottom: "1px solid #E9E4DC" }}>
             <StatCard
-              label="💰 My Points"
-              value={String(userTotalPoints)}
-              delta={userTotalPoints > 0 ? "Earned from completed workflows" : "Complete workflows to earn points"}
+              label="🎖️ Rank"
+              value={leaderboardRank != null ? String(leaderboardRank) : "—"}
+              delta={companySize > 0 ? `Among ${companySize} teammates` : "Unranked"}
+              deltaColor="#623CEA"
             />
             <StatCard label="✅ Completed" value={String(completedCount)} delta={`${inProgressCount} in progress`} deltaColor={inProgressCount > 0 ? "#F68A29" : undefined} />
             <StatCard label="⭐ My Workflows" value={String(myWorkflows.length)} delta={myWorkflows.length > 0 ? "Tailored to your stack" : "Update preferences to get started"} deltaColor={myWorkflows.length > 0 ? "#3699FC" : undefined} />

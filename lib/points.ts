@@ -57,6 +57,7 @@ export type LeaderboardEntry = {
 export type LeaderboardStats = {
   company_size: number;
   top: LeaderboardEntry[];
+  all: LeaderboardEntry[];
   me: LeaderboardEntry | null;
 };
 

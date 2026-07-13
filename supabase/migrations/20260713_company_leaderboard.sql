@@ -1,4 +1,4 @@
--- Company leaderboard for the My Progress page: top 5 by points plus the caller's own rank.
+-- Company leaderboard for the My Progress page: top 5, full list, plus the caller's own rank.
 CREATE OR REPLACE FUNCTION public.get_company_leaderboard()
 RETURNS json
 LANGUAGE sql
@@ -33,11 +33,15 @@ AS $$
   ranked AS (
     SELECT
       user_id, full_name, avatar_url, total_points,
-      RANK() OVER (ORDER BY total_points DESC)::int AS rank
+      RANK() OVER (ORDER BY total_points DESC)::int AS rank,
+      ROW_NUMBER() OVER (
+        ORDER BY total_points DESC, full_name ASC NULLS LAST, user_id
+      )::int AS position
     FROM company_totals
   )
   SELECT json_build_object(
     'company_size', (SELECT COUNT(*)::int FROM ranked),
+    -- Use ROW_NUMBER position (not RANK) so ties don't inflate the top list past 5.
     'top', COALESCE((
       SELECT json_agg(json_build_object(
         'user_id', user_id,
@@ -45,9 +49,19 @@ AS $$
         'avatar_url', avatar_url,
         'points', total_points,
         'rank', rank
-      ) ORDER BY rank)
+      ) ORDER BY position)
       FROM ranked
-      WHERE rank <= 5
+      WHERE position <= 5
+    ), '[]'::json),
+    'all', COALESCE((
+      SELECT json_agg(json_build_object(
+        'user_id', user_id,
+        'full_name', full_name,
+        'avatar_url', avatar_url,
+        'points', total_points,
+        'rank', rank
+      ) ORDER BY position)
+      FROM ranked
     ), '[]'::json),
     'me', (
       SELECT json_build_object(

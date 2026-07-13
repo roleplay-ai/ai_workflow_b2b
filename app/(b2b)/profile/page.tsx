@@ -23,8 +23,6 @@ export type CategoryProficiency = { category: string; percent: number };
 export type Certificate = { title: string; icon: string; earnedAt: string | null; percent: number | null };
 export type RecommendedActivity = { id: string; title: string; description: string | null; category: string };
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
 export default async function ProfilePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -89,22 +87,15 @@ export default async function ProfilePage() {
 
   const userTotalPoints = sumPointsFromProgress(progress, activityPoints);
   const completedCount = history.length;
-  const inProgressCount = inProgressIds.size;
-  const now = Date.now();
-  const thisWeekCount = history.filter(h => now - new Date(h.completedAt).getTime() <= WEEK_MS).length;
 
   const categoryPoints = new Map<string, number>();
   for (const h of history) categoryPoints.set(h.category, (categoryPoints.get(h.category) ?? 0) + h.points);
-  let bestCategory: { name: string; points: number } | null = null;
-  for (const [name, points] of categoryPoints) {
-    if (!bestCategory || points > bestCategory.points) bestCategory = { name, points };
-  }
 
   // Company rank stats — same RPC used on the Workflows page.
   let companyPercentile: number | null = null;
   let companySize = 0;
   let companyAvgPoints = 0;
-  let leaderboard: LeaderboardStats = { company_size: 0, top: [], me: null };
+  let leaderboard: LeaderboardStats = { company_size: 0, top: [], all: [], me: null };
   if (user) {
     const [{ data: pointsStats }, { data: leaderboardStats }] = await Promise.all([
       supabase.rpc("get_my_points_stats"),
@@ -116,8 +107,14 @@ export default async function ProfilePage() {
       companySize = stats.company_size ?? 0;
       companyAvgPoints = stats.company_avg_points ?? 0;
     }
-    if (leaderboardStats && typeof leaderboardStats === "object") {
-      leaderboard = leaderboardStats as LeaderboardStats;
+  if (leaderboardStats && typeof leaderboardStats === "object") {
+      const stats = leaderboardStats as LeaderboardStats;
+      leaderboard = {
+        company_size: stats.company_size ?? 0,
+        top: stats.top ?? [],
+        all: stats.all ?? stats.top ?? [],
+        me: stats.me ?? null,
+      };
     }
   }
 
@@ -184,9 +181,6 @@ export default async function ProfilePage() {
         history={history}
         userTotalPoints={userTotalPoints}
         completedCount={completedCount}
-        inProgressCount={inProgressCount}
-        thisWeekCount={thisWeekCount}
-        bestCategory={bestCategory}
         companyPercentile={companyPercentile}
         companySize={companySize}
         companyAvgPoints={companyAvgPoints}
