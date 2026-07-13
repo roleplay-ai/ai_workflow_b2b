@@ -8,10 +8,20 @@ export const ASK_LIMITS = {
   dailyUserMessages: 30,
   maxWebSearchUses: 5,
   minRepeatIntervalMs: 3000,
+  maxSupportContextChars: 500,
+  maxReplyEmailChars: 254,
+  dailySupportRequests: 5,
 } as const;
+
+/** Shown to the user (and required verbatim from the model) whenever Ask AI genuinely
+ *  can't help — the "Ask our team" dialog is the real fulfillment of this promise. */
+export const ASK_FALLBACK_SENTENCE =
+  "I currently can't help you with that — would you like to email us this question?";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Common prompt-injection / jailbreak patterns — block before calling the model. */
 const INJECTION_PATTERNS = [
@@ -95,6 +105,41 @@ export function validateWorkflowContext(
     description: typeof description === "string" ? description : undefined,
     tools: Array.isArray(tools) ? (tools as string[]) : undefined,
   };
+}
+
+export type SupportRequestValidationResult =
+  | { ok: true; question: string; context?: string }
+  | { ok: false; status: number; error: string };
+
+/** Note: no reply-to email here — the route handler fills that in from the
+ *  authenticated user's account email, never from client input. */
+export function validateSupportRequest(body: unknown): SupportRequestValidationResult {
+  if (body == null || typeof body !== "object") {
+    return { ok: false, status: 400, error: "Invalid request body" };
+  }
+  const { question, context } = body as Record<string, unknown>;
+
+  const questionResult = validateQuestion(question);
+  if (!questionResult.ok) return questionResult;
+
+  let trimmedContext: string | undefined;
+  if (context != null) {
+    if (typeof context !== "string" || context.length > ASK_LIMITS.maxSupportContextChars) {
+      return {
+        ok: false,
+        status: 400,
+        error: `Context is too long (max ${ASK_LIMITS.maxSupportContextChars} characters).`,
+      };
+    }
+    trimmedContext = context.trim() || undefined;
+  }
+
+  return { ok: true, question: questionResult.question, context: trimmedContext };
+}
+
+/** Basic sanity check on the account email pulled server-side for reply_to_email. */
+export function isValidEmail(email: string): boolean {
+  return email.length > 0 && email.length <= ASK_LIMITS.maxReplyEmailChars && EMAIL_RE.test(email);
 }
 
 function parseIndexList(value: string, max: number): number[] {

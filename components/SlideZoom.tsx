@@ -66,7 +66,7 @@ export default function SlideZoom({ src, alt, open, onClose }: Props) {
       {open && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: "rgba(10,12,20,.92)", backdropFilter: "blur(8px)" }}
+          style={{ background: "rgba(10,12,20,.92)", backdropFilter: "blur(8px)", zIndex: 1000 }}
           onClick={e => { if (e.target === e.currentTarget) close(); }}
         >
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-2 rounded-2xl"
