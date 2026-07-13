@@ -435,6 +435,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
   const [confirmingPreferences, setConfirmingPreferences] = useState(false);
   const [navigatingToPreferences, setNavigatingToPreferences] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set(savedWorkflowIds));
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(qParam);
@@ -450,16 +451,26 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
       setSelectedTool(null);
     }
   }, [qParam]);
+
+  useEffect(() => {
+    setSavedIds(new Set(savedWorkflowIds));
+  }, [savedWorkflowIds]);
+
   const COLS = 4;
 
   const myWorkflows = useMemo(
-    () => activities.filter(a => savedWorkflowIds.has(a.id) && !dismissedIds.has(a.id)),
-    [activities, savedWorkflowIds, dismissedIds]
+    () => activities.filter(a => savedIds.has(a.id) && !dismissedIds.has(a.id)),
+    [activities, savedIds, dismissedIds]
   );
 
   function dismissSavedWorkflow(activityId: string) {
     if (preferencesConfirmed) return;
     setDismissedIds(prev => new Set(prev).add(activityId));
+    setSavedIds(prev => {
+      const next = new Set(prev);
+      next.delete(activityId);
+      return next;
+    });
     if (!userId) return;
     // keepalive so the request survives a fast click-then-refresh — a plain
     // fetch (or the supabase-js client, which doesn't expose keepalive) can
@@ -470,6 +481,51 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
       body: JSON.stringify({ activityId }),
       keepalive: true,
     }).catch(() => {});
+  }
+
+  function toggleSaveWorkflow(activityId: string) {
+    if (!userId) return;
+
+    const wasSaved = savedIds.has(activityId);
+    setSavedIds(prev => {
+      const next = new Set(prev);
+      if (wasSaved) next.delete(activityId);
+      else next.add(activityId);
+      return next;
+    });
+    // If it was previously dismissed in review mode, clear that so a re-like shows again.
+    setDismissedIds(prev => {
+      if (!prev.has(activityId)) return prev;
+      const next = new Set(prev);
+      next.delete(activityId);
+      return next;
+    });
+
+    void fetch("/api/workflows/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ activityId }),
+      keepalive: true,
+    })
+      .then(async res => {
+        if (!res.ok) throw new Error("save failed");
+        const data = await res.json() as { saved?: boolean };
+        setSavedIds(prev => {
+          const next = new Set(prev);
+          if (data.saved) next.add(activityId);
+          else next.delete(activityId);
+          return next;
+        });
+      })
+      .catch(() => {
+        // Revert optimistic update on failure.
+        setSavedIds(prev => {
+          const next = new Set(prev);
+          if (wasSaved) next.add(activityId);
+          else next.delete(activityId);
+          return next;
+        });
+      });
   }
 
   async function confirmPreferences() {
@@ -730,7 +786,16 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
                       <div className="static-grid">
                         {visible.map(a => (
                           <div key={a.id} className="static-grid-slot">
-                            <ActivityCard activity={a} toolLogos={toolLogos} tagLogos={tagLogos} viewCount={viewCounts[a.id] ?? 0} isCompleted={completedIds.has(a.id)} onlyTool={selectedTool} />
+                            <ActivityCard
+                              activity={a}
+                              toolLogos={toolLogos}
+                              tagLogos={tagLogos}
+                              viewCount={viewCounts[a.id] ?? 0}
+                              isCompleted={completedIds.has(a.id)}
+                              onlyTool={selectedTool}
+                              isSaved={savedIds.has(a.id)}
+                              onToggleSave={userId ? toggleSaveWorkflow : undefined}
+                            />
                           </div>
                         ))}
                       </div>
@@ -756,13 +821,13 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
                 <div className="rail-title">
                   <span className="section-label">Built for you</span>
                   <h2>My Workflows</h2>
-                  <p>Based on what you told us during onboarding.</p>
+                  <p>Based on your preferences and workflows you&apos;ve liked.</p>
                 </div>
               </div>
 
               {myWorkflows.length === 0 ? (
                 <div className="static-grid-empty">
-                  No personalized workflows yet. Switch to All Workflows to browse the library.
+                  No saved workflows yet. Browse All Workflows and tap the heart to add some.
                 </div>
               ) : (
                 <>
@@ -796,7 +861,7 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
                             onClick={e => { e.preventDefault(); e.stopPropagation(); dismissSavedWorkflow(a.id); }}
                             title="Remove from My Workflows"
                             style={{
-                              position: "absolute", top: 10, right: 10, zIndex: 20,
+                              position: "absolute", top: 10, left: 10, zIndex: 20,
                               width: 26, height: 26, borderRadius: "50%",
                               background: "rgba(255,255,255,.92)", border: "1px solid #E8E6DC",
                               color: "#221D23", fontSize: 13, cursor: "pointer",
@@ -813,6 +878,8 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
                           viewCount={viewCounts[a.id] ?? 0}
                           isCompleted={completedIds.has(a.id)}
                           onlyTool={preferredToolSlug}
+                          isSaved={savedIds.has(a.id)}
+                          onToggleSave={userId ? toggleSaveWorkflow : undefined}
                         />
                       </div>
                     ))}
