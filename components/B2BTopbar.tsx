@@ -41,22 +41,40 @@ type Props = {
   onSearch?: (q: string) => void;
   newActivities?: NewActivity[];
   activeTag?: string | null;
+  /** When provided, skips the client-side points fetch. */
+  points?: number | null;
 };
 
-export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = [], activeTag = null }: Props) {
+export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = [], activeTag = null, points: pointsProp }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [localQ, setLocalQ] = useState(searchQuery);
   const [notifOpen, setNotifOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [featuredTags, setFeaturedTags] = useState<FeaturedTag[]>([]);
+  const [fetchedPoints, setFetchedPoints] = useState<number | null>(null);
   const topbarActionsRef = useRef<HTMLDivElement>(null);
   const pageLabel = LABELS[pathname] ?? "AI Practice Lab";
   const hasNew = newActivities.length > 0;
   const hasFeaturedTags = featuredTags.length > 0;
-  const isAskAi = pathname === "/ask-ai";
+  const points = pointsProp !== undefined ? pointsProp : fetchedPoints;
 
   useEffect(() => { setLocalQ(searchQuery); }, [searchQuery]);
+
+  useEffect(() => {
+    if (pointsProp !== undefined) return;
+    const supabase = createClient();
+    void (async () => {
+      try {
+        const { data } = await supabase.rpc("get_my_points_stats");
+        if (data && typeof data === "object" && "user_points" in data) {
+          setFetchedPoints(Number((data as { user_points?: number }).user_points ?? 0));
+        }
+      } catch {
+        // Ignore transient network/auth errors during points fetch.
+      }
+    })();
+  }, [pointsProp]);
 
   function submit() {
     const q = localQ.trim();
@@ -106,13 +124,13 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
 
   const agentsBtnStyle = (open: boolean): React.CSSProperties => ({
     width: 36, height: 36, borderRadius: 10,
-    border: `1.5px solid ${open ? "#623CEA" : "rgba(98,60,234,.22)"}`,
-    background: open ? "#623CEA" : "var(--bg)",
+    border: `1.5px solid ${open ? "#1C1820" : "#E9E4DC"}`,
+    background: open ? "#1C1820" : "var(--bg)",
     display: "flex", alignItems: "center", justifyContent: "center",
     cursor: "pointer",
-    color: open ? "#FFCE00" : "#623CEA",
+    color: open ? "#FFCE00" : "#1C1820",
     position: "relative", padding: 0, fontFamily: "inherit",
-    boxShadow: open ? "0 4px 14px rgba(98,60,234,.28)" : "none",
+    boxShadow: "none",
     transition: "all .15s ease",
   });
 
@@ -171,45 +189,22 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
           />
         </div>
 
-        {/* Ask AI — inactive/blurred when already on the Ask AI page */}
-        {isAskAi ? (
+        {/* Points */}
+        {points != null && (
           <span
-            title="You're on Ask AI"
-            aria-disabled="true"
+            title="My points"
             style={{
-              display: "flex", alignItems: "center", gap: 7,
-              height: 36, padding: "0 14px", borderRadius: 10,
-              border: "1.5px solid #FFCE00",
-              background: "#FFCE00",
-              color: "#7A5F00", fontSize: 12.5, fontWeight: 800,
-              flexShrink: 0,
-              opacity: 0.45,
-              filter: "blur(1.5px)",
-              cursor: "default",
-              pointerEvents: "none",
-              userSelect: "none",
-            }}
-          >
-            <span style={{ fontSize: 14 }}>✦</span>
-            Ask AI
-          </span>
-        ) : (
-          <Link
-            href="/ask-ai"
-            title="Ask AI"
-            style={{
-              display: "flex", alignItems: "center", gap: 7,
-              height: 36, padding: "0 14px", borderRadius: 10,
-              border: "1.5px solid rgba(255,206,0,.4)",
+              display: "flex", alignItems: "center", gap: 6,
+              height: 36, padding: "0 12px", borderRadius: 10,
+              border: "1.5px solid rgba(255,206,0,.45)",
               background: "#FFFBEB",
-              color: "#7A5F00", fontSize: 12.5, fontWeight: 800,
-              textDecoration: "none", flexShrink: 0,
-              transition: "all .15s ease",
+              color: "#7A5F00", fontSize: 14, fontWeight: 800,
+              flexShrink: 0,
             }}
           >
-            <span style={{ fontSize: 14 }}>✦</span>
-            Ask AI
-          </Link>
+            <span aria-hidden="true">💰</span>
+            {points} pts
+          </span>
         )}
 
         {/* Featured agents */}
@@ -220,7 +215,10 @@ export default function B2BTopbar({ searchQuery = "", onSearch, newActivities = 
             style={agentsBtnStyle(tagsOpen)}
           >
             <svg width="16" height="16" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2.5 2.5h4.2L8.5 6.3l2.8-1.1 1.1 2.8-3.8 1.8-1.8 3.8-1.1-2.8-2.8-1.1 1.8-3.8z"/>
+              <rect x="1.5" y="1.5" width="5" height="5" rx="1.2"/>
+              <rect x="8.5" y="1.5" width="5" height="5" rx="1.2"/>
+              <rect x="1.5" y="8.5" width="5" height="5" rx="1.2"/>
+              <rect x="8.5" y="8.5" width="5" height="5" rx="1.2"/>
             </svg>
           </button>
 

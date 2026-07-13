@@ -93,3 +93,98 @@ button { font-family: inherit; }
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
+
+/* ─── Universal page navigation loading overlay ─────────────────────────── */
+
+.page-nav-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Center in the main content column (right of the sidebar), not the full viewport */
+  padding-left: var(--sidebar-w);
+  background: rgba(28, 24, 32, 0.42);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  animation: page-nav-fade-in 0.18s ease-out;
+}
+
+.page-nav-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.page-nav-loading-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.page-nav-loading-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 14px;
+}
+
+.page-nav-loading-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #FFCE00;
+  animation: page-nav-dot-bounce 1s ease-in-out infinite;
+}
+
+.page-nav-loading-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+  background: #623CEA;
+}
+
+.page-nav-loading-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+  background: #1C1820;
+}
+
+@keyframes page-nav-dot-bounce {
+  0%, 80%, 100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  40% {
+    transform: translateY(-7px);
+    opacity: 1;
+  }
+}
+
+@keyframes page-nav-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Thin scrollbar for company leaderboard popup */
+.leaderboard-modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+.leaderboard-modal-scroll::-webkit-scrollbar {
+  width: 2px;
+}
+
+.leaderboard-modal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.leaderboard-modal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+}
+
+.leaderboard-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.45);
+}

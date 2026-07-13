@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { userNeedsOnboarding } from "@/lib/auth/onboardingGate";
-import { sumPointsFromProgress, type PointsStats } from "@/lib/points";
+import { sumPointsFromProgress, type PointsStats, type LeaderboardStats } from "@/lib/points";
 import { rowsToToolLogoMap, rowsToTagLogoMap } from "@/lib/toolLogos";
 import { onboardingToolToSlug } from "@/lib/onboarding";
 import WorkflowsClient from "./WorkflowsClient";
@@ -94,18 +94,27 @@ export default async function WorkflowsPage() {
   let companyPercentile: number | null = null;
   let companySize = 0;
   let companyAvgPoints = 0;
+  let leaderboardRank: number | null = null;
   let workflowsConfirmed = false;
   let streakCount = 0;
   let preferredToolSlug: string | null = null;
 
   if (user) {
-    const { data: pointsStats } = await supabase.rpc("get_my_points_stats");
+    const [{ data: pointsStats }, { data: leaderboardStats }] = await Promise.all([
+      supabase.rpc("get_my_points_stats"),
+      supabase.rpc("get_company_leaderboard"),
+    ]);
     if (pointsStats && typeof pointsStats === "object") {
       const stats = pointsStats as PointsStats;
       userTotalPoints = stats.user_points ?? userTotalPoints;
       companyPercentile = stats.company_percentile ?? null;
       companySize = stats.company_size ?? 0;
       companyAvgPoints = stats.company_avg_points ?? 0;
+    }
+    if (leaderboardStats && typeof leaderboardStats === "object") {
+      const lb = leaderboardStats as LeaderboardStats;
+      leaderboardRank = lb.me?.rank ?? null;
+      if (lb.company_size > 0) companySize = lb.company_size;
     }
 
     const { data: profileExtras, error: profileExtrasError } = await supabase
@@ -144,6 +153,7 @@ export default async function WorkflowsPage() {
         completedCount={completedCount}
         inProgressCount={inProgressCount}
         userTotalPoints={userTotalPoints}
+        leaderboardRank={leaderboardRank}
         companyPercentile={companyPercentile}
         companySize={companySize}
         companyAvgPoints={companyAvgPoints}

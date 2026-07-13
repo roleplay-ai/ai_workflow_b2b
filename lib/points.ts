@@ -46,12 +46,27 @@ export type PointsStats = {
   company_size: number;
 };
 
+export type LeaderboardEntry = {
+  user_id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  points: number;
+  rank: number;
+};
+
+export type LeaderboardStats = {
+  company_size: number;
+  top: LeaderboardEntry[];
+  all: LeaderboardEntry[];
+  me: LeaderboardEntry | null;
+};
+
 const AI_LEVELS = [
   { min: 0, label: "Explorer" },
-  { min: 50, label: "Builder" },
-  { min: 150, label: "Operator" },
-  { min: 300, label: "Strategist" },
-  { min: 500, label: "Master" },
+  { min: 200, label: "Builder" },
+  { min: 500, label: "Operator" },
+  { min: 1000, label: "Strategist" },
+  { min: 2000, label: "Master" },
 ] as const;
 
 /** Point-tier label derived from total points earned, with the next tier's name (if any). */
