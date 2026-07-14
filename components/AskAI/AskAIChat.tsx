@@ -34,44 +34,41 @@ type ChatMessage = {
 
 const SUGGESTION_CHIPS = [
   {
-    text: "Help me automate a repetitive task",
+    text: "Can ChatGPT edit local files?",
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M17 2l4 4-4 4" />
-        <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-        <path d="M7 22l-4-4 4-4" />
-        <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
       </svg>
     ),
   },
   {
-    text: "Compare two AI tools for a task",
+    text: "Will Gemini send emails for me?",
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M12 3v18" />
-        <path d="M5 7h14" />
-        <path d="M5 7l-3 6h6L5 7zM19 7l-3 6h6l-3-6z" />
+        <rect x="2" y="4" width="20" height="16" rx="2" />
+        <path d="m22 7-10 7L2 7" />
       </svg>
     ),
   },
   {
-    text: "Recommend an AI workflow",
+    text: "Does Copilot offer Cowork features?",
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <circle cx="6" cy="6" r="2" />
-        <circle cx="18" cy="6" r="2" />
-        <circle cx="12" cy="18" r="2" />
-        <path d="M8 6h8M7.2 7.6 10.8 16.4M16.8 7.6 13.2 16.4" />
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
       </svg>
     ),
   },
   {
-    text: "Show me how to use AI at work",
+    text: "Build a website with Claude?",
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M9 18h6" />
-        <path d="M10 22h4" />
-        <path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2.3h6c0-1.1.4-1.8 1-2.3A7 7 0 0 0 12 2z" />
+        <circle cx="12" cy="12" r="10" />
+        <path d="M2 12h20" />
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
       </svg>
     ),
   },
@@ -386,14 +383,21 @@ export default function AskAIChat({
         padding: "32px 24px 48px", overflowY: "auto",
       }}>
         <div style={{ width: "100%", maxWidth: 960, display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: 16, marginBottom: 18,
-            background: "linear-gradient(135deg, #FFCE00 0%, #FFA800 100%)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 24, boxShadow: "0 8px 24px rgba(255,206,0,.35)",
-          }}>
-            ✦
-          </div>
+          <video
+            src="/ask-ai/star-logo.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            aria-hidden="true"
+            style={{
+              width: 72,
+              height: 72,
+              marginBottom: 18,
+              objectFit: "contain",
+              display: "block",
+            }}
+          />
           <h1 style={{ margin: 0, fontSize: 30, fontWeight: 900, letterSpacing: "-.04em", color: "#221D23", textAlign: "center" }}>
             What do you want to do with AI?
           </h1>
@@ -429,7 +433,7 @@ export default function AskAIChat({
               ))}
             </div>
           </div>
-
+          {/* 
           <div style={{
             width: "100%", maxWidth: 760, marginTop: 40, paddingTop: 24, borderTop: "1px solid #E8E6DC",
             display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 18,
@@ -450,7 +454,7 @@ export default function AskAIChat({
                 </div>
               </div>
             ))}
-          </div>
+          </div> */}
         </div>
       </div>
     );
