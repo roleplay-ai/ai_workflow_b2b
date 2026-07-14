@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { onboardingExperienceToLevels, onboardingToolToSlug } from "@/lib/onboarding";
+import { NextRequest } from "next/server";
+import { onboardingToolToSlug } from "@/lib/onboarding";
 import { createRouteHandlerClient, jsonWithSessionCookies } from "@/lib/supabase/route-handler";
 
 type CompleteBody = {
@@ -10,7 +10,6 @@ type CompleteBody = {
   jobFunctionOther: string | null;
   interests: string[];
   interestsOther: string | null;
-  experience: string;
 };
 
 export async function POST(req: NextRequest) {
@@ -26,10 +25,9 @@ export async function POST(req: NextRequest) {
     tool, toolTier = null, toolOther = null,
     jobFunction, jobFunctionOther = null,
     interests, interestsOther = null,
-    experience,
   } = body;
 
-  if (!tool || !jobFunction || !experience || !Array.isArray(interests) || interests.length === 0) {
+  if (!tool || !jobFunction || !Array.isArray(interests) || interests.length === 0) {
     return jsonWithSessionCookies(sessionResponse, { error: "Missing required onboarding answers" }, { status: 400 });
   }
 
@@ -44,7 +42,7 @@ export async function POST(req: NextRequest) {
       onboarding_function_other: jobFunctionOther,
       onboarding_interests: interests,
       onboarding_interests_other: interestsOther,
-      onboarding_experience: experience,
+      onboarding_experience: null,
       workflows_confirmed_at: null,
     })
     .eq("id", user.id);
@@ -53,7 +51,7 @@ export async function POST(req: NextRequest) {
     return jsonWithSessionCookies(sessionResponse, { error: profileError.message }, { status: 500 });
   }
 
-  // Match: category overlap + function + tool + level (when applicable).
+  // Match: category overlap + function + tool (when applicable).
   let matchQuery = supabase
     .from("activities")
     .select("id")
@@ -67,11 +65,6 @@ export async function POST(req: NextRequest) {
   const toolSlug = onboardingToolToSlug(tool);
   if (toolSlug) {
     matchQuery = matchQuery.contains("tools", [toolSlug]);
-  }
-
-  const levels = onboardingExperienceToLevels(experience);
-  if (levels.length > 0) {
-    matchQuery = matchQuery.in("level", levels);
   }
 
   const { data: matched, error: matchError } = await matchQuery;

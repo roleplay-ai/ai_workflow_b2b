@@ -12,7 +12,6 @@ const MUTED = "#6B6B6B";
 
 const Q1_OPTIONS = ["Claude", "Gemini", "Copilot", "ChatGPT", "None"];
 const Q1_TIER_OPTIONS = ["Free", "Paid", "Not sure"];
-const Q4_OPTIONS = ["Beginner", "Some experience", "Advanced", "Not sure"];
 
 const LOADING_MESSAGES = [
   "Getting to know your workflow...",
@@ -29,7 +28,6 @@ type ExistingAnswers = {
   jobFunctionOther: string | null;
   interests: string[];
   interestsOther: string | null;
-  experience: string | null;
 };
 
 type Props = {
@@ -39,7 +37,7 @@ type Props = {
   existingAnswers: ExistingAnswers | null;
 };
 
-type Step = 1 | 2 | 3 | 4 | "loading" | "results";
+type Step = 1 | 2 | 3 | "loading" | "results";
 
 export default function OnboardingClient({ mode, functionOptions, categoryOptions, existingAnswers }: Props) {
   const router = useRouter();
@@ -56,8 +54,6 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
   const [q3Interests, setQ3Interests] = useState<string[]>(existingAnswers?.interests ?? []);
   const [q3Other, setQ3Other] = useState(existingAnswers?.interestsOther ?? "");
 
-  const [q4Experience, setQ4Experience] = useState<string | null>(existingAnswers?.experience ?? null);
-
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
   const [matchedCount, setMatchedCount] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -67,8 +63,8 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
   const q2Options = [...functionOptions, "Other"];
   const q3Options = [...categoryOptions, "Other"];
 
-  const stepNum = typeof step === "number" ? step : step === "results" ? 4 : 4;
-  const progressPct = typeof step === "number" ? step * 25 : 100;
+  const stepNum = typeof step === "number" ? step : 3;
+  const progressPct = typeof step === "number" ? Math.round((step / 3) * 100) : 100;
 
   function goTo(next: Step) { setStep(next); }
 
@@ -82,7 +78,6 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
     setQ1Tool(null); setQ1Tier(null); setQ1Other("");
     setQ2Function(null); setQ2Other("");
     setQ3Interests([]); setQ3Other("");
-    setQ4Experience(null);
     setMatchedCount(null); setErrorMsg("");
     setStep(1);
   }
@@ -113,7 +108,6 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
       jobFunctionOther: q2Function === "Other" ? (q2Other.trim() || null) : null,
       interests: q3Interests,
       interestsOther: q3Interests.includes("Other") ? (q3Other.trim() || null) : null,
-      experience: q4Experience,
     };
 
     try {
@@ -130,7 +124,7 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
       if (loadingIntervalRef.current) clearInterval(loadingIntervalRef.current);
       if (!res.ok) {
         setErrorMsg(json.error ?? "Something went wrong. Please try again.");
-        setStep(4);
+        setStep(3);
         return;
       }
       setMatchedCount(json.matchedCount ?? 0);
@@ -138,7 +132,7 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
     } catch {
       if (loadingIntervalRef.current) clearInterval(loadingIntervalRef.current);
       setErrorMsg("Something went wrong. Please try again.");
-      setStep(4);
+      setStep(3);
     }
   }
 
@@ -155,7 +149,6 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
     : (q1Tool ?? "your tool");
   const toolLabelWithTier = q1Tool !== "None" && q1Tier ? `${toolLabel} (${q1Tier})` : toolLabel;
   const functionLabel = q2Function === "Other" && q2Other.trim() ? q2Other.trim() : (q2Function ?? "your function");
-  const experienceLabel = q4Experience === "Not sure" ? null : (q4Experience ?? "Some experience");
 
   return (
     <div style={{
@@ -189,7 +182,7 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
         {step !== "results" && (
           <>
             <div style={{ textAlign: "center", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,.6)", marginBottom: 8 }}>
-              {step === "loading" ? "Almost there" : `Question ${stepNum} of 4`}
+              {step === "loading" ? "Almost there" : `Question ${stepNum} of 3`}
             </div>
             <div style={{ height: 6, background: "rgba(255,255,255,.15)", borderRadius: 999, overflow: "hidden", marginBottom: 32 }}>
               <div style={{ height: "100%", background: AMBER, borderRadius: 999, width: `${progressPct}%`, transition: "width .35s ease" }} />
@@ -260,7 +253,10 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
               title="What would you like AI to help you with?"
               sub="Pick as many as you like. We'll build your list from these."
               nextDisabled={q3Interests.length === 0}
-              onNext={() => goTo(4)}
+              nextLabel="See My Journey →"
+              nextLoading={submitting}
+              nextStyle={finalNextBtnStyle}
+              onNext={submitOnboarding}
               onBack={() => goTo(2)}
               backLabel="← Back"
             >
@@ -273,22 +269,6 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
                   style={otherInputStyle}
                 />
               )}
-            </QuestionScreen>
-          )}
-
-          {step === 4 && (
-            <QuestionScreen
-              title="How comfortable are you with AI tools today?"
-              sub="No wrong answer, this just sets your starting point."
-              nextDisabled={!q4Experience}
-              nextLabel="See My Journey →"
-              nextLoading={submitting}
-              nextStyle={finalNextBtnStyle}
-              onNext={submitOnboarding}
-              onBack={() => goTo(3)}
-              backLabel="← Back"
-            >
-              <OptionGrid options={Q4_OPTIONS} selected={q4Experience ? [q4Experience] : []} mode="single" onPick={v => setQ4Experience(v)} />
               {errorMsg && <div style={{ marginTop: 14, fontSize: 13, color: "#DC2626", fontWeight: 600 }}>{errorMsg}</div>}
             </QuestionScreen>
           )}
@@ -317,11 +297,7 @@ export default function OnboardingClient({ mode, functionOptions, categoryOption
                   Your Learning Journey
                 </div>
                 <div style={{ fontSize: 15, lineHeight: 1.6, color: "#E8E6DC" }}>
-                  Built for someone in <b style={{ color: "white" }}>{functionLabel}</b> using <b style={{ color: "white" }}>{toolLabelWithTier}</b>
-                  {experienceLabel && (
-                    <>, at <b style={{ color: "white" }}>{experienceLabel}</b> level</>
-                  )}
-                  , focused on:
+                  Built for someone in <b style={{ color: "white" }}>{functionLabel}</b> using <b style={{ color: "white" }}>{toolLabelWithTier}</b>, focused on:
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
                   {q3Interests.map((tag, i) => (

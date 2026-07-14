@@ -17,7 +17,7 @@ export default async function AskAIPage() {
   const [{ data: profile }, { data: functionRows }, { data: categoryRows }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("onboarding_tool, onboarding_tool_tier, onboarding_tool_other, onboarding_function, onboarding_function_other, onboarding_interests, onboarding_interests_other, onboarding_experience")
+      .select("onboarding_tool, onboarding_tool_tier, onboarding_tool_other, onboarding_function, onboarding_function_other, onboarding_interests, onboarding_interests_other")
       .eq("id", user.id)
       .single(),
     supabase.from("activity_functions").select("id, name").order("name"),
@@ -34,7 +34,6 @@ export default async function AskAIPage() {
     jobFunctionOther: profile?.onboarding_function_other ?? null,
     interests: profile?.onboarding_interests ?? [],
     interestsOther: profile?.onboarding_interests_other ?? null,
-    experience: profile?.onboarding_experience ?? null,
   };
 
   const needsOnboarding = await userNeedsOnboarding(supabase, user.id);

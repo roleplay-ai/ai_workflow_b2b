@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type CSSProperties, type FormEvent } from "react";
 
 type User = {
   id: string;
@@ -24,6 +24,12 @@ export default function SuperadminUsersClient() {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [addEmail, setAddEmail] = useState("");
+  const [addPassword, setAddPassword] = useState("");
+  const [addCompanyId, setAddCompanyId] = useState("");
+  const [adding, setAdding] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -62,21 +68,95 @@ export default function SuperadminUsersClient() {
     setActionLoading(null);
   }
 
+  function resetAddForm() {
+    setAddName("");
+    setAddEmail("");
+    setAddPassword("");
+    setAddCompanyId("");
+    setShowAddUser(false);
+  }
+
+  async function handleAddUser(e: FormEvent) {
+    e.preventDefault();
+    if (!addName.trim() || !addEmail.trim() || !addPassword || !addCompanyId) {
+      alert("Name, email, password, and company are required");
+      return;
+    }
+    setAdding(true);
+    const res = await fetch("/api/superadmin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        full_name: addName.trim(),
+        email: addEmail.trim(),
+        password: addPassword,
+        company_id: addCompanyId,
+      }),
+    });
+    if (res.ok) {
+      resetAddForm();
+      fetchUsers();
+    } else {
+      const err = await res.json();
+      alert(err.error || "Failed to create user");
+    }
+    setAdding(false);
+  }
+
   const roleBadge = (role: string) => ({
     fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999,
     background: role === "superadmin" ? "rgba(98,60,234,.1)" : role === "admin" ? "rgba(54,150,252,.1)" : "rgba(35,206,104,.1)",
     color: role === "superadmin" ? "#5030C0" : role === "admin" ? "#1A7FD4" : "#17A855",
   });
 
+  const fieldStyle: CSSProperties = {
+    width: "100%",
+    padding: "10px 14px",
+    borderRadius: 10,
+    border: "1px solid #E8E6DC",
+    fontSize: 14,
+    fontFamily: "inherit",
+    outline: "none",
+    boxSizing: "border-box",
+    background: "white",
+  };
+
+  const labelStyle: CSSProperties = {
+    display: "block",
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#6B6B6B",
+    marginBottom: 6,
+  };
+
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: "-.04em", color: "#221D23" }}>
-          User Management
-        </h1>
-        <p style={{ margin: "4px 0 0", color: "#6B6B6B", fontSize: 14 }}>
-          Manage all platform users across companies
-        </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, gap: 16 }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: "-.04em", color: "#221D23" }}>
+            User Management
+          </h1>
+          <p style={{ margin: "4px 0 0", color: "#6B6B6B", fontSize: 14 }}>
+            Manage all platform users across companies
+          </p>
+        </div>
+        <button
+          onClick={() => setShowAddUser(true)}
+          style={{
+            padding: "10px 18px",
+            borderRadius: 999,
+            border: "none",
+            background: "#FFCE00",
+            color: "#221D23",
+            fontSize: 13,
+            fontWeight: 800,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            whiteSpace: "nowrap",
+          }}
+        >
+          + Add User
+        </button>
       </div>
 
       {/* Filters */}
@@ -224,6 +304,115 @@ export default function SuperadminUsersClient() {
         )}
       </div>
 
+      {/* Add User modal */}
+      {showAddUser && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", zIndex: 500, display: "grid", placeItems: "center" }}
+          onClick={resetAddForm}
+        >
+          <form
+            onClick={e => e.stopPropagation()}
+            onSubmit={handleAddUser}
+            style={{
+              background: "white",
+              borderRadius: 20,
+              padding: 32,
+              width: "min(440px, calc(100vw - 48px))",
+              boxShadow: "0 24px 64px rgba(0,0,0,.15)",
+            }}
+          >
+            <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 900, letterSpacing: "-.03em" }}>Add User</h2>
+            <p style={{ margin: "0 0 20px", fontSize: 13, color: "#6B6B6B" }}>
+              Create a login with name, email, password, and company
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={labelStyle}>Name</label>
+                <input
+                  required
+                  value={addName}
+                  onChange={e => setAddName(e.target.value)}
+                  placeholder="Full name"
+                  style={fieldStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Email ID</label>
+                <input
+                  required
+                  type="email"
+                  value={addEmail}
+                  onChange={e => setAddEmail(e.target.value)}
+                  placeholder="name@company.com"
+                  style={fieldStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Password</label>
+                <input
+                  required
+                  type="text"
+                  minLength={6}
+                  value={addPassword}
+                  onChange={e => setAddPassword(e.target.value)}
+                  placeholder="Min. 6 characters"
+                  style={fieldStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Company</label>
+                <select
+                  required
+                  value={addCompanyId}
+                  onChange={e => setAddCompanyId(e.target.value)}
+                  style={{ ...fieldStyle, cursor: "pointer" }}
+                >
+                  <option value="">Select company</option>
+                  {companies.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 24, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={resetAddForm}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 10,
+                  border: "1px solid #E8E6DC",
+                  background: "white",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={adding}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "#221D23",
+                  color: "white",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: adding ? "wait" : "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {adding ? "Creating..." : "Create User"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Edit modal */}
       {editingUser && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", zIndex: 500, display: "grid", placeItems: "center" }}
@@ -235,14 +424,12 @@ export default function SuperadminUsersClient() {
             <h2 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 900, letterSpacing: "-.03em" }}>Edit User</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6B6B", marginBottom: 6 }}>Full Name</label>
-                <input value={editName} onChange={e => setEditName(e.target.value)}
-                  style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #E8E6DC", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                <label style={labelStyle}>Full Name</label>
+                <input value={editName} onChange={e => setEditName(e.target.value)} style={fieldStyle} />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6B6B", marginBottom: 6 }}>Email</label>
-                <input value={editEmail} onChange={e => setEditEmail(e.target.value)}
-                  style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #E8E6DC", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                <label style={labelStyle}>Email</label>
+                <input value={editEmail} onChange={e => setEditEmail(e.target.value)} style={fieldStyle} />
               </div>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 24, justifyContent: "flex-end" }}>

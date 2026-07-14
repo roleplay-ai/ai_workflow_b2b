@@ -30,6 +30,9 @@ export type Profile = {
   onboarding_interests_other: string | null;
   onboarding_experience: string | null;
   workflows_confirmed_at: string | null;
+  /** Provisional plaintext for welcome emails only; service-role access. */
+  initial_password: string | null;
+  welcome_email_sent_at: string | null;
 };
 
 export type Activity = {
@@ -304,8 +307,8 @@ export type Database = {
       };
       profiles: {
         Row: Profile;
-        Insert: { id: string; email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean; onboarding_completed_at?: string | null; onboarding_tool?: string | null; onboarding_tool_tier?: string | null; onboarding_tool_other?: string | null; onboarding_function?: string | null; onboarding_function_other?: string | null; onboarding_interests?: string[]; onboarding_interests_other?: string | null; onboarding_experience?: string | null; workflows_confirmed_at?: string | null };
-        Update: { email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean; onboarding_completed_at?: string | null; onboarding_tool?: string | null; onboarding_tool_tier?: string | null; onboarding_tool_other?: string | null; onboarding_function?: string | null; onboarding_function_other?: string | null; onboarding_interests?: string[]; onboarding_interests_other?: string | null; onboarding_experience?: string | null; workflows_confirmed_at?: string | null };
+        Insert: { id: string; email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean; onboarding_completed_at?: string | null; onboarding_tool?: string | null; onboarding_tool_tier?: string | null; onboarding_tool_other?: string | null; onboarding_function?: string | null; onboarding_function_other?: string | null; onboarding_interests?: string[]; onboarding_interests_other?: string | null; onboarding_experience?: string | null; workflows_confirmed_at?: string | null; initial_password?: string | null; welcome_email_sent_at?: string | null };
+        Update: { email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean; onboarding_completed_at?: string | null; onboarding_tool?: string | null; onboarding_tool_tier?: string | null; onboarding_tool_other?: string | null; onboarding_function?: string | null; onboarding_function_other?: string | null; onboarding_interests?: string[]; onboarding_interests_other?: string | null; onboarding_experience?: string | null; workflows_confirmed_at?: string | null; initial_password?: string | null; welcome_email_sent_at?: string | null };
         Relationships: [];
       };
       activities: {
