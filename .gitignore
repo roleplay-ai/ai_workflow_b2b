@@ -28,6 +28,9 @@ build/
 *.tsbuildinfo
 next-env.d.ts
 
+# generated credentials (never commit)
+scripts/output/
+
 # misc
 .DS_Store
 *.pem
