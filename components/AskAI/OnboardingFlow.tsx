@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 
 const Q1_OPTIONS = ["Claude", "Gemini", "Copilot", "ChatGPT", "None"];
 const Q1_TIER_OPTIONS = ["Free", "Paid", "Not sure"];
-const Q4_OPTIONS = ["Beginner", "Some experience", "Advanced", "Not sure"];
 
 const TYPING_DELAY_MS = 650;
 
@@ -17,7 +16,6 @@ export type OnboardingExistingAnswers = {
   jobFunctionOther: string | null;
   interests: string[];
   interestsOther: string | null;
-  experience: string | null;
 };
 
 type Props = {
@@ -33,7 +31,7 @@ type Props = {
   onChipsChange?: (chips: ChipsState | null) => void;
 };
 
-type Phase = 1 | 2 | 3 | 4 | "submitting" | "done";
+type Phase = 1 | 2 | 3 | "submitting" | "done";
 
 export type ChipsState = {
   options: string[];
@@ -47,7 +45,7 @@ export type ChipsState = {
 };
 
 /**
- * The same 4-question onboarding survey that used to live on its own /onboarding page,
+ * The same 3-question onboarding survey that used to live on its own /onboarding page,
  * now asked conversationally inside Ask AI when a user hasn't completed it yet. This is
  * entirely scripted/hardcoded — no Claude call happens here. Presented like a live chat:
  * one question revealed at a time, with a brief "typing" pause before each new one, so it
@@ -81,8 +79,6 @@ export default function OnboardingFlow({
 
   const [q3Interests, setQ3Interests] = useState<string[]>(existingAnswers?.interests ?? []);
   const [q3Other, setQ3Other] = useState(existingAnswers?.interestsOther ?? "");
-
-  const [q4Experience, setQ4Experience] = useState<string | null>(existingAnswers?.experience ?? null);
 
   const [matchedCount, setMatchedCount] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -133,9 +129,8 @@ export default function OnboardingFlow({
     setQ3Interests((prev) => (prev.includes(name) ? prev.filter((v) => v !== name) : [...prev, name]));
   }
 
-  async function pickExperience(exp: string) {
-    setQ4Experience(exp);
-    setAnsweredThrough(4);
+  async function submitOnboarding() {
+    setAnsweredThrough(3);
     setTyping(true);
     setErrorMsg("");
 
@@ -147,7 +142,6 @@ export default function OnboardingFlow({
       jobFunctionOther: q2Function === "Other" ? (q2Other.trim() || null) : null,
       interests: q3Interests,
       interestsOther: q3Interests.includes("Other") ? (q3Other.trim() || null) : null,
-      experience: exp,
     };
 
     setTimeout(async () => {
@@ -162,8 +156,8 @@ export default function OnboardingFlow({
         const json = await res.json();
         if (!res.ok) {
           setErrorMsg(json.error ?? "Something went wrong. Please try again.");
-          setAnsweredThrough(3); // re-open Q4's live options so the user can retry
-          setPhase(4);
+          setAnsweredThrough(2); // re-open Q3 so the user can retry
+          setPhase(3);
           return;
         }
         setMatchedCount(json.matchedCount ?? 0);
@@ -171,8 +165,8 @@ export default function OnboardingFlow({
         setTimeout(() => router.push("/workflows"), 1800);
       } catch {
         setErrorMsg("Something went wrong. Please try again.");
-        setAnsweredThrough(3);
-        setPhase(4);
+        setAnsweredThrough(2);
+        setPhase(3);
       }
     }, TYPING_DELAY_MS);
   }
@@ -185,9 +179,9 @@ export default function OnboardingFlow({
     ? [...q3Interests.filter((i) => i !== "Other"), q3Other.trim()].join(", ")
     : q3Interests.join(", ");
 
-  const isAnswered = (step: 1 | 2 | 3 | 4) => answeredThrough >= step;
-  const isLive = (step: 1 | 2 | 3 | 4) => !isAnswered(step) && phase === step && !typing;
-  const isVisible = (step: 1 | 2 | 3 | 4) => isAnswered(step) || isLive(step);
+  const isAnswered = (step: 1 | 2 | 3) => answeredThrough >= step;
+  const isLive = (step: 1 | 2 | 3) => !isAnswered(step) && phase === step && !typing;
+  const isVisible = (step: 1 | 2 | 3) => isAnswered(step) || isLive(step);
 
   const showInlineOptions = uiMode === "in-message";
 
@@ -247,31 +241,17 @@ export default function OnboardingFlow({
       return;
     }
 
-    // Q3 — interests (multi + Continue)
+    // Q3 — interests (multi + Finish)
     if (isLive(3)) {
       onChipsChange({
         options: q3Options,
         selected: q3Interests,
         multi: true,
         onPick: toggleInterest,
-        continueLabel: "Continue →",
+        continueLabel: "Finish →",
         continueDisabled: q3Interests.length === 0,
         continueStyle: continueBtnStyleDark,
-        onContinue: () => { setAnsweredThrough(3); advance(4); },
-      });
-      return;
-    }
-
-    // Q4 — experience
-    if (isLive(4)) {
-      onChipsChange({
-        options: Q4_OPTIONS,
-        selected: q4Experience ? [q4Experience] : [],
-        onPick: pickExperience,
-        continueLabel: "Finish →",
-        continueDisabled: !q4Experience,
-        continueStyle: continueBtnStyleDark,
-        onContinue: q4Experience ? (() => { void pickExperience(q4Experience); }) : undefined,
+        onContinue: () => { void submitOnboarding(); },
       });
       return;
     }
@@ -287,7 +267,6 @@ export default function OnboardingFlow({
     q2Function,
     q3Interests,
     q3Other,
-    q4Experience,
     functionOptions.length,
     categoryOptions.length,
   ]);
@@ -367,11 +346,11 @@ export default function OnboardingFlow({
         </>
       )}
 
-      {/* Q3 — interests (multi-select, always needs an explicit Continue) */}
+      {/* Q3 — interests (multi-select, always needs an explicit Finish) */}
       {isVisible(3) && (
         <>
           <AssistantRow>
-            What would you like AI to actually help you with? Pick as many as apply.
+            Last one — what would you like AI to actually help you with? Pick as many as apply.
             {isLive(3) && (
               <div style={{ marginTop: 12 }}>
                 {showInlineOptions && (
@@ -387,33 +366,18 @@ export default function OnboardingFlow({
                 )}
                 {showInlineOptions && (
                   <button
-                    onClick={() => { setAnsweredThrough(3); advance(4); }}
+                    onClick={() => { void submitOnboarding(); }}
                     disabled={q3Interests.length === 0}
                     style={{ ...continueBtnStyleDark, marginTop: 12, opacity: q3Interests.length === 0 ? 0.4 : 1 }}
                   >
-                    Continue →
+                    Finish →
                   </button>
                 )}
-              </div>
-            )}
-          </AssistantRow>
-          {!isLive(3) && <UserRow>{interestsSummary}</UserRow>}
-        </>
-      )}
-
-      {/* Q4 — experience */}
-      {isVisible(4) && (
-        <>
-          <AssistantRow>
-            Last one, I promise — how comfortable are you with AI tools today?
-            {showInlineOptions && isLive(4) && (
-              <div style={{ marginTop: 12 }}>
-                <OptionButtons options={Q4_OPTIONS} selected={q4Experience ? [q4Experience] : []} onPick={pickExperience} />
                 {errorMsg && <div style={{ marginTop: 10, fontSize: 12.5, color: "#DC2626", fontWeight: 600 }}>{errorMsg}</div>}
               </div>
             )}
           </AssistantRow>
-          {!isLive(4) && <UserRow>{q4Experience}</UserRow>}
+          {!isLive(3) && <UserRow>{interestsSummary}</UserRow>}
         </>
       )}
 

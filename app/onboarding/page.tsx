@@ -12,7 +12,7 @@ export default async function OnboardingPage() {
   const [{ data: profile }, { count: savedWorkflowCount }, { data: functionRows }, { data: categoryRows }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("onboarding_completed_at, onboarding_tool, onboarding_tool_tier, onboarding_tool_other, onboarding_function, onboarding_function_other, onboarding_interests, onboarding_interests_other, onboarding_experience")
+      .select("onboarding_completed_at, onboarding_tool, onboarding_tool_tier, onboarding_tool_other, onboarding_function, onboarding_function_other, onboarding_interests, onboarding_interests_other")
       .eq("id", user.id)
       .single(),
     supabase
@@ -47,7 +47,6 @@ export default async function OnboardingPage() {
         jobFunctionOther: profile?.onboarding_function_other ?? null,
         interests: profile?.onboarding_interests ?? [],
         interestsOther: profile?.onboarding_interests_other ?? null,
-        experience: profile?.onboarding_experience ?? null,
       } : null}
     />
   );
