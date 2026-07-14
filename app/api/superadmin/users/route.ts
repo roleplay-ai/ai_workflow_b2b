@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 async function requireSuperadmin(supabase: any) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -57,6 +58,110 @@ export async function GET(req: NextRequest) {
   }));
 
   return NextResponse.json({ users: enriched, companies: companies ?? [] });
+}
+
+export async function POST(req: NextRequest) {
+  const supabase = await createClient();
+  const admin = await requireSuperadmin(supabase);
+  if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const body = await req.json() as {
+    full_name?: string;
+    email?: string;
+    password?: string;
+    company_id?: string;
+    role?: string;
+  };
+
+  const full_name = String(body.full_name ?? "").trim();
+  const email = String(body.email ?? "").trim().toLowerCase();
+  const password = String(body.password ?? "");
+  const company_id = body.company_id?.trim() || null;
+  const role = body.role && ["user", "admin", "superadmin"].includes(body.role) ? body.role : "user";
+
+  if (!full_name) {
+    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  }
+  if (!email || !email.includes("@")) {
+    return NextResponse.json({ error: "Valid email is required" }, { status: 400 });
+  }
+  if (!password || password.length < 6) {
+    return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+  }
+  if (!company_id) {
+    return NextResponse.json({ error: "Company is required" }, { status: 400 });
+  }
+
+  const { data: company, error: companyErr } = await supabase
+    .from("companies")
+    .select("id, name")
+    .eq("id", company_id)
+    .maybeSingle();
+
+  if (companyErr || !company) {
+    return NextResponse.json({ error: "Company not found" }, { status: 400 });
+  }
+
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (existing) {
+    return NextResponse.json({ error: "A user with this email already exists" }, { status: 409 });
+  }
+
+  let service;
+  try {
+    service = createServiceClient();
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || "Server misconfigured" }, { status: 500 });
+  }
+
+  const { data: authUser, error: authError } = await service.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name },
+  });
+
+  if (authError || !authUser?.user) {
+    return NextResponse.json(
+      { error: authError?.message || "Failed to create auth user" },
+      { status: 500 }
+    );
+  }
+
+  const { error: profileErr } = await service
+    .from("profiles")
+    .update({
+      email,
+      full_name,
+      company_id,
+      role,
+      initial_password: password,
+    })
+    .eq("id", authUser.user.id);
+
+  if (profileErr) {
+    return NextResponse.json(
+      { error: `User created but profile update failed: ${profileErr.message}` },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    success: true,
+    user: {
+      id: authUser.user.id,
+      email,
+      full_name,
+      company_id,
+      company_name: company.name,
+      role,
+    },
+  });
 }
 
 export async function PATCH(req: NextRequest) {

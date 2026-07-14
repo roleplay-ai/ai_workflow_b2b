@@ -85,6 +85,11 @@ const fileIdx = args.indexOf("--file");
 const filePath = fileIdx >= 0 ? args[fileIdx + 1] : null;
 const companyIdx = args.indexOf("--company");
 const companyFilter = companyIdx >= 0 ? args[companyIdx + 1] : null;
+const emailsIdx = args.indexOf("--emails");
+const emailsFilter =
+  emailsIdx >= 0
+    ? args[emailsIdx + 1].split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
+    : null;
 
 type Recipient = {
   id?: string;
@@ -121,7 +126,48 @@ Team Nudgeable
 team@nudgeable.app`;
 }
 
+async function loadRecipientsByEmails(emails: string[]): Promise<Recipient[]> {
+  const sb = getServiceClient();
+  const nameByEmail: Record<string, string> = {
+    "hitanshutandon8@gmail.com": "Hitanshu",
+    "egauravpatel@gmail.com": "Gaurav",
+    "roleplayai8@gmail.com": "Team",
+  };
+
+  const results: Recipient[] = [];
+  for (const email of emails) {
+    const { data: profile } = await sb
+      .from("profiles")
+      .select("id, email, full_name, initial_password")
+      .eq("email", email)
+      .maybeSingle();
+
+    const password = profile?.initial_password?.trim();
+    if (!password) {
+      console.error(
+        `No initial_password in DB for ${email}. Save one first (create users or --file), then retry.`
+      );
+      process.exit(1);
+    }
+
+    results.push({
+      id: profile?.id,
+      first_name:
+        (profile?.full_name ?? "").trim().split(/\s+/)[0] ||
+        nameByEmail[email] ||
+        email.split("@")[0],
+      email,
+      password,
+    });
+  }
+  return results;
+}
+
 async function loadRecipientsFromDb(): Promise<Recipient[]> {
+  if (emailsFilter?.length) {
+    return loadRecipientsByEmails(emailsFilter);
+  }
+
   const sb = getServiceClient();
 
   let companyId: string | null = null;
@@ -235,12 +281,12 @@ async function loadRecipients(): Promise<Recipient[]> {
     return results;
   }
 
-  if (fromDb) {
+  if (fromDb || emailsFilter?.length) {
     return loadRecipientsFromDb();
   }
 
   if (!filePath) {
-    console.error("Provide --test, --from-db, or --file <path-to-xlsx>");
+    console.error("Provide --test, --from-db, --emails, or --file <path-to-xlsx>");
     process.exit(1);
   }
 

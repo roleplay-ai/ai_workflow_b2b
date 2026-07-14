@@ -57,7 +57,7 @@ let companyId;
 const { data: existingCompany } = await sb
   .from("companies")
   .select("id, name")
-  .ilike("name", "%hiranandani%")
+  .or("name.ilike.%hiranandani%,name.eq.HOH,domain.ilike.%hiranandani%")
   .maybeSingle();
 
 if (existingCompany) {
@@ -66,7 +66,7 @@ if (existingCompany) {
 } else {
   const { data: created, error: cErr } = await sb
     .from("companies")
-    .insert({ name: "House of Hiranandani", domain: "houseofhiranandani.com" })
+    .insert({ name: "HOH", domain: "houseofhiranandani.com" })
     .select("id, name")
     .single();
   if (cErr) {
