@@ -19,17 +19,11 @@ export default async function AdminDashboardPage() {
     redirect("/apply");
   }
 
-  const [
-    { data: companyUsers },
-    { count: totalActivities },
-  ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, email, full_name, role, created_at")
-      .eq("company_id", profile.company_id)
-      .order("created_at", { ascending: false }),
-    supabase.from("activities").select("*", { count: "exact", head: true }).eq("published", true),
-  ]);
+  const { data: companyUsers } = await supabase
+    .from("profiles")
+    .select("id, email, full_name, role, created_at")
+    .eq("company_id", profile.company_id)
+    .order("created_at", { ascending: false });
 
   const userIds = (companyUsers ?? []).map(u => u.id);
 
@@ -53,7 +47,6 @@ export default async function AdminDashboardPage() {
     <AdminDashboardClient
       companyUsers={companyUsers ?? []}
       allProgress={allProgress ?? []}
-      totalActivities={totalActivities ?? 0}
       activityViews={activityViews ?? []}
       fluencyViews={fluencyViews ?? []}
     />

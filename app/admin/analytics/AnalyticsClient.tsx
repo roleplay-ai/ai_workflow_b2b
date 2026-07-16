@@ -84,6 +84,7 @@ export default function AnalyticsClient() {
         avgQuiz: s.quizCount > 0 ? Math.round(s.avgQuiz / s.quizCount) : null,
         completionRate: (s.started + s.completed) > 0 ? Math.round((s.completed / (s.started + s.completed)) * 100) : 0,
       }))
+      .filter(s => s.started > 0 || s.completed > 0)
       .sort((a, b) => (b.views + b.completed) - (a.views + a.completed));
   }, [data]);
 
@@ -140,9 +141,9 @@ export default function AnalyticsClient() {
   const knowMaxDay = Math.max(...knowStats.byDay.map(d => d.count), 1);
 
   const TABS = [
-    { id: "activities" as const, label: "Activity Completion" },
+    { id: "activities" as const, label: "Workflow Completion" },
     { id: "users" as const, label: "User Activity" },
-    { id: "know" as const, label: "AI Updates" },
+    { id: "know" as const, label: "AI News" },
   ];
 
   return (
@@ -213,7 +214,7 @@ export default function AnalyticsClient() {
                 <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
                   <thead>
                     <tr style={{ background: "#FAFAF8", borderBottom: "1px solid #E8E6DC" }}>
-                      {["Activity", "Views", "Started", "Completed", "Completion Rate", "Avg Quiz"].map(h => (
+                      {["Workflow", "Views", "Started", "Completed", "Completion Rate", "Avg Quiz"].map(h => (
                         <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: 11.5, fontWeight: 700, color: "#6B6B6B", textTransform: "uppercase", letterSpacing: ".04em" }}>{h}</th>
                       ))}
                     </tr>
@@ -239,7 +240,7 @@ export default function AnalyticsClient() {
                       </tr>
                     ))}
                     {activityStats.length === 0 && (
-                      <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#B0ABA5", fontSize: 13 }}>No activity data for this period</td></tr>
+                      <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#B0ABA5", fontSize: 13 }}>No workflow data for this period</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -302,7 +303,7 @@ export default function AnalyticsClient() {
               <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 20, padding: 24 }}>
                 <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 20, color: "#221D23" }}>Views by Content Type</div>
                 {Object.keys(knowStats.byType).length === 0 ? (
-                  <div style={{ padding: 32, textAlign: "center", color: "#B0ABA5", fontSize: 13 }}>No AI updates views</div>
+                  <div style={{ padding: 32, textAlign: "center", color: "#B0ABA5", fontSize: 13 }}>No AI news views</div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                     {[
@@ -334,7 +335,7 @@ export default function AnalyticsClient() {
 
               {/* Views over time */}
               <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 20, padding: 24 }}>
-                <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4, color: "#221D23" }}>AI Updates — Daily Views</div>
+                <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4, color: "#221D23" }}>AI News — Daily Views</div>
                 <div style={{ fontSize: 12, color: "#B0ABA5", marginBottom: 20 }}>Last 14 days</div>
                 {knowStats.byDay.length === 0 ? (
                   <div style={{ padding: 32, textAlign: "center", color: "#B0ABA5", fontSize: 13 }}>No data for this period</div>

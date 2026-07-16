@@ -10,9 +10,10 @@ type User = {
   completed: number;
   inProgress: number;
   lastActive: string | null;
+  points: number;
 };
 
-type SortField = "full_name" | "email" | "role" | "completed" | "created_at" | "lastActive";
+type SortField = "full_name" | "email" | "role" | "completed" | "points" | "created_at" | "lastActive";
 
 export default function UsersClient() {
   const [users, setUsers] = useState<User[]>([]);
@@ -150,6 +151,7 @@ export default function UsersClient() {
                     ["email", "Email"],
                     ["role", "Role"],
                     ["completed", "Progress"],
+                    ["points", "Points"],
                     ["lastActive", "Last Active"],
                     ["created_at", "Joined"],
                   ] as [SortField, string][]).map(([field, label]) => (
@@ -202,6 +204,9 @@ export default function UsersClient() {
                           <span style={{ fontSize: 12, fontWeight: 700, color: "#1A7FD4" }}>{u.inProgress} active</span>
                         )}
                       </div>
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 700, color: "#221D23" }}>
+                      {u.points.toLocaleString()}
                     </td>
                     <td style={{ padding: "12px 16px", fontSize: 12.5, color: "#6B6B6B" }}>
                       {u.lastActive ? new Date(u.lastActive).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Never"}
