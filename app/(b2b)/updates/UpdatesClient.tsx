@@ -5,6 +5,7 @@ import B2BTopbar from "@/components/B2BTopbar";
 import BriefNewsCard, { type BriefNewsItem } from "@/components/BriefNewsCard";
 import { normalizeToolSlug } from "@/lib/tools";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
+import { trackFluencyView } from "@/lib/trackFluencyView";
 import "./updates.css";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -189,6 +190,10 @@ function SectionHeader({ label, title, subtitle }: { label: string; title: strin
 // ── Tool Modal ─────────────────────────────────────────────────────────────────
 
 function ToolModal({ tool, onClose }: { tool: Tool; onClose: () => void }) {
+  useEffect(() => {
+    trackFluencyView("tool", tool.id);
+  }, [tool.id]);
+
   const accent = tool.color ?? "#623CEA";
 
   useEffect(() => {
@@ -427,12 +432,15 @@ function ToolGuideCard({
   const showUpdate = guide.update_label || guide.update_date;
   const iconIndex = (sortIndex % 4) + 1;
 
+  const trackGuide = () => trackFluencyView("tool_guide", guide.id);
+
   const exploreBtn = resolvedUrl && !isHtml ? (
     <a
       href={resolvedUrl}
       className="upd-guide-explore"
       target="_blank"
       rel="noopener noreferrer"
+      onClick={trackGuide}
     >
       Explore guide ›
     </a>
@@ -440,7 +448,10 @@ function ToolGuideCard({
     <button
       type="button"
       className="upd-guide-explore"
-      onClick={onOpenHtml}
+      onClick={() => {
+        trackGuide();
+        onOpenHtml?.();
+      }}
       style={{ fontFamily: "inherit" }}
     >
       Explore guide ›
@@ -477,6 +488,10 @@ function ToolGuideCard({
 
 function DeepDiveModal({ deepDiveId, title, onClose }: { deepDiveId: string; title: string; onClose: () => void }) {
   const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    trackFluencyView("deep_dive", deepDiveId);
+  }, [deepDiveId]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
@@ -536,6 +551,10 @@ function DeepDiveModal({ deepDiveId, title, onClose }: { deepDiveId: string; tit
 function VideoModal({ video, onClose }: { video: Video; onClose: () => void }) {
   const accent = GROUP_ACCENT[video.group_name ?? ""] ?? "#623CEA";
   const isYouTube = video.video_url?.includes("youtube.com") || video.video_url?.includes("youtu.be");
+
+  useEffect(() => {
+    trackFluencyView("video", video.id);
+  }, [video.id]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
