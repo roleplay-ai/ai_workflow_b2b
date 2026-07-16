@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import { PageLoadingIndicator } from "@/components/NavigationLoading";
 
 type AnalyticsData = {
   users: any[];
@@ -179,7 +180,9 @@ export default function AnalyticsClient() {
       </div>
 
       {loading ? (
-        <div style={{ padding: 60, textAlign: "center", color: "#B0ABA5", fontSize: 14 }}>Loading analytics...</div>
+        <div style={{ padding: 60, display: "flex", justifyContent: "center" }}>
+          <PageLoadingIndicator label="Loading analytics" />
+        </div>
       ) : !data ? (
         <div style={{ padding: 60, textAlign: "center", color: "#B0ABA5", fontSize: 14 }}>Failed to load data</div>
       ) : (

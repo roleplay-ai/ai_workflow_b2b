@@ -16,27 +16,52 @@ export function useNavigationLoading() {
   return React.useContext(NavigationLoadingContext);
 }
 
-function PageLoadingOverlay() {
+export function PageLoadingIndicator({ label = "Loading your page" }: { label?: string }) {
+  return (
+    <div
+      className="page-nav-loading-content"
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/nudgeable-logo.png"
+        alt=""
+        className="page-nav-loading-logo"
+      />
+      <div className="page-nav-loading-dots" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+    </div>
+  );
+}
+
+function getSidebarOffset(pathname: string): number {
+  if (pathname.startsWith("/admin") || pathname.startsWith("/superadmin")) return 256;
+  if (
+    pathname.startsWith("/apply") ||
+    pathname.startsWith("/workflows") ||
+    pathname.startsWith("/updates") ||
+    pathname.startsWith("/ask-ai")
+  ) {
+    return 224;
+  }
+  return 0;
+}
+
+function PageLoadingOverlay({ sidebarOffset }: { sidebarOffset: number }) {
   return (
     <div
       className="page-nav-loading"
+      style={{ paddingLeft: sidebarOffset > 0 ? sidebarOffset : undefined }}
       role="status"
       aria-live="polite"
       aria-label="Loading your page"
     >
-      <div className="page-nav-loading-content">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/nudgeable-logo.png"
-          alt=""
-          className="page-nav-loading-logo"
-        />
-        <div className="page-nav-loading-dots" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
-      </div>
+      <PageLoadingIndicator />
     </div>
   );
 }
@@ -93,10 +118,12 @@ export default function NavigationLoadingProvider({
     return () => window.clearTimeout(timer);
   }, [pending]);
 
+  const sidebarOffset = getSidebarOffset(pathname);
+
   return (
     <NavigationLoadingContext.Provider value={{ startNavigating }}>
       {children}
-      {pending && <PageLoadingOverlay />}
+      {pending && <PageLoadingOverlay sidebarOffset={sidebarOffset} />}
     </NavigationLoadingContext.Provider>
   );
 }

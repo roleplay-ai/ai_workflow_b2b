@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { PageLoadingIndicator } from "@/components/NavigationLoading";
 
 type User = {
   id: string;
@@ -138,7 +139,9 @@ export default function UsersClient() {
       {/* Users table */}
       <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 20, overflow: "hidden" }}>
         {loading ? (
-          <div style={{ padding: 48, textAlign: "center", color: "#B0ABA5", fontSize: 14 }}>Loading users...</div>
+          <div style={{ padding: 48, display: "flex", justifyContent: "center" }}>
+            <PageLoadingIndicator label="Loading users" />
+          </div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: 48, textAlign: "center", color: "#B0ABA5", fontSize: 14 }}>No users found</div>
         ) : (
