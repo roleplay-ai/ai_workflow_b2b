@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { sumPointsFromProgress, type PointsProgressRow } from "@/lib/points";
 
 async function getAdminProfile(supabase: any) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -39,24 +40,35 @@ export async function GET(req: NextRequest) {
 
   const userIds = filtered.map((u: any) => u.id);
   const { data: progress } = userIds.length
-    ? await supabase.from("user_progress").select("user_id, status, completed_at, updated_at").in("user_id", userIds)
+    ? await supabase.from("user_progress").select("user_id, activity_id, status, completed_at, updated_at, quiz_score").in("user_id", userIds)
     : { data: [] };
 
-  const progressMap: Record<string, { completed: number; inProgress: number; lastActive: string | null }> = {};
+  const { data: activities } = await supabase.from("activities").select("id, points");
+  const activityPointsMap: Record<string, number> = {};
+  (activities ?? []).forEach((a: any) => { activityPointsMap[a.id] = a.points ?? 0; });
+
+  const progressMap: Record<string, { completed: number; inProgress: number; lastActive: string | null; rows: PointsProgressRow[] }> = {};
   (progress ?? []).forEach((p: any) => {
-    if (!progressMap[p.user_id]) progressMap[p.user_id] = { completed: 0, inProgress: 0, lastActive: null };
+    if (!progressMap[p.user_id]) progressMap[p.user_id] = { completed: 0, inProgress: 0, lastActive: null, rows: [] };
     if (p.status === "completed") progressMap[p.user_id].completed++;
     if (p.status === "in_progress") progressMap[p.user_id].inProgress++;
     const d = p.completed_at || p.updated_at;
     if (d && (!progressMap[p.user_id].lastActive || d > progressMap[p.user_id].lastActive!)) {
       progressMap[p.user_id].lastActive = d;
     }
+    progressMap[p.user_id].rows.push({ activity_id: p.activity_id, status: p.status, quiz_score: p.quiz_score });
   });
 
-  const enriched = filtered.map((u: any) => ({
-    ...u,
-    ...(progressMap[u.id] || { completed: 0, inProgress: 0, lastActive: null }),
-  }));
+  const enriched = filtered.map((u: any) => {
+    const stats = progressMap[u.id];
+    return {
+      ...u,
+      completed: stats?.completed ?? 0,
+      inProgress: stats?.inProgress ?? 0,
+      lastActive: stats?.lastActive ?? null,
+      points: stats ? sumPointsFromProgress(stats.rows, activityPointsMap) : 0,
+    };
+  });
 
   return NextResponse.json({ users: enriched });
 }

@@ -1,10 +1,10 @@
 "use client";
 import { useMemo } from "react";
+import { sumPointsFromProgress, type PointsProgressRow } from "@/lib/points";
 
 type Props = {
   companyUsers: any[];
   allProgress: any[];
-  totalActivities: number;
   activityViews: any[];
   fluencyViews: any[];
 };
@@ -33,14 +33,11 @@ function getLastNDays(n: number): string[] {
   return days;
 }
 
-export default function AdminDashboardClient({ companyUsers, allProgress, totalActivities, activityViews, fluencyViews }: Props) {
+export default function AdminDashboardClient({ companyUsers, allProgress, activityViews, fluencyViews }: Props) {
   const completedCount = allProgress.filter(p => p.status === "completed").length;
   const inProgressCount = allProgress.filter(p => p.status === "in_progress").length;
   const activeUserIds = new Set(allProgress.map(p => p.user_id));
   const activeUsers = activeUserIds.size;
-  const avgCompletion = companyUsers.length
-    ? Math.round((completedCount / (companyUsers.length * Math.max(totalActivities, 1))) * 100)
-    : 0;
 
   const last7Days = useMemo(() => getLastNDays(7), []);
 
@@ -73,20 +70,29 @@ export default function AdminDashboardClient({ companyUsers, allProgress, totalA
       .slice(0, 8);
   }, [allProgress]);
 
+  const activityPointsMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    allProgress.forEach((p: any) => {
+      if (p.activity_id) map[p.activity_id] = p.activities?.points ?? 0;
+    });
+    return map;
+  }, [allProgress]);
+
   const leaderboard = useMemo(() => {
     return companyUsers
       .map(u => {
-        const userProgress = allProgress.filter(p => p.user_id === u.id);
+        const userProgress: PointsProgressRow[] = allProgress.filter(p => p.user_id === u.id);
         const completed = userProgress.filter(p => p.status === "completed").length;
         const inProg = userProgress.filter(p => p.status === "in_progress").length;
-        return { ...u, completed, inProgress: inProg };
+        const points = sumPointsFromProgress(userProgress, activityPointsMap);
+        return { ...u, completed, inProgress: inProg, points };
       })
-      .filter(u => u.completed > 0 || u.inProgress > 0)
-      .sort((a, b) => b.completed - a.completed || b.inProgress - a.inProgress)
+      .filter(u => u.points > 0 || u.inProgress > 0)
+      .sort((a, b) => b.points - a.points || b.completed - a.completed)
       .slice(0, 5);
-  }, [companyUsers, allProgress]);
+  }, [companyUsers, allProgress, activityPointsMap]);
 
-  const maxCompleted = Math.max(...leaderboard.map(u => u.completed), 1);
+  const maxPoints = Math.max(...leaderboard.map(u => u.points), 1);
 
   const fluencyByType = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -111,8 +117,8 @@ export default function AdminDashboardClient({ companyUsers, allProgress, totalA
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 28 }}>
         <StatCard label="Total Users" value={companyUsers.length} bg="rgba(35,206,104,.06)" border="rgba(35,206,104,.15)" />
         <StatCard label="Active Learners" value={activeUsers} sub={`${companyUsers.length - activeUsers} haven't started`} bg="rgba(54,150,252,.06)" border="rgba(54,150,252,.15)" />
-        <StatCard label="Completions" value={completedCount} sub={`${inProgressCount} in progress`} bg="rgba(255,206,0,.08)" border="rgba(255,206,0,.2)" />
-        <StatCard label="Avg Completion" value={`${avgCompletion}%`} sub={`across ${totalActivities} activities`} bg="rgba(246,138,41,.06)" border="rgba(246,138,41,.15)" />
+        <StatCard label="Completions" value={completedCount} bg="rgba(255,206,0,.08)" border="rgba(255,206,0,.2)" />
+        <StatCard label="Workflows In Progress" value={inProgressCount} bg="rgba(246,138,41,.06)" border="rgba(246,138,41,.15)" />
       </div>
 
       {/* Two-column layout */}
@@ -120,7 +126,7 @@ export default function AdminDashboardClient({ companyUsers, allProgress, totalA
         {/* Activity chart */}
         <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 20, padding: 24 }}>
           <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4, color: "#221D23" }}>Engagement — Last 7 Days</div>
-          <div style={{ fontSize: 12, color: "#B0ABA5", marginBottom: 20 }}>Total views (activities + AI updates)</div>
+          <div style={{ fontSize: 12, color: "#B0ABA5", marginBottom: 20 }}>Total views (workflows + AI news)</div>
           <div style={{ display: "flex", gap: 8 }}>
             {viewsByDay.map(({ day, count }) => {
               const BAR_AREA = 120;
@@ -148,10 +154,10 @@ export default function AdminDashboardClient({ companyUsers, allProgress, totalA
 
         {/* AI Updates engagement */}
         <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 20, padding: 24 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4, color: "#221D23" }}>AI Updates Engagement</div>
+          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4, color: "#221D23" }}>AI News Engagement</div>
           <div style={{ fontSize: 12, color: "#B0ABA5", marginBottom: 20 }}>Views by content type</div>
           {Object.keys(fluencyByType).length === 0 ? (
-            <div style={{ textAlign: "center", padding: 32, color: "#B0ABA5", fontSize: 13 }}>No AI updates views yet</div>
+            <div style={{ textAlign: "center", padding: 32, color: "#B0ABA5", fontSize: 13 }}>No AI news views yet</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {[
@@ -184,9 +190,9 @@ export default function AdminDashboardClient({ companyUsers, allProgress, totalA
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
         {/* Top activities */}
         <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 20, padding: 24 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 16, color: "#221D23" }}>Top Activities</div>
+          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 16, color: "#221D23" }}>Top Workflows</div>
           {topActivities.length === 0 ? (
-            <p style={{ color: "#B0ABA5", fontSize: 13, textAlign: "center", padding: 24 }}>No activity data yet</p>
+            <p style={{ color: "#B0ABA5", fontSize: 13, textAlign: "center", padding: 24 }}>No workflow data yet</p>
           ) : (
             topActivities.map(([id, { title, completed, started }]) => (
               <div key={id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid #F0EEE8" }}>
@@ -206,7 +212,7 @@ export default function AdminDashboardClient({ companyUsers, allProgress, totalA
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#221D23" }}>Leaderboard</div>
-              <div style={{ fontSize: 12, color: "#B0ABA5", marginTop: 2 }}>By activities completed</div>
+              <div style={{ fontSize: 12, color: "#B0ABA5", marginTop: 2 }}>By points earned</div>
             </div>
             <a href="/admin/users" style={{ fontSize: 12, fontWeight: 700, color: "#3696FC", textDecoration: "none" }}>View all</a>
           </div>
@@ -231,16 +237,16 @@ export default function AdminDashboardClient({ companyUsers, allProgress, totalA
                   <div style={{ height: 4, background: "#F0EEE8", borderRadius: 999, overflow: "hidden" }}>
                     <div style={{
                       height: "100%",
-                      width: `${(u.completed / maxCompleted) * 100}%`,
+                      width: `${(u.points / maxPoints) * 100}%`,
                       background: i === 0 ? "linear-gradient(90deg, #FFCE00, #F68A29)" : "#3696FC",
                       borderRadius: 999,
                     }} />
                   </div>
                 </div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: "#221D23" }}>{u.completed}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#221D23" }}>{u.points} pts</div>
                   <div style={{ fontSize: 10, color: "#B0ABA5", fontWeight: 600 }}>
-                    completed{u.inProgress > 0 ? ` · ${u.inProgress} active` : ""}
+                    {u.completed} completed{u.inProgress > 0 ? ` · ${u.inProgress} active` : ""}
                   </div>
                 </div>
               </div>
