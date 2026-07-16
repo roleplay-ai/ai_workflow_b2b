@@ -73,18 +73,20 @@ export default function AdminDashboardClient({ companyUsers, allProgress, totalA
       .slice(0, 8);
   }, [allProgress]);
 
-  const recentUsers = useMemo(() => {
-    return companyUsers.slice(0, 5).map(u => {
-      const userProgress = allProgress.filter(p => p.user_id === u.id);
-      const completed = userProgress.filter(p => p.status === "completed").length;
-      const inProg = userProgress.filter(p => p.status === "in_progress").length;
-      const lastActive = userProgress.reduce((latest: string | null, p: any) => {
-        const d = p.completed_at || p.updated_at;
-        return !latest || d > latest ? d : latest;
-      }, null);
-      return { ...u, completed, inProgress: inProg, lastActive };
-    });
+  const leaderboard = useMemo(() => {
+    return companyUsers
+      .map(u => {
+        const userProgress = allProgress.filter(p => p.user_id === u.id);
+        const completed = userProgress.filter(p => p.status === "completed").length;
+        const inProg = userProgress.filter(p => p.status === "in_progress").length;
+        return { ...u, completed, inProgress: inProg };
+      })
+      .filter(u => u.completed > 0 || u.inProgress > 0)
+      .sort((a, b) => b.completed - a.completed || b.inProgress - a.inProgress)
+      .slice(0, 5);
   }, [companyUsers, allProgress]);
+
+  const maxCompleted = Math.max(...leaderboard.map(u => u.completed), 1);
 
   const fluencyByType = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -178,7 +180,7 @@ export default function AdminDashboardClient({ companyUsers, allProgress, totalA
         </div>
       </div>
 
-      {/* Two-column: top activities + recent users */}
+      {/* Two-column: top activities + leaderboard */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
         {/* Top activities */}
         <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 20, padding: 24 }}>
@@ -199,36 +201,51 @@ export default function AdminDashboardClient({ companyUsers, allProgress, totalA
           )}
         </div>
 
-        {/* Recent users */}
+        {/* Leaderboard */}
         <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 20, padding: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#221D23" }}>Recent Users</div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#221D23" }}>Leaderboard</div>
+              <div style={{ fontSize: 12, color: "#B0ABA5", marginTop: 2 }}>By activities completed</div>
+            </div>
             <a href="/admin/users" style={{ fontSize: 12, fontWeight: 700, color: "#3696FC", textDecoration: "none" }}>View all</a>
           </div>
-          {recentUsers.map(u => (
-            <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid #F0EEE8" }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: "50%", background: "#221D23",
-                color: "white", display: "grid", placeItems: "center",
-                fontSize: 11, fontWeight: 800, flexShrink: 0,
-              }}>
-                {(u.full_name ?? u.email ?? "?")[0].toUpperCase()}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#221D23", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {u.full_name ?? u.email}
+          {leaderboard.length === 0 ? (
+            <p style={{ color: "#B0ABA5", fontSize: 13, textAlign: "center", padding: 24 }}>No completions yet</p>
+          ) : (
+            leaderboard.map((u, i) => (
+              <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid #F0EEE8" }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                  background: i === 0 ? "linear-gradient(135deg, #FFCE00, #F68A29)" : i === 1 ? "#E8E6DC" : i === 2 ? "rgba(246,138,41,.2)" : "#F0EEE8",
+                  color: i === 0 ? "#221D23" : "#6B6B6B",
+                  display: "grid", placeItems: "center",
+                  fontSize: 11, fontWeight: 800,
+                }}>
+                  {i + 1}
                 </div>
-                <div style={{ fontSize: 11, color: "#B0ABA5" }}>
-                  {u.completed} completed, {u.inProgress} active
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#221D23", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>
+                    {u.full_name ?? u.email}
+                  </div>
+                  <div style={{ height: 4, background: "#F0EEE8", borderRadius: 999, overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%",
+                      width: `${(u.completed / maxCompleted) * 100}%`,
+                      background: i === 0 ? "linear-gradient(90deg, #FFCE00, #F68A29)" : "#3696FC",
+                      borderRadius: 999,
+                    }} />
+                  </div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#221D23" }}>{u.completed}</div>
+                  <div style={{ fontSize: 10, color: "#B0ABA5", fontWeight: 600 }}>
+                    completed{u.inProgress > 0 ? ` · ${u.inProgress} active` : ""}
+                  </div>
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: "#B0ABA5", flexShrink: 0 }}>
-                {u.lastActive
-                  ? new Date(u.lastActive).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                  : "No activity"}
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

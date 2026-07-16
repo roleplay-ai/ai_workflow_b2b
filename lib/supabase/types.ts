@@ -373,13 +373,13 @@ export type Database = {
       };
       activity_views: {
         Row: ActivityView;
-        Insert: { activity_id: string; user_id?: string | null; session_id?: string | null };
+        Insert: { activity_id: string; user_id?: string | null; session_id?: string | null; ip_address?: string | null };
         Update: Record<string, never>;
         Relationships: [];
       };
       fluency_views: {
         Row: FluencyView;
-        Insert: { entity_type: FluencyEntityType; entity_id: string; user_id?: string | null; session_id?: string | null };
+        Insert: { entity_type: FluencyEntityType; entity_id: string; user_id?: string | null; session_id?: string | null; ip_address?: string | null };
         Update: Record<string, never>;
         Relationships: [];
       };

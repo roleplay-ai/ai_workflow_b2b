@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { trackFluencyView } from "@/lib/trackFluencyView";
 
 type Props = {
   moduleId: string;
@@ -11,6 +12,10 @@ type Props = {
 export default function ModuleHtmlModal({ moduleId, moduleTitle, moduleEmoji, onClose }: Props) {
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    trackFluencyView("module", moduleId);
+  }, [moduleId]);
 
   // Trigger pop-in animation after mount
   useEffect(() => {
