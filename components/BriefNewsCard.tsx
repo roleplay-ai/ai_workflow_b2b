@@ -3,15 +3,12 @@
 import { useRef } from "react";
 import "./BriefNewsCard.css";
 
-export type BriefNewsItem = { id: string; content: string; sort_order: number };
-
-// Temporary hardcoded article links — one per brief card, by sort order.
-const TEMP_BRIEF_NEWS_LINKS = [
-  "https://www.tomshardware.com/tech-industry/artificial-intelligence/z-ai-free-glm-5-2-tops-the-open-weight-ai-rankings-on-all-huawei-silicon",
-  "https://www.reuters.com/legal/litigation/openai-defers-public-rollout-gpt56-us-seeks-early-access-frontier-ai-models-2026-06-26/",
-  "https://www.anthropic.com/news/claude-sonnet-5",
-  "https://www.businessinsider.com/google-3-5-pro-july-release-tokens-ai-agents-model-2026-6",
-] as const;
+export type BriefNewsItem = {
+  id: string;
+  content: string;
+  link_url: string | null;
+  sort_order: number;
+};
 
 const SCROLL_CARD_WIDTH = 280;
 const SCROLL_GAP = 20;
@@ -28,6 +25,16 @@ function parseNewsContent(content: string): { title: string; description: string
   }
 
   return { title: cleaned, description: "" };
+}
+
+function safeExternalUrl(value?: string | null) {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function formatBriefNewsDate(dateStr?: string | null) {
@@ -60,7 +67,7 @@ function NewsCard({
       ) : (
         <p className="aif-news-desc" style={{ marginBottom: 14 }} />
       )}
-      <span className="aif-news-read-link">Read update ›</span>
+      {href && <span className="aif-news-read-link">Read update ›</span>}
     </>
   );
 
@@ -107,12 +114,12 @@ export default function BriefNewsCard({ items, publishedDate, className }: Props
           ‹
         </button>
         <div ref={scrollRef} className="aif-news-scroll">
-          {sorted.map((item, index) => (
+          {sorted.map(item => (
             <NewsCard
               key={item.id}
               item={item}
               displayDate={displayDate}
-              href={TEMP_BRIEF_NEWS_LINKS[index]}
+              href={safeExternalUrl(item.link_url)}
             />
           ))}
         </div>
@@ -125,12 +132,12 @@ export default function BriefNewsCard({ items, publishedDate, className }: Props
 
   return (
     <div className={className ? `aif-news-grid ${className}` : "aif-news-grid"}>
-      {sorted.map((item, index) => (
+      {sorted.map(item => (
         <NewsCard
           key={item.id}
           item={item}
           displayDate={displayDate}
-          href={TEMP_BRIEF_NEWS_LINKS[index]}
+          href={safeExternalUrl(item.link_url)}
         />
       ))}
     </div>

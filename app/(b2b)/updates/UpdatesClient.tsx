@@ -10,7 +10,7 @@ import "./updates.css";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type BriefItem = { id: string; content: string; sort_order: number };
+type BriefItem = { id: string; content: string; link_url: string | null; sort_order: number };
 type Brief = { id: string; title: string; published_date: string; fluency_brief_items: BriefItem[] };
 
 type Video = {

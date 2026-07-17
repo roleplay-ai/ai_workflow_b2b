@@ -25,7 +25,7 @@ type Tool = {
   company_name: string | null; try_url: string | null; best_for: string | null;
   pricing: string | null; is_featured: boolean; published: boolean; sort_order: number;
 };
-type BriefItem = { id: string; content: string; sort_order: number };
+type BriefItem = { id: string; content: string; link_url: string | null; sort_order: number };
 type Brief = { id: string; title: string; published_date: string; is_active: boolean; fluency_brief_items: BriefItem[] };
 type BriefEdit = { title: string; published_date: string };
 
@@ -930,10 +930,12 @@ function BriefTab({ initBriefs }: { initBriefs: Brief[] }) {
   const [briefDraft, setBriefDraft] = useState<BriefEdit>({ title: "", published_date: "" });
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [itemDraft, setItemDraft] = useState("");
+  const [itemLinkDraft, setItemLinkDraft] = useState("");
 
   const [nTitle, setNTitle] = useState("");
   const [nDate, setNDate] = useState(new Date().toISOString().slice(0, 10));
   const [nItem, setNItem] = useState("");
+  const [nItemLink, setNItemLink] = useState("");
 
   async function deactivateOtherBriefs(activeId: string) {
     const others = briefs.filter(b => b.id !== activeId && b.is_active);
@@ -999,35 +1001,38 @@ function BriefTab({ initBriefs }: { initBriefs: Brief[] }) {
     const nextSort = brief.fluency_brief_items.length > 0
       ? Math.max(...brief.fluency_brief_items.map(i => i.sort_order)) + 1 : 0;
     const { data, error } = await supabase.from("fluency_brief_items")
-      .insert({ brief_id: briefId, content: nItem, sort_order: nextSort })
+      .insert({ brief_id: briefId, content: nItem, link_url: nItemLink.trim() || null, sort_order: nextSort })
       .select().single();
     if (!error && data) {
       setBriefs(prev => prev.map(b => b.id === briefId
         ? { ...b, fluency_brief_items: [...b.fluency_brief_items, data as BriefItem] }
         : b));
-      setNItem(""); setAddingItemTo(null);
+      setNItem(""); setNItemLink(""); setAddingItemTo(null);
     } else if (error) alert(error.message);
   }
 
   function startEditItem(item: BriefItem) {
     setEditingItemId(item.id);
     setItemDraft(item.content);
+    setItemLinkDraft(item.link_url ?? "");
   }
 
   async function saveItem(briefId: string, itemId: string) {
     const content = itemDraft.trim();
     if (!content) return;
-    const { data, error } = await supabase.from("fluency_brief_items").update({ content }).eq("id", itemId).select("id").maybeSingle();
+    const link_url = itemLinkDraft.trim() || null;
+    const { data, error } = await supabase.from("fluency_brief_items").update({ content, link_url }).eq("id", itemId).select("id").maybeSingle();
     if (error) { alert(error.message); return; }
     if (!data) {
       alert("Could not save item. Run supabase/migrations/20240624_fluency_brief_superadmin_rls.sql in the Supabase SQL editor, then try again.");
       return;
     }
     setBriefs(prev => prev.map(b => b.id === briefId
-      ? { ...b, fluency_brief_items: b.fluency_brief_items.map(i => i.id === itemId ? { ...i, content } : i) }
+      ? { ...b, fluency_brief_items: b.fluency_brief_items.map(i => i.id === itemId ? { ...i, content, link_url } : i) }
       : b));
     setEditingItemId(null);
     setItemDraft("");
+    setItemLinkDraft("");
   }
 
   async function moveItem(briefId: string, itemId: string, dir: "up" | "down") {
@@ -1136,14 +1141,30 @@ function BriefTab({ initBriefs }: { initBriefs: Brief[] }) {
                           </div>
                           <span style={{ fontSize: 11, fontWeight: 700, color: "#B0ABA5", paddingTop: 2, flexShrink: 0, minWidth: 16, textAlign: "center" }}>{i + 1}</span>
                           {isEditingItem ? (
-                            <textarea
-                              value={itemDraft}
-                              onChange={e => setItemDraft(e.target.value)}
-                              rows={3}
-                              style={{ ...inp, flex: 1, resize: "vertical" }}
-                            />
+                            <div style={{ display: "flex", flexDirection: "column", gap: 7, flex: 1 }}>
+                              <textarea
+                                value={itemDraft}
+                                onChange={e => setItemDraft(e.target.value)}
+                                rows={3}
+                                style={{ ...inp, resize: "vertical" }}
+                              />
+                              <input
+                                type="url"
+                                value={itemLinkDraft}
+                                onChange={e => setItemLinkDraft(e.target.value)}
+                                placeholder="Article URL (https://…)"
+                                style={inp}
+                              />
+                            </div>
                           ) : (
-                            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, flex: 1 }}>{item.content}</p>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55 }}>{item.content}</p>
+                              {item.link_url && (
+                                <a href={item.link_url} target="_blank" rel="noopener noreferrer" style={{ display: "block", marginTop: 4, color: "#3696FC", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {item.link_url}
+                                </a>
+                              )}
+                            </div>
                           )}
                           <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
                             {isEditingItem ? (
@@ -1165,11 +1186,20 @@ function BriefTab({ initBriefs }: { initBriefs: Brief[] }) {
 
                   {addingItemTo === b.id ? (
                     <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                      <textarea
-                        value={nItem} onChange={e => setNItem(e.target.value)}
-                        placeholder="Brief item text…" rows={2}
-                        style={{ ...inp, flex: 1, resize: "vertical" }}
-                      />
+                      <div style={{ display: "flex", flexDirection: "column", gap: 7, flex: 1 }}>
+                        <textarea
+                          value={nItem} onChange={e => setNItem(e.target.value)}
+                          placeholder="Brief item text…" rows={2}
+                          style={{ ...inp, resize: "vertical" }}
+                        />
+                        <input
+                          type="url"
+                          value={nItemLink}
+                          onChange={e => setNItemLink(e.target.value)}
+                          placeholder="Article URL (https://…)"
+                          style={inp}
+                        />
+                      </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                         <button onClick={() => addItem(b.id)} disabled={!nItem} style={{ ...btnAmber, padding: "9px 14px", fontSize: 12 }}>Add</button>
                         <button onClick={() => setAddingItemTo(null)} style={{ ...btnGhost, padding: "9px 14px", fontSize: 12 }}>✕</button>
