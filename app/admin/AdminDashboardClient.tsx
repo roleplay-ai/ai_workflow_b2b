@@ -1,6 +1,8 @@
 "use client";
 import { useMemo } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { sumPointsFromProgress, type PointsProgressRow } from "@/lib/points";
+import { useNavigationLoading } from "@/components/NavigationLoading";
 
 type Props = {
   companyUsers: any[];
@@ -34,6 +36,16 @@ function getLastNDays(n: number): string[] {
 }
 
 export default function AdminDashboardClient({ companyUsers, allProgress, activityViews, fluencyViews }: Props) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { startNavigating } = useNavigationLoading();
+
+  function navigate(href: string) {
+    if (pathname === href) return;
+    startNavigating(href);
+    router.push(href);
+  }
+
   const completedCount = allProgress.filter(p => p.status === "completed").length;
   const inProgressCount = allProgress.filter(p => p.status === "in_progress").length;
   const activeUserIds = new Set(allProgress.map(p => p.user_id));
@@ -214,7 +226,16 @@ export default function AdminDashboardClient({ companyUsers, allProgress, activi
               <div style={{ fontSize: 15, fontWeight: 800, color: "#221D23" }}>Leaderboard</div>
               <div style={{ fontSize: 12, color: "#B0ABA5", marginTop: 2 }}>By points earned</div>
             </div>
-            <a href="/admin/users" style={{ fontSize: 12, fontWeight: 700, color: "#3696FC", textDecoration: "none" }}>View all</a>
+            <a
+              href="/admin/users"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/admin/users");
+              }}
+              style={{ fontSize: 12, fontWeight: 700, color: "#3696FC", textDecoration: "none" }}
+            >
+              View all
+            </a>
           </div>
           {leaderboard.length === 0 ? (
             <p style={{ color: "#B0ABA5", fontSize: 13, textAlign: "center", padding: 24 }}>No completions yet</p>

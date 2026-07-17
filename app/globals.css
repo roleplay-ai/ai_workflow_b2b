@@ -103,7 +103,8 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Center in the main content column (right of the sidebar), not the full viewport */
+  /* Center in the main content column (right of the sidebar), not the full viewport.
+     Inline style from NavigationLoading overrides this when a sidebar is present. */
   padding-left: var(--sidebar-w);
   background: rgba(28, 24, 32, 0.42);
   backdrop-filter: blur(28px);
@@ -164,6 +165,12 @@ button { font-family: inherit; }
 @keyframes page-nav-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .page-nav-loading {
+    padding-left: 0 !important;
+  }
 }
 
 /* Thin scrollbar for company leaderboard popup */

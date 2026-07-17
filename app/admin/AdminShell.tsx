@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useNavigationLoading } from "@/components/NavigationLoading";
 import type { Profile } from "@/lib/supabase/types";
 
 type Props = {
@@ -59,9 +60,52 @@ const NAV_ITEMS = [
   },
 ];
 
+function AdminNavLink({
+  href,
+  onNavigate,
+  children,
+  style,
+}: {
+  href: string;
+  onNavigate?: () => void;
+  children: React.ReactNode;
+  style: React.CSSProperties;
+}) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { startNavigating } = useNavigationLoading();
+
+  return (
+    <Link
+      href={href}
+      onClick={(e) => {
+        onNavigate?.();
+        if (pathname === href || (href !== "/admin" && pathname.startsWith(href))) {
+          e.preventDefault();
+          return;
+        }
+        e.preventDefault();
+        startNavigating(href);
+        router.push(href);
+      }}
+      style={style}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export default function AdminShell({ profile, children }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { startNavigating } = useNavigationLoading();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  function navigate(href: string) {
+    if (pathname === href) return;
+    startNavigating(href);
+    router.push(href);
+  }
 
   function isActive(href: string) {
     if (href === "/admin") return pathname === "/admin";
@@ -103,7 +147,14 @@ export default function AdminShell({ profile, children }: Props) {
       }}>
         {/* Brand area */}
         <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #F0EEE8" }}>
-          <Link href="/apply" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+          <Link
+            href="/apply"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/apply");
+            }}
+            style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/nudgeable-logo.png" alt="Nudgeable" style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 500, color: "#221D23", letterSpacing: "-.02em" }}>
@@ -134,10 +185,10 @@ export default function AdminShell({ profile, children }: Props) {
           {NAV_ITEMS.map(item => {
             const active = isActive(item.href);
             return (
-              <Link
+              <AdminNavLink
                 key={item.href}
                 href={item.href}
-                onClick={() => setSidebarOpen(false)}
+                onNavigate={() => setSidebarOpen(false)}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -160,7 +211,7 @@ export default function AdminShell({ profile, children }: Props) {
                     marginLeft: "auto", flexShrink: 0,
                   }} />
                 )}
-              </Link>
+              </AdminNavLink>
             );
           })}
         </nav>
@@ -170,6 +221,10 @@ export default function AdminShell({ profile, children }: Props) {
           {profile.role === "superadmin" && (
             <Link
               href="/superadmin"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/superadmin");
+              }}
               style={{
                 display: "flex", alignItems: "center", gap: 8,
                 padding: "8px 12px", borderRadius: 10, marginBottom: 8,
@@ -184,7 +239,13 @@ export default function AdminShell({ profile, children }: Props) {
               Superadmin Panel
             </Link>
           )}
-          <Link href="/apply" style={{
+          <Link
+            href="/apply"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/apply");
+            }}
+            style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "8px 12px", borderRadius: 10, marginBottom: 8,
             fontSize: 12, fontWeight: 700, color: "#6B6B6B",
