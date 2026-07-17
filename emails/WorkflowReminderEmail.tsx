@@ -10,7 +10,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-import { WorkflowCardRow } from "./NewsletterEmail";
+import { EMAIL_ANIMATION_STYLES, WorkflowCardRow } from "./NewsletterEmail";
 
 export type WorkflowReminderEmailItem = { title: string; description: string };
 
@@ -37,17 +37,19 @@ export function WorkflowReminderEmail({
 
   return (
     <Html lang="en">
-      <Head />
+      <Head>
+        <style>{EMAIL_ANIMATION_STYLES}</style>
+      </Head>
       <Preview>A few workflows are waiting for you, {name}</Preview>
       <Body style={body}>
         <Container style={outer}>
           <Container style={card}>
             <Section style={hero}>
-              <Text style={badge}>Reminder</Text>
-              <Heading style={h1}>
+              <Text className="anim-fade" style={badge}>Reminder</Text>
+              <Heading className="anim-fade-delay" style={h1}>
                 Pick up where you left off, {name}
               </Heading>
-              <Text style={heroSub}>
+              <Text className="anim-fade-delay" style={heroSub}>
                 Here are {workflows.length} workflow{workflows.length === 1 ? "" : "s"} to help you keep building your AI practice.
               </Text>
             </Section>
@@ -55,7 +57,7 @@ export function WorkflowReminderEmail({
             <Section style={bodyPad}>
               <WorkflowCardRow items={workflows} workflowsUrl={workflowsUrl} />
 
-              <Section style={{ textAlign: "center", marginTop: 22 }}>
+              <Section className="anim-fade" style={{ textAlign: "center", marginTop: 22 }}>
                 <Button href={workflowsUrl} style={cta}>
                   Open Workflows →
                 </Button>

@@ -36,7 +36,7 @@ export default async function AIFluencyAdminPage() {
       .order("sort_order"),
     supabase
       .from("fluency_briefs")
-      .select("id, title, published_date, is_active, fluency_brief_items(id, content, sort_order)")
+      .select("id, title, published_date, is_active, fluency_brief_items(id, content, link_url, sort_order)")
       .order("published_date", { ascending: false })
       .limit(10),
   ]);

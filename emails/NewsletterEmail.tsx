@@ -30,6 +30,37 @@ const COLORS = {
   border: "#E8E6DC",
 };
 
+/** Same lightweight entrance-animation approach as emails/LabWelcomeEmail.tsx — exported so WorkflowReminderEmail.tsx (which reuses WorkflowCardRow) gets working `.anim-card` styling too. */
+export const EMAIL_ANIMATION_STYLES = `
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes logoNudge {
+    0%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-4px); }
+    60% { transform: translateY(1px); }
+  }
+  @keyframes contentReveal {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .anim-fade { animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .anim-fade-delay { animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both; }
+  .anim-fade-delay-2 { animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both; }
+  .anim-logo { animation: logoNudge 2.8s ease-in-out infinite; }
+  .anim-card { animation: cardIn 0.65s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .anim-reveal { animation: contentReveal 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both; }
+  @media (prefers-reduced-motion: reduce) {
+    .anim-fade, .anim-fade-delay, .anim-fade-delay-2, .anim-logo,
+    .anim-card, .anim-reveal { animation: none !important; }
+  }
+`;
+
 export function NewsletterEmail({
   title,
   newsItems,
@@ -38,31 +69,35 @@ export function NewsletterEmail({
 }: NewsletterEmailProps) {
   return (
     <Html lang="en">
-      <Head />
+      <Head>
+        <style>{EMAIL_ANIMATION_STYLES}</style>
+      </Head>
       <Preview>{title}</Preview>
       <Body style={body}>
         <Container style={outer}>
           <Container style={card}>
             <Section style={hero}>
-              <Text style={badge}>Nudgeable</Text>
-              <Heading style={h1}>{title}</Heading>
+              <Text className="anim-logo" style={badge}>AI Practice Lab</Text>
+              <Heading className="anim-fade-delay" style={h1}>{title}</Heading>
             </Section>
 
             <Section style={bodyPad}>
               {newsItems.length > 0 && (
                 <>
-                  <Text style={sectionTitle}>Latest AI News</Text>
+                  <Text className="anim-fade-delay-2" style={sectionTitle}>Latest AI News</Text>
                   {newsItems.map((item, i) => (
-                    <ItemCard key={`news-${i}`} index={i + 1} title={item.title} description={item.description} />
+                    <Section key={`news-${i}`} className="anim-card" style={{ animationDelay: `${0.3 + i * 0.12}s` }}>
+                      <ItemCard index={i + 1} title={item.title} description={item.description} />
+                    </Section>
                   ))}
                 </>
               )}
 
               {workflowItems.length > 0 && (
                 <>
-                  <Text style={{ ...sectionTitle, marginTop: newsItems.length > 0 ? 28 : 0 }}>Workflows to Try</Text>
+                  <Text className="anim-fade-delay-2" style={{ ...sectionTitle, marginTop: newsItems.length > 0 ? 28 : 0 }}>Workflows to Try</Text>
                   <WorkflowCardRow items={workflowItems} workflowsUrl={workflowsUrl} />
-                  <Section style={{ textAlign: "center", marginTop: 22 }}>
+                  <Section className="anim-reveal" style={{ textAlign: "center", marginTop: 22 }}>
                     <Button href={workflowsUrl} style={cta}>
                       Open Workflows →
                     </Button>
@@ -70,7 +105,7 @@ export function NewsletterEmail({
                 </>
               )}
 
-              <Text style={signoff}>
+              <Text className="anim-fade-delay-2" style={signoff}>
                 Regards,
                 <br />
                 <strong>Team Nudgeable</strong>
@@ -116,10 +151,10 @@ export function WorkflowCardRow({ items, workflowsUrl }: { items: { title: strin
       {rows.map((pair, ri) => (
         <Row key={ri} style={{ marginBottom: 12 }}>
           <Column style={{ width: "50%", verticalAlign: "top", paddingRight: 6 }}>
-            <WorkflowCard item={pair[0]} workflowsUrl={workflowsUrl} />
+            <WorkflowCard item={pair[0]} workflowsUrl={workflowsUrl} index={ri * 2} />
           </Column>
           <Column style={{ width: "50%", verticalAlign: "top", paddingLeft: 6 }}>
-            {pair[1] && <WorkflowCard item={pair[1]} workflowsUrl={workflowsUrl} />}
+            {pair[1] && <WorkflowCard item={pair[1]} workflowsUrl={workflowsUrl} index={ri * 2 + 1} />}
           </Column>
         </Row>
       ))}
@@ -127,9 +162,9 @@ export function WorkflowCardRow({ items, workflowsUrl }: { items: { title: strin
   );
 }
 
-function WorkflowCard({ item, workflowsUrl }: { item: { title: string; description: string }; workflowsUrl: string }) {
+function WorkflowCard({ item, workflowsUrl, index }: { item: { title: string; description: string }; workflowsUrl: string; index: number }) {
   return (
-    <a href={workflowsUrl} style={workflowCard}>
+    <a href={workflowsUrl} className="anim-card" style={{ ...workflowCard, animationDelay: `${0.3 + index * 0.12}s` }}>
       <span style={workflowCardAccent} />
       <span style={cardTitle}>{item.title}</span>
       {item.description && <span style={cardDesc}>{item.description}</span>}
