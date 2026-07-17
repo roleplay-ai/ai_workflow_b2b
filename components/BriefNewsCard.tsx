@@ -6,7 +6,7 @@ import "./BriefNewsCard.css";
 export type BriefNewsItem = {
   id: string;
   content: string;
-  link_url: string | null;
+  link_url?: string | null;
   sort_order: number;
 };
 
@@ -28,9 +28,11 @@ function parseNewsContent(content: string): { title: string; description: string
 }
 
 function safeExternalUrl(value?: string | null) {
-  if (!value) return undefined;
+  const raw = value?.trim();
+  if (!raw) return undefined;
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
   try {
-    const url = new URL(value);
+    const url = new URL(withProtocol);
     return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : undefined;
   } catch {
     return undefined;
@@ -67,7 +69,7 @@ function NewsCard({
       ) : (
         <p className="aif-news-desc" style={{ marginBottom: 14 }} />
       )}
-      {href && <span className="aif-news-read-link">Read update ›</span>}
+      <span className="aif-news-read-link">Read update ›</span>
     </>
   );
 

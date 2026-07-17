@@ -920,6 +920,12 @@ function briefDateOnly(value: string) {
   return value.slice(0, 10);
 }
 
+function normalizeBriefLink(value: string) {
+  const raw = value.trim();
+  if (!raw) return null;
+  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+}
+
 function BriefTab({ initBriefs }: { initBriefs: Brief[] }) {
   const supabase = createClient();
   const [briefs, setBriefs] = useState(initBriefs);
@@ -1001,7 +1007,7 @@ function BriefTab({ initBriefs }: { initBriefs: Brief[] }) {
     const nextSort = brief.fluency_brief_items.length > 0
       ? Math.max(...brief.fluency_brief_items.map(i => i.sort_order)) + 1 : 0;
     const { data, error } = await supabase.from("fluency_brief_items")
-      .insert({ brief_id: briefId, content: nItem, link_url: nItemLink.trim() || null, sort_order: nextSort })
+      .insert({ brief_id: briefId, content: nItem, link_url: normalizeBriefLink(nItemLink), sort_order: nextSort })
       .select().single();
     if (!error && data) {
       setBriefs(prev => prev.map(b => b.id === briefId
@@ -1020,7 +1026,7 @@ function BriefTab({ initBriefs }: { initBriefs: Brief[] }) {
   async function saveItem(briefId: string, itemId: string) {
     const content = itemDraft.trim();
     if (!content) return;
-    const link_url = itemLinkDraft.trim() || null;
+    const link_url = normalizeBriefLink(itemLinkDraft);
     const { data, error } = await supabase.from("fluency_brief_items").update({ content, link_url }).eq("id", itemId).select("id").maybeSingle();
     if (error) { alert(error.message); return; }
     if (!data) {
