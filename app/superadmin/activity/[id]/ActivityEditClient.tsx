@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MultiSelect, { type SelectOption } from "@/components/MultiSelect";
@@ -26,7 +26,7 @@ type EditableStep = Omit<ActivityStep, "created_at"> & {
   try_asking_text: string;
 };
 
-type Tab = "info" | "slides" | "steps" | "quiz" | "goals" | "prompts" | "downloads" | "video";
+type Tab = "info" | "slides" | "steps" | "video" | "resources" | "quiz";
 
 function validateQuizQuestions(raw: unknown): { ok: true; questions: QuizQuestion[] } | { ok: false; error: string } {
   if (!Array.isArray(raw)) return { ok: false, error: "JSON must be an array of questions" };
@@ -53,15 +53,13 @@ const QUIZ_JSON_EXAMPLE = `[
     "correct_index": 0
   }
 ]`;
-const TABS: { id: Tab; label: string }[] = [
+const TABS: { id: Tab; label: string; optional?: boolean }[] = [
   { id: "info",      label: "✏️ Info"      },
   { id: "slides",    label: "📸 Slides"    },
   { id: "steps",     label: "📋 Steps"     },
-  { id: "quiz",      label: "✓ Quiz"      },
-  { id: "goals",     label: "🎯 Goals"    },
-  { id: "prompts",   label: "💬 Prompts"  },
   { id: "video",     label: "🎬 Video"    },
-  { id: "downloads", label: "📥 Downloads"},
+  { id: "resources", label: "🎁 Resources"},
+  { id: "quiz",      label: "✓ Quiz",     optional: true },
 ];
 
 export default function ActivityEditClient({ activity, activitySteps: initSteps, toolOptions: initToolOpts, toolLogos: initToolLogos, tagOptions: initTagOpts, categoryOptions: initCategoryOpts, functionOptions: initFunctionOpts, contentTypes: initContentTypes }: Props) {
@@ -70,6 +68,8 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
   const [tab, setTab] = useState<Tab>("info");
   const [saving, setSaving]   = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+  const [contentRowExists, setContentRowExists] = useState(!!content);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"" | "saving" | "saved" | "error">("");
 
   // Info — basic fields
   const [infoTitle,    setInfoTitle]    = useState(activity.title ?? "");
@@ -344,33 +344,58 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
   const [videoPasteUrl,  setVideoPasteUrl]  = useState("");
   const [videoFile,      setVideoFile]      = useState<File | null>(null);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [videoUploadPct, setVideoUploadPct] = useState(0);
   const [videoMsg,       setVideoMsg]       = useState("");
+
+  // The Supabase JS SDK's storage upload() doesn't expose byte-level progress
+  // (it's fetch-based), so this talks to the storage REST endpoint directly
+  // via XMLHttpRequest, which does support upload.onprogress.
+  function uploadFileWithProgress(bucket: string, path: string, file: File, accessToken: string, onProgress: (pct: number) => void): Promise<void> {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const anonKey     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const form = new FormData();
+    form.append("cacheControl", "3600");
+    form.append("", file);
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${supabaseUrl}/storage/v1/object/${bucket}/${path}`);
+      xhr.setRequestHeader("apikey", anonKey);
+      xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
+      xhr.setRequestHeader("x-upsert", "true");
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) { resolve(); return; }
+        let message = `Upload failed (${xhr.status})`;
+        try { message = JSON.parse(xhr.responseText)?.message ?? message; } catch {}
+        reject(new Error(message));
+      };
+      xhr.onerror = () => reject(new Error("Network error during upload"));
+      xhr.send(form);
+    });
+  }
 
   async function uploadVideo() {
     if (!videoFile) return;
     setUploadingVideo(true);
+    setVideoUploadPct(0);
     setVideoMsg(`Uploading "${videoFile.name}"…`);
 
     try {
-      // Upload directly to Supabase Storage (same pattern as slides / downloads)
       const safeName = videoFile.name.replace(/[^\w.\-]/g, "_");
       const path     = `${activity.id}/${Date.now()}_${safeName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("activity-videos")
-        .upload(path, videoFile, { upsert: true, contentType: videoFile.type });
-
-      if (uploadError) {
-        setVideoMsg(`Upload error: ${uploadError.message}`);
-        return;
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      await uploadFileWithProgress("activity-videos", path, videoFile, session?.access_token ?? "", setVideoUploadPct);
 
       const { data: { publicUrl } } = supabase.storage
         .from("activity-videos")
         .getPublicUrl(path);
 
       // Persist the URL to the DB immediately — don't make the admin click Save All
-      if (content) {
+      if (contentRowExists) {
         await supabase
           .from("activity_content")
           .update({ video_url: publicUrl, updated_at: new Date().toISOString() })
@@ -387,6 +412,7 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
           downloads:     [],
           updated_at:    new Date().toISOString(),
         });
+        setContentRowExists(true);
       }
 
       setVideoUrl(publicUrl);
@@ -396,6 +422,7 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
       setVideoMsg(`Error: ${err?.message ?? "Upload failed"}`);
     } finally {
       setUploadingVideo(false);
+      setVideoUploadPct(0);
     }
   }
 
@@ -404,12 +431,12 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
     if (!trimmed) return;
     setVideoUrl(trimmed);
     setVideoPasteUrl("");
-    setVideoMsg("✓ URL set — click Save All to apply");
+    setVideoMsg("✓ URL set — saves automatically when you switch tabs");
   }
 
   function removeVideo() {
     setVideoUrl("");
-    setVideoMsg("Video removed — click Save All to apply");
+    setVideoMsg("Video removed — saves automatically when you switch tabs");
   }
 
   // Steps inline edit
@@ -656,9 +683,9 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
     setUploadingDl(false);
   }
 
-  // ── Save all ──────────────────────────────────────────────────────────────
-  async function saveAll() {
-    setSaving(true); setSaveMsg("");
+  // ── Persist slides/quiz/resources/video/what-you-get to activity_content ───
+  // Shared by "Save All" and by the auto-save-on-tab-switch below.
+  async function persistContent(): Promise<{ ok: boolean; error?: string }> {
     const slides = await uploadImages();
     let quiz: QuizQuestion[] = [];
     try {
@@ -667,15 +694,11 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
       if (result.ok) {
         quiz = result.questions;
       } else if (quizJson.trim() && quizJson.trim() !== "[]") {
-        setSaveMsg(`Quiz JSON error: ${result.error}`);
-        setSaving(false);
-        return;
+        return { ok: false, error: `Quiz JSON error: ${result.error}` };
       }
     } catch {
       if (quizJson.trim() && quizJson.trim() !== "[]") {
-        setSaveMsg("Quiz JSON error: invalid JSON");
-        setSaving(false);
-        return;
+        return { ok: false, error: "Quiz JSON error: invalid JSON" };
       }
     }
 
@@ -692,15 +715,52 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
       updated_at:    new Date().toISOString(),
     };
 
-    if (content) {
-      await supabase.from("activity_content").update(payload).eq("activity_id", activity.id);
-    } else {
-      await supabase.from("activity_content").insert(payload);
-    }
+    const { error } = contentRowExists
+      ? await supabase.from("activity_content").update(payload).eq("activity_id", activity.id)
+      : await supabase.from("activity_content").insert(payload);
 
-    setSaveMsg("✓ Saved");
+    if (error) return { ok: false, error: error.message };
+    if (!contentRowExists) setContentRowExists(true);
+    return { ok: true };
+  }
+
+  // ── Save all ──────────────────────────────────────────────────────────────
+  async function saveAll() {
+    setSaving(true); setSaveMsg("");
+    const result = await persistContent();
     setSaving(false);
-    setTimeout(() => setSaveMsg(""), 3000);
+    setSaveMsg(result.ok ? "✓ Saved" : (result.error ?? "Error saving"));
+    if (result.ok) setTimeout(() => setSaveMsg(""), 3000);
+  }
+
+  // ── Auto-save whatever's on the tab being left, so nothing is lost when ───
+  // switching without clicking a Save button. "Save All" below still runs a
+  // final full save as a safety net.
+  async function autoSaveOnLeave(fromTab: Tab) {
+    setAutoSaveStatus("saving");
+    try {
+      if (fromTab === "info") {
+        if (infoTitle.trim()) await saveInfo();
+      } else if (fromTab === "steps") {
+        const dirtySteps = editSteps.filter(s => s.isDirty && s.title.trim());
+        await Promise.all(dirtySteps.map(s => saveStep(s.id)));
+        await persistContent();
+      } else {
+        await persistContent();
+      }
+      setAutoSaveStatus("saved");
+    } catch {
+      setAutoSaveStatus("error");
+    } finally {
+      setTimeout(() => setAutoSaveStatus(""), 2500);
+    }
+  }
+
+  function changeTab(next: Tab) {
+    if (next === tab) return;
+    const leaving = tab;
+    setTab(next);
+    void autoSaveOnLeave(leaving);
   }
 
   function updateWhatYouGetItem(index: number, field: keyof WhatYouGetItem, value: string) {
@@ -713,6 +773,25 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
 
   function removeWhatYouGetItem(index: number) {
     setWhatYouGetItems(prev => prev.filter((_, i) => i !== index));
+  }
+
+  // Lets the admin see at a glance which tabs already have content, without
+  // having to click into each one.
+  function tabHasContent(id: Tab): boolean {
+    switch (id) {
+      case "info":      return infoTitle.trim().length > 0;
+      case "slides":    return savedSlides.length > 0;
+      case "steps":     return editSteps.length > 0;
+      case "video":     return !!videoUrl;
+      case "resources":
+        return goalsText.trim().length > 0 || accessText.trim().length > 0 || prompts.length > 0 || downloads.length > 0;
+      case "quiz":
+        try {
+          const qs = JSON.parse(quizJson);
+          return Array.isArray(qs) && qs.length > 0;
+        } catch { return false; }
+      default: return false;
+    }
   }
 
   return (
@@ -742,17 +821,101 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
 
         {/* Content card */}
         <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 20, padding: 24, boxShadow: "0 2px 12px rgba(34,29,35,.07)" }}>
+          {/* Progress — journey view */}
+          {(() => {
+            const requiredTabs = TABS.filter(t => !t.optional);
+            const doneCount = requiredTabs.filter(t => tabHasContent(t.id)).length;
+            return (
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ display: "flex", alignItems: "flex-start" }}>
+                  {TABS.map((t, i) => {
+                    const done = tabHasContent(t.id);
+                    const active = tab === t.id;
+                    return (
+                      <Fragment key={t.id}>
+                        <button
+                          type="button"
+                          onClick={() => changeTab(t.id)}
+                          title={t.label}
+                          style={{
+                            background: "none", border: 0, cursor: "pointer", padding: 0, flexShrink: 0,
+                            width: 76, display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                          }}
+                        >
+                          <div style={{
+                            width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                            display: "grid", placeItems: "center", fontSize: 12, fontWeight: 800,
+                            background: done ? "#22C55E" : active ? "#221D23" : "white",
+                            color: done || active ? "white" : "#B0ABA5",
+                            border: `2px solid ${done ? "#22C55E" : active ? "#221D23" : "#E8E6DC"}`,
+                            boxShadow: active ? "0 0 0 4px rgba(34,29,35,.10)" : "none",
+                            transition: "all .2s",
+                          }}>
+                            {done ? "✓" : i + 1}
+                          </div>
+                          <span style={{
+                            fontSize: 10, lineHeight: 1.25, textAlign: "center",
+                            fontWeight: active ? 800 : 600,
+                            color: active ? "#221D23" : done ? "#17A855" : "#9E9897",
+                          }}>
+                            {t.label}
+                            {t.optional && <><br /><span style={{ fontWeight: 500, opacity: .75 }}>optional</span></>}
+                          </span>
+                        </button>
+                        {i < TABS.length - 1 && (
+                          <div style={{ flex: 1, minWidth: 8, height: 2, marginTop: 13, background: done ? "#22C55E" : "#E8E6DC", transition: "background .2s" }} />
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: "#6B6B6B", whiteSpace: "nowrap" }}>
+                    {doneCount}/{requiredTabs.length} required sections filled
+                  </span>
+                  {autoSaveStatus && (
+                    <span style={{
+                      fontSize: 11.5, fontWeight: 700, whiteSpace: "nowrap",
+                      color: autoSaveStatus === "error" ? "#EF4444" : autoSaveStatus === "saving" ? "#B0ABA5" : "#17A855",
+                    }}>
+                      {autoSaveStatus === "saving" ? "Saving…" : autoSaveStatus === "saved" ? "✓ Auto-saved" : "Auto-save failed"}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Tabs */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 22, paddingBottom: 16, borderBottom: "1px solid #E8E6DC" }}>
-            {TABS.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{
-                padding: "7px 14px", borderRadius: 999, border: "1.5px solid",
-                borderColor: tab === t.id ? "#221D23" : "#E8E6DC",
-                background: tab === t.id ? "#221D23" : "white",
-                color: tab === t.id ? "white" : "#6B6B6B",
-                fontWeight: 700, fontSize: 12, cursor: "pointer",
-              }}>{t.label}</button>
-            ))}
+            {TABS.map(t => {
+              const active = tab === t.id;
+              const has = tabHasContent(t.id);
+              return (
+                <button key={t.id} onClick={() => changeTab(t.id)} style={{
+                  display: "inline-flex", alignItems: "center", gap: 7,
+                  padding: "7px 14px", borderRadius: 999, border: "1.5px solid",
+                  borderColor: active ? "#221D23" : "#E8E6DC",
+                  background: active ? "#221D23" : "white",
+                  color: active ? "white" : "#6B6B6B",
+                  fontWeight: 700, fontSize: 12, cursor: "pointer",
+                }}>
+                  <span title={has ? "Has content" : "Empty"} style={{
+                    width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                    background: has ? "#22C55E" : "transparent",
+                    border: has ? "none" : `1.5px solid ${active ? "rgba(255,255,255,.5)" : "#D8D4CC"}`,
+                  }} />
+                  {t.label}
+                  {t.optional && (
+                    <span style={{
+                      fontSize: 8.5, fontWeight: 800, letterSpacing: ".03em", padding: "2px 6px", borderRadius: 999,
+                      background: active ? "rgba(255,255,255,.18)" : "#F1F0EC",
+                      color: active ? "white" : "#9E9897",
+                    }}>OPTIONAL</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* ── Info ─────────────────────────────────────────────────────────── */}
@@ -989,11 +1152,11 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
           {/* ── Slides ──────────────────────────────────────────────────────── */}
           {tab === "slides" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* PDF */}
-              <div style={sectionBox}>
-                <div style={sectionHead}><span>📄</span><b>Upload PDF</b><span style={{ color: "#B0ABA5", fontWeight: 400, fontSize: 12 }}>Each page becomes a slide</span></div>
-                <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-                  <input type="file" accept=".pdf" onChange={e => { setPdfFile(e.target.files?.[0] ?? null); setPdfProgress(""); }} style={{ fontSize: 13 }} />
+              {/* PDF — primary path */}
+              <div style={heroBox}>
+                <div style={heroHead}><span style={{ fontSize: 18 }}>📄</span><b>Upload PDF</b><span style={{ color: "#B0ABA5", fontWeight: 400, fontSize: 12 }}>Each page becomes a slide — start here</span></div>
+                <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <input type="file" accept=".pdf" onChange={e => { setPdfFile(e.target.files?.[0] ?? null); setPdfProgress(""); }} style={{ fontSize: 13.5 }} />
                   {pdfFile && (
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <button onClick={convertPdf} disabled={pdfConverting} style={btnAmber}>
@@ -1004,13 +1167,15 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
                   )}
                 </div>
               </div>
-              {/* Images */}
-              <div style={sectionBox}>
-                <div style={sectionHead}><span>🖼</span><b>Upload images directly</b><span style={{ color: "#B0ABA5", fontWeight: 400, fontSize: 12 }}>PNG/JPG — replaces all</span></div>
-                <div style={{ padding: 14 }}>
+              {/* Images — secondary/alternate path */}
+              <details style={{ border: "1.5px dashed #E8E6DC", borderRadius: 12 }}>
+                <summary style={{ padding: "10px 14px", fontSize: 12.5, fontWeight: 700, color: "#6B6B6B", cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>🖼</span> Or upload images directly <span style={{ color: "#B0ABA5", fontWeight: 400 }}>— PNG/JPG, replaces all</span>
+                </summary>
+                <div style={{ padding: "0 14px 14px" }}>
                   <input type="file" accept="image/*" multiple onChange={e => setSlideFiles(e.target.files)} style={{ fontSize: 13 }} />
                 </div>
-              </div>
+              </details>
               {/* Preview */}
               {savedSlides.length > 0 ? (
                 <div>
@@ -1025,7 +1190,7 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
                   </div>
                 </div>
               ) : (
-                <div style={emptyState}>No slides yet — upload a PDF or images above, then Save All</div>
+                <div style={emptyState}>No slides yet — upload a PDF above (auto-saves when you switch tabs)</div>
               )}
             </div>
           )}
@@ -1033,6 +1198,27 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
           {/* ── Steps ─────────────────────────────────────────────────────────── */}
           {tab === "steps" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+              {/* JSON import — primary path, at the top */}
+              <div style={heroBox}>
+                <div style={heroHead}><span style={{ fontSize: 18 }}>📋</span><b>Upload steps JSON</b><span style={{ color: "#B0ABA5", fontWeight: 400, fontSize: 12 }}>Replaces all steps — start here</span></div>
+                <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <input type="file" accept=".json" onChange={handleStepsJsonUpload} style={{ fontSize: 13.5 }} />
+                  {stepsMsg && (
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: stepsMsg.startsWith("✓") || stepsMsg.startsWith("Loaded") ? "#17A855" : "#EF4444" }}>
+                      {stepsMsg}
+                    </div>
+                  )}
+                  {parsedSteps.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 12, color: "#6B6B6B" }}>{parsedSteps.length} step(s) ready</span>
+                      <button onClick={saveSteps} disabled={savingSteps} style={{ ...btnAmber, opacity: savingSteps ? .5 : 1 }}>
+                        {savingSteps ? "Saving…" : "Replace All Steps"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* What you'll walk away with — permanent */}
               <div style={sectionBox}>
@@ -1074,7 +1260,7 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
 
               {/* Existing steps */}
               {editSteps.length === 0 && parsedSteps.length === 0 && (
-                <div style={emptyState}>No steps yet — add one above or import JSON below.</div>
+                <div style={emptyState}>No steps yet — import JSON above, or add one manually below.</div>
               )}
 
               {parsedSteps.length > 0 && (
@@ -1228,33 +1414,183 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
                   </div>
                 );
               })}
-
-              {/* JSON import (collapsed by default) */}
-              <details style={{ border: "1.5px dashed #E8E6DC", borderRadius: 12 }}>
-                <summary style={{ padding: "10px 14px", fontSize: 12.5, fontWeight: 700, color: "#6B6B6B", cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", gap: 8 }}>
-                  <span>📋</span> Import from JSON (replaces all steps)
-                </summary>
-                <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-                  <input type="file" accept=".json" onChange={handleStepsJsonUpload} style={{ fontSize: 13 }} />
-                  {stepsMsg && (
-                    <div style={{ fontSize: 12.5, fontWeight: 700, color: stepsMsg.startsWith("✓") || stepsMsg.startsWith("Loaded") ? "#17A855" : "#EF4444" }}>
-                      {stepsMsg}
-                    </div>
-                  )}
-                  {parsedSteps.length > 0 && (
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 12, color: "#6B6B6B" }}>{parsedSteps.length} step(s) ready</span>
-                      <button onClick={saveSteps} disabled={savingSteps} style={{ ...btnAmber, opacity: savingSteps ? .5 : 1 }}>
-                        {savingSteps ? "Saving…" : "Replace All Steps"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </details>
             </div>
           )}
 
-          {/* ── Quiz ──────────────────────────────────────────────────────────── */}
+          {/* ── Video ────────────────────────────────────────────────────────── */}
+          {tab === "video" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+              {/* Upload file — primary path, at the top */}
+              <div style={heroBox}>
+                <div style={heroHead}><span style={{ fontSize: 18 }}>📤</span><b>Upload video file</b><span style={{ color: "#B0ABA5", fontWeight: 400, fontSize: 12 }}>MP4, MOV, WebM — start here</span></div>
+                <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    disabled={uploadingVideo}
+                    onChange={e => { setVideoFile(e.target.files?.[0] ?? null); setVideoMsg(""); }}
+                    style={{ fontSize: 13.5 }}
+                  />
+                  {videoFile && !uploadingVideo && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <button onClick={uploadVideo} style={btnAmber}>
+                        Upload &ldquo;{videoFile.name}&rdquo;
+                      </button>
+                      <span style={{ fontSize: 12, color: "#B0ABA5" }}>
+                        {(videoFile.size / 1024 / 1024).toFixed(1)} MB
+                      </span>
+                    </div>
+                  )}
+                  {uploadingVideo && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: "#6B6B6B" }}>{videoMsg}</span>
+                        <span style={{ fontSize: 12.5, fontWeight: 800, color: "#221D23" }}>{videoUploadPct}%</span>
+                      </div>
+                      <div style={{ height: 8, borderRadius: 999, background: "#F0EEE8", overflow: "hidden" }}>
+                        <div style={{ width: `${videoUploadPct}%`, height: "100%", background: "#FFCE00", borderRadius: 999, transition: "width .15s" }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Paste URL — secondary/alternate path */}
+              <details style={{ border: "1.5px dashed #E8E6DC", borderRadius: 12 }}>
+                <summary style={{ padding: "10px 14px", fontSize: 12.5, fontWeight: 700, color: "#6B6B6B", cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>🔗</span> Or paste a video URL <span style={{ color: "#B0ABA5", fontWeight: 400 }}>— YouTube, Vimeo, or any direct .mp4 link</span>
+                </summary>
+                <div style={{ padding: "0 14px 14px", display: "flex", gap: 8 }}>
+                  <input value={videoPasteUrl} onChange={e => setVideoPasteUrl(e.target.value)} placeholder="https://youtube.com/watch?v=…" style={{ ...inp, flex: 1 }} />
+                  <button onClick={applyPastedUrl} disabled={!videoPasteUrl.trim()} style={{ ...btnAmber, opacity: !videoPasteUrl.trim() ? .4 : 1, flexShrink: 0 }}>Set URL</button>
+                </div>
+              </details>
+
+              {/* status message (shown only when not in the middle of uploading, to avoid duplication) */}
+              {videoMsg && !uploadingVideo && (
+                <div style={{ fontSize: 13, fontWeight: 700, color: videoMsg.startsWith("✓") ? "#17A855" : "#EF4444" }}>
+                  {videoMsg}
+                </div>
+              )}
+
+              {/* Current video preview */}
+              {videoUrl && (
+                <div style={sectionBox}>
+                  <div style={sectionHead}><span>▶️</span><b>Current video</b></div>
+                  <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ fontSize: 12, color: "#6B6B6B", wordBreak: "break-all", padding: "8px 10px", background: "#F8F8F6", borderRadius: 8, border: "1px solid #E8E6DC" }}>
+                      {videoUrl}
+                    </div>
+                    {/* Preview player */}
+                    {/youtube\.com|youtu\.be/.test(videoUrl) || /vimeo\.com/.test(videoUrl) ? (
+                      <div style={{ borderRadius: 10, overflow: "hidden", aspectRatio: "16/9", background: "#000" }}>
+                        <iframe
+                          src={/youtu/.test(videoUrl)
+                            ? `https://www.youtube.com/embed/${videoUrl.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1] ?? ""}`
+                            : `https://player.vimeo.com/video/${videoUrl.match(/vimeo\.com\/(\d+)/)?.[1] ?? ""}`}
+                          allow="autoplay; fullscreen"
+                          allowFullScreen
+                          style={{ width: "100%", height: "100%", border: 0 }}
+                          title="Video preview"
+                        />
+                      </div>
+                    ) : (
+                      <video src={videoUrl} controls style={{ width: "100%", borderRadius: 10, background: "#000", maxHeight: 260 }} />
+                    )}
+                    <button onClick={removeVideo} style={{ border: "1px solid #FCA5A5", background: "white", color: "#EF4444", borderRadius: 8, padding: "6px 16px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", alignSelf: "flex-start" }}>
+                      Remove video
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!videoUrl && !videoMsg && (
+                <div style={emptyState}>No video yet — paste a URL or upload a file above (auto-saves when you switch tabs)</div>
+              )}
+            </div>
+          )}
+
+          {/* ── Resources (Goals + Prompts + Downloads) ─────────────────────────── */}
+          {tab === "resources" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
+
+              {/* Goals & Access */}
+              <div>
+                <div style={resourceHead}><span>🎯</span><b>Goals & Access</b></div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                  <div>
+                    <label style={lbl}>Goals — one per line (shown in learner sidebar)</label>
+                    <textarea value={goalsText} onChange={e => setGoalsText(e.target.value)} rows={6}
+                      placeholder={"Write an effective AI prompt\nReduce back-and-forth with your chatbot"}
+                      style={{ ...inp, resize: "vertical", marginTop: 6 }} />
+                  </div>
+                  <div>
+                    <label style={lbl}>Access you'll need — one per line</label>
+                    <textarea value={accessText} onChange={e => setAccessText(e.target.value)} rows={5}
+                      placeholder={"ChatGPT (free or Plus)\nA Gmail account"}
+                      style={{ ...inp, resize: "vertical", marginTop: 6 }} />
+                  </div>
+                </div>
+              </div>
+
+              <div style={resourceDivider} />
+
+              {/* Prompts */}
+              <div>
+                <div style={resourceHead}><span>💬</span><b>Prompts</b></div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {prompts.length === 0 && <div style={emptyState}>No prompts yet</div>}
+                  {prompts.map((p, i) => (
+                    <div key={i} style={{ border: "1px solid #E8E6DC", borderRadius: 12, overflow: "hidden" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "#FAFAF8", borderBottom: "1px solid #E8E6DC" }}>
+                        <span style={{ fontWeight: 700, fontSize: 13 }}>{p.label}</span>
+                        <button onClick={() => setPrompts(prev => prev.filter((_, j) => j !== i))} style={{ border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 16 }}>×</button>
+                      </div>
+                      <pre style={{ margin: 0, padding: "10px 12px", fontSize: 12, fontFamily: "monospace", whiteSpace: "pre-wrap", background: "white" }}>{p.text}</pre>
+                    </div>
+                  ))}
+                  <div style={{ border: "1.5px dashed #E8E6DC", borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: "#6B6B6B" }}>+ Add prompt</div>
+                    <input value={newPromptLabel} onChange={e => setNewPromptLabel(e.target.value)} placeholder="Label (e.g. 'Draft email prompt')" style={inp} />
+                    <textarea value={newPromptText} onChange={e => setNewPromptText(e.target.value)} rows={4}
+                      placeholder="Act as a professional email writer…" style={{ ...inp, resize: "vertical", fontFamily: "monospace", fontSize: 12 }} />
+                    <button onClick={() => { if (!newPromptLabel.trim() || !newPromptText.trim()) return; setPrompts(p => [...p, { label: newPromptLabel.trim(), text: newPromptText.trim() }]); setNewPromptLabel(""); setNewPromptText(""); }} style={btnAmber}>Add Prompt</button>
+                  </div>
+                </div>
+              </div>
+
+              <div style={resourceDivider} />
+
+              {/* Downloads */}
+              <div>
+                <div style={resourceHead}><span>📥</span><b>Downloads</b></div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {downloads.length === 0 && <div style={emptyState}>No downloads yet</div>}
+                  {downloads.map((d, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", border: "1px solid #E8E6DC", borderRadius: 12, background: "#FAFAF8" }}>
+                      <span style={{ fontSize: 20 }}>{dlIcon(d.type)}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13 }}>{d.label}</div>
+                        <div style={{ fontSize: 11, color: "#B0ABA5" }}>{d.type.toUpperCase()}</div>
+                      </div>
+                      <button onClick={() => setDownloads(prev => prev.filter((_, j) => j !== i))} style={{ border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 16 }}>×</button>
+                    </div>
+                  ))}
+                  <div style={{ border: "1.5px dashed #E8E6DC", borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: "#6B6B6B" }}>+ Upload file</div>
+                    <input value={dlLabel} onChange={e => setDlLabel(e.target.value)} placeholder="Label (e.g. 'Prompt cheat sheet')" style={inp} />
+                    <input type="file" accept=".pdf,.ppt,.pptx,.xlsx,.xls,.doc,.docx" onChange={e => setDlFile(e.target.files?.[0] ?? null)} style={{ fontSize: 13 }} />
+                    <button onClick={uploadDownload} disabled={uploadingDl || !dlFile} style={{ ...btnAmber, opacity: (!dlFile || uploadingDl) ? .4 : 1 }}>
+                      {uploadingDl ? "Uploading…" : "Upload & Add"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Quiz (optional) ──────────────────────────────────────────────────── */}
           {tab === "quiz" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={sectionBox}>
@@ -1349,155 +1685,6 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
             </div>
           )}
 
-          {/* ── Goals & Access ─────────────────────────────────────────────────── */}
-          {tab === "goals" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-              <div>
-                <label style={lbl}>Goals — one per line (shown in learner sidebar)</label>
-                <textarea value={goalsText} onChange={e => setGoalsText(e.target.value)} rows={6}
-                  placeholder={"Write an effective AI prompt\nReduce back-and-forth with your chatbot"}
-                  style={{ ...inp, resize: "vertical", marginTop: 6 }} />
-              </div>
-              <div>
-                <label style={lbl}>Access you'll need — one per line</label>
-                <textarea value={accessText} onChange={e => setAccessText(e.target.value)} rows={5}
-                  placeholder={"ChatGPT (free or Plus)\nA Gmail account"}
-                  style={{ ...inp, resize: "vertical", marginTop: 6 }} />
-              </div>
-            </div>
-          )}
-
-          {/* ── Prompts ───────────────────────────────────────────────────────── */}
-          {tab === "prompts" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {prompts.length === 0 && <div style={emptyState}>No prompts yet</div>}
-              {prompts.map((p, i) => (
-                <div key={i} style={{ border: "1px solid #E8E6DC", borderRadius: 12, overflow: "hidden" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "#FAFAF8", borderBottom: "1px solid #E8E6DC" }}>
-                    <span style={{ fontWeight: 700, fontSize: 13 }}>{p.label}</span>
-                    <button onClick={() => setPrompts(prev => prev.filter((_, j) => j !== i))} style={{ border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 16 }}>×</button>
-                  </div>
-                  <pre style={{ margin: 0, padding: "10px 12px", fontSize: 12, fontFamily: "monospace", whiteSpace: "pre-wrap", background: "white" }}>{p.text}</pre>
-                </div>
-              ))}
-              <div style={{ border: "1.5px dashed #E8E6DC", borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "#6B6B6B" }}>+ Add prompt</div>
-                <input value={newPromptLabel} onChange={e => setNewPromptLabel(e.target.value)} placeholder="Label (e.g. 'Draft email prompt')" style={inp} />
-                <textarea value={newPromptText} onChange={e => setNewPromptText(e.target.value)} rows={4}
-                  placeholder="Act as a professional email writer…" style={{ ...inp, resize: "vertical", fontFamily: "monospace", fontSize: 12 }} />
-                <button onClick={() => { if (!newPromptLabel.trim() || !newPromptText.trim()) return; setPrompts(p => [...p, { label: newPromptLabel.trim(), text: newPromptText.trim() }]); setNewPromptLabel(""); setNewPromptText(""); }} style={btnAmber}>Add Prompt</button>
-              </div>
-            </div>
-          )}
-
-          {/* ── Video ────────────────────────────────────────────────────────── */}
-          {tab === "video" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-              {/* Current video preview */}
-              {videoUrl && (
-                <div style={sectionBox}>
-                  <div style={sectionHead}><span>▶️</span><b>Current video</b></div>
-                  <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-                    <div style={{ fontSize: 12, color: "#6B6B6B", wordBreak: "break-all", padding: "8px 10px", background: "#F8F8F6", borderRadius: 8, border: "1px solid #E8E6DC" }}>
-                      {videoUrl}
-                    </div>
-                    {/* Preview player */}
-                    {/youtube\.com|youtu\.be/.test(videoUrl) || /vimeo\.com/.test(videoUrl) ? (
-                      <div style={{ borderRadius: 10, overflow: "hidden", aspectRatio: "16/9", background: "#000" }}>
-                        <iframe
-                          src={/youtu/.test(videoUrl)
-                            ? `https://www.youtube.com/embed/${videoUrl.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1] ?? ""}`
-                            : `https://player.vimeo.com/video/${videoUrl.match(/vimeo\.com\/(\d+)/)?.[1] ?? ""}`}
-                          allow="autoplay; fullscreen"
-                          allowFullScreen
-                          style={{ width: "100%", height: "100%", border: 0 }}
-                          title="Video preview"
-                        />
-                      </div>
-                    ) : (
-                      <video src={videoUrl} controls style={{ width: "100%", borderRadius: 10, background: "#000", maxHeight: 260 }} />
-                    )}
-                    <button onClick={removeVideo} style={{ border: "1px solid #FCA5A5", background: "white", color: "#EF4444", borderRadius: 8, padding: "6px 16px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", alignSelf: "flex-start" }}>
-                      Remove video
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Paste URL */}
-              <div style={sectionBox}>
-                <div style={sectionHead}><span>🔗</span><b>Paste a video URL</b><span style={{ color: "#B0ABA5", fontWeight: 400, fontSize: 12 }}>YouTube, Vimeo, or any direct .mp4 link</span></div>
-                <div style={{ padding: 14, display: "flex", gap: 8 }}>
-                  <input value={videoPasteUrl} onChange={e => setVideoPasteUrl(e.target.value)} placeholder="https://youtube.com/watch?v=…" style={{ ...inp, flex: 1 }} />
-                  <button onClick={applyPastedUrl} disabled={!videoPasteUrl.trim()} style={{ ...btnAmber, opacity: !videoPasteUrl.trim() ? .4 : 1, flexShrink: 0 }}>Set URL</button>
-                </div>
-              </div>
-
-              {/* Upload file */}
-              <div style={sectionBox}>
-                <div style={sectionHead}><span>📤</span><b>Upload video file</b><span style={{ color: "#B0ABA5", fontWeight: 400, fontSize: 12 }}>MP4, MOV, WebM — saved directly to Supabase Storage</span></div>
-                <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-                  <input
-                    type="file"
-                    accept="video/*"
-                    disabled={uploadingVideo}
-                    onChange={e => { setVideoFile(e.target.files?.[0] ?? null); setVideoMsg(""); }}
-                    style={{ fontSize: 13 }}
-                  />
-                  {videoFile && !uploadingVideo && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <button onClick={uploadVideo} style={btnAmber}>
-                        Upload &ldquo;{videoFile.name}&rdquo;
-                      </button>
-                      <span style={{ fontSize: 12, color: "#B0ABA5" }}>
-                        {(videoFile.size / 1024 / 1024).toFixed(1)} MB
-                      </span>
-                    </div>
-                  )}
-                  {uploadingVideo && (
-                    <div style={{ fontSize: 12.5, fontWeight: 700, color: "#6B6B6B" }}>{videoMsg}</div>
-                  )}
-                </div>
-              </div>
-
-              {/* status message (shown only when not in the middle of uploading, to avoid duplication) */}
-              {videoMsg && !uploadingVideo && (
-                <div style={{ fontSize: 13, fontWeight: 700, color: videoMsg.startsWith("✓") ? "#17A855" : "#EF4444" }}>
-                  {videoMsg}
-                </div>
-              )}
-
-              {!videoUrl && !videoMsg && (
-                <div style={emptyState}>No video yet — paste a URL or upload a file above, then Save All</div>
-              )}
-            </div>
-          )}
-
-          {/* ── Downloads ─────────────────────────────────────────────────────── */}
-          {tab === "downloads" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {downloads.length === 0 && <div style={emptyState}>No downloads yet</div>}
-              {downloads.map((d, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", border: "1px solid #E8E6DC", borderRadius: 12, background: "#FAFAF8" }}>
-                  <span style={{ fontSize: 20 }}>{dlIcon(d.type)}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13 }}>{d.label}</div>
-                    <div style={{ fontSize: 11, color: "#B0ABA5" }}>{d.type.toUpperCase()}</div>
-                  </div>
-                  <button onClick={() => setDownloads(prev => prev.filter((_, j) => j !== i))} style={{ border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 16 }}>×</button>
-                </div>
-              ))}
-              <div style={{ border: "1.5px dashed #E8E6DC", borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "#6B6B6B" }}>+ Upload file</div>
-                <input value={dlLabel} onChange={e => setDlLabel(e.target.value)} placeholder="Label (e.g. 'Prompt cheat sheet')" style={inp} />
-                <input type="file" accept=".pdf,.ppt,.pptx,.xlsx,.xls,.doc,.docx" onChange={e => setDlFile(e.target.files?.[0] ?? null)} style={{ fontSize: 13 }} />
-                <button onClick={uploadDownload} disabled={uploadingDl || !dlFile} style={{ ...btnAmber, opacity: (!dlFile || uploadingDl) ? .4 : 1 }}>
-                  {uploadingDl ? "Uploading…" : "Upload & Add"}
-                </button>
-              </div>
-            </div>
-          )}
         </div>
     </div>
   );
@@ -1524,6 +1711,10 @@ function dlIcon(type: string) {
 
 const sectionBox: React.CSSProperties = { border: "1.5px solid #E8E6DC", borderRadius: 12, overflow: "hidden" };
 const sectionHead: React.CSSProperties = { padding: "10px 14px", background: "#FAFAF8", borderBottom: "1px solid #E8E6DC", display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700 };
+const heroBox: React.CSSProperties = { border: "2px solid #FFCE00", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 10px rgba(255,206,0,.15)" };
+const heroHead: React.CSSProperties = { padding: "12px 16px", background: "#FFFBE6", borderBottom: "1.5px solid #FFCE00", display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, fontWeight: 800 };
+const resourceHead: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, fontWeight: 800, color: "#221D23", marginBottom: 14 };
+const resourceDivider: React.CSSProperties = { height: 1, background: "#E8E6DC" };
 const emptyState: React.CSSProperties = { padding: 24, textAlign: "center", background: "#FAFAF8", borderRadius: 12, color: "#B0ABA5", fontSize: 13 };
 const inp: React.CSSProperties = { padding: "9px 12px", borderRadius: 10, border: "1.5px solid #E8E6DC", fontSize: 13.5, outline: "none", width: "100%", boxSizing: "border-box", fontFamily: "inherit", background: "#FAFAF8" };
 const lbl: React.CSSProperties = { display: "block", fontSize: 11.5, fontWeight: 700, color: "#6B6B6B" };

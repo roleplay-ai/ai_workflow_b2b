@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AI_UPDATES_PAGE_NAME } from "@/lib/site";
 import { createClient } from "@/lib/supabase/client";
 
@@ -57,17 +58,9 @@ export default function SuperadminClient({ companies, activities: initActivities
   const [activities,   setActivities]   = useState(initActivities);
   const [assignments,  setAssignments]  = useState(initAssignments);
   const [tags,         setTags]         = useState(initTags);
-  const [showForm,     setShowForm]     = useState(false);
   const supabase = createClient();
+  const router = useRouter();
 
-  // Create form state
-  const [title,    setTitle]    = useState("");
-  const [desc,     setDesc]     = useState("");
-  const [level,    setLevel]    = useState<Activity["level"]>("Beginner");
-  const [time,     setTime]     = useState(15);
-  const [points,   setPoints]   = useState(50);
-  const [tool,     setTool]     = useState<string>(availableTools[0] ?? DEFAULT_TOOLS[0]);
-  const [contentType, setContentType] = useState("chat");
   const [creating, setCreating] = useState(false);
   const [syncingAskAI, setSyncingAskAI] = useState(false);
 
@@ -88,17 +81,17 @@ export default function SuperadminClient({ companies, activities: initActivities
     }
   }
 
-  async function createActivity(e: React.FormEvent) {
-    e.preventDefault();
+  async function createActivity() {
     setCreating(true);
     const nextPosition = activities.reduce((max, a) => Math.max(max, a.position), -1) + 1;
     const { data, error } = await supabase.from("activities").insert({
-      title, description: desc, level, time_estimate_minutes: time,
-      points, tools: [tool], content_type: contentType, published: false, position: nextPosition,
+      title: "Untitled Activity", description: "", level: "Beginner", time_estimate_minutes: 15,
+      points: 50, tools: [availableTools[0] ?? DEFAULT_TOOLS[0]], content_type: "chat", published: false, position: nextPosition,
     }).select().single();
     if (!error && data) {
       setActivities(prev => [...prev, { ...(data as ActivityRow), activity_content: null, activity_steps: [{ count: 0 }] }]);
-      setTitle(""); setDesc(""); setShowForm(false);
+      router.push(`/superadmin/activity/${data.id}`);
+      return;
     }
     setCreating(false);
   }
@@ -237,54 +230,11 @@ export default function SuperadminClient({ companies, activities: initActivities
             <button onClick={syncToAskAI} disabled={syncingAskAI} style={{ ...btnGhost, opacity: syncingAskAI ? .6 : 1 }} title="Recompute embeddings so Ask AI can suggest published workflows">
               {syncingAskAI ? "Syncing…" : "↻ Sync to Ask AI"}
             </button>
-            <button onClick={() => setShowForm(v => !v)} style={btnAmber}>+ New Activity</button>
+            <button onClick={createActivity} disabled={creating} style={{ ...btnAmber, opacity: creating ? .6 : 1 }}>
+              {creating ? "Creating…" : "+ New Activity"}
+            </button>
           </div>
         </div>
-
-        {/* Create form */}
-        {showForm && (
-          <div style={{ ...card, marginBottom: 18, borderColor: "#FFCE00" }}>
-            <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 14 }}>New Activity</div>
-            <form onSubmit={createActivity} style={{ display: "flex", flexDirection: "column", gap: 11 }}>
-              <input value={title} onChange={e => setTitle(e.target.value)} required placeholder="Activity title" style={inp} />
-              <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} placeholder="Short description shown on the dashboard card" style={{ ...inp, resize: "vertical" }} />
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10 }}>
-                <div>
-                  <label style={lbl}>Content Type</label>
-                  <select value={contentType} onChange={e => setContentType(e.target.value)} style={inp}>
-                    <option value="chat">✦ Chatbot</option>
-                    <option value="build">🛠 Vibe Coding</option>
-                    <option value="automate">⚡ Automation</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={lbl}>Level</label>
-                  <select value={level ?? "Beginner"} onChange={e => setLevel(e.target.value as any)} style={inp}>
-                    <option>Beginner</option><option>Intermediate</option><option>Advanced</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={lbl}>Time (min)</label>
-                  <input type="number" value={time} onChange={e => setTime(+e.target.value)} style={inp} min={1} />
-                </div>
-                <div>
-                  <label style={lbl}>Points</label>
-                  <input type="number" value={points} onChange={e => setPoints(+e.target.value)} style={inp} min={0} />
-                </div>
-              </div>
-              <div>
-                <label style={lbl}>Tool</label>
-                <select value={tool} onChange={e => setTool(e.target.value)} style={inp}>
-                  {availableTools.map(t => <option key={t} value={t}>{formatToolLabel(t)}</option>)}
-                </select>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button type="submit" disabled={creating} style={btnAmber}>{creating ? "Creating…" : "Create Activity"}</button>
-                <button type="button" onClick={() => setShowForm(false)} style={btnGhost}>Cancel</button>
-              </div>
-            </form>
-          </div>
-        )}
 
         {/* Activity list — flat, sorted by position */}
         {activities.length === 0 ? (
@@ -572,12 +522,6 @@ const card: React.CSSProperties = {
   background: "white", border: "1px solid #E8E6DC", borderRadius: 18,
   boxShadow: "0 2px 12px rgba(34,29,35,.06)",
 };
-const inp: React.CSSProperties = {
-  padding: "9px 12px", borderRadius: 10, border: "1.5px solid #E8E6DC",
-  fontSize: 13.5, outline: "none", width: "100%", boxSizing: "border-box",
-  fontFamily: "inherit", background: "#FAFAF8",
-};
-const lbl: React.CSSProperties = { display: "block", fontSize: 11.5, fontWeight: 700, color: "#6B6B6B", marginBottom: 4 };
 const btnAmber: React.CSSProperties = { padding: "9px 18px", borderRadius: 999, border: 0, background: "#FFCE00", color: "#221D23", fontWeight: 800, fontSize: 13, cursor: "pointer" };
 const btnGhost: React.CSSProperties = { padding: "9px 18px", borderRadius: 999, border: "1.5px solid #E8E6DC", background: "white", color: "#6B6B6B", fontWeight: 700, fontSize: 13, cursor: "pointer" };
 const posBtnStyle: React.CSSProperties = { width: 18, height: 14, border: "1px solid #E8E6DC", borderRadius: 4, background: "#F8F8F6", color: "#6B6B6B", fontSize: 8, cursor: "pointer", display: "grid", placeItems: "center", padding: 0 };
