@@ -18,16 +18,34 @@ export async function convertPdfToImages(
     (global as any).DOMMatrix = DOMMatrix;
   }
 
-  // canvas-stub workspace makes require("canvas") resolve to @napi-rs/canvas,
-  // so pdfjs's internal NodeCanvasFactory works without the native canvas package.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const pdfjs = require("pdfjs-dist/build/pdf.js");
   pdfjs.GlobalWorkerOptions.workerSrc = ""; // disable Web Worker in Node.js
+
+  // pdfjs's own Node canvas factory does `require("canvas")` unconditionally,
+  // and the native `canvas` package isn't installed here — we render with
+  // @napi-rs/canvas instead. Passing our own factory to getDocument() (not just
+  // page.render()) stops pdfjs from ever constructing its default factory.
+  const canvasFactory = {
+    create(w: number, h: number) {
+      const c = createCanvas(w, h);
+      return { canvas: c, context: c.getContext("2d") };
+    },
+    reset(obj: any, w: number, h: number) {
+      obj.canvas.width  = w;
+      obj.canvas.height = h;
+    },
+    destroy(obj: any) {
+      obj.canvas.width  = 0;
+      obj.canvas.height = 0;
+    },
+  };
 
   const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(pdfBuffer),
     useSystemFonts: true,
     disableFontFace: true,
+    canvasFactory,
   });
 
   const pdfDoc = await loadingTask.promise;
@@ -42,21 +60,6 @@ export async function convertPdfToImages(
 
     const canvas = createCanvas(width, height);
     const ctx    = canvas.getContext("2d");
-
-    const canvasFactory = {
-      create(w: number, h: number) {
-        const c = createCanvas(w, h);
-        return { canvas: c, context: c.getContext("2d") };
-      },
-      reset(obj: any, w: number, h: number) {
-        obj.canvas.width  = w;
-        obj.canvas.height = h;
-      },
-      destroy(obj: any) {
-        obj.canvas.width  = 0;
-        obj.canvas.height = 0;
-      },
-    };
 
     await page.render({
       canvasContext: ctx,
