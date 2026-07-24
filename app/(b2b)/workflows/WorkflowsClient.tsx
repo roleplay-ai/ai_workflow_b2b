@@ -430,14 +430,16 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
   const searchParams = useSearchParams();
   const selectedTag = searchParams.get("tag");
   const qParam = searchParams.get("q") ?? "";
-  const [activeMainTab, setActiveMainTab] = useState<"my" | "all">(qParam.trim() ? "all" : "my");
+  const categoryParam = searchParams.get("category");
+  const browseAll = searchParams.get("browse") === "all";
+  const [activeMainTab, setActiveMainTab] = useState<"my" | "all">(qParam.trim() || categoryParam || browseAll ? "all" : "my");
   const [preferencesConfirmed, setPreferencesConfirmed] = useState(workflowsConfirmedInitial);
   const [confirmingPreferences, setConfirmingPreferences] = useState(false);
   const [navigatingToPreferences, setNavigatingToPreferences] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set(savedWorkflowIds));
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
   const [searchQuery, setSearchQuery] = useState(qParam);
   const [extraRows, setExtraRows] = useState(0);
 
@@ -445,12 +447,12 @@ export default function WorkflowsClient({ activities, toolLogos, tagLogos, userI
   // Always open the All Workflows tab and show only matching results.
   useEffect(() => {
     setSearchQuery(qParam);
-    if (qParam.trim()) {
+    setSelectedCategory(categoryParam);
+    if (qParam.trim() || categoryParam || browseAll) {
       setActiveMainTab("all");
-      setSelectedCategory(null);
       setSelectedTool(null);
     }
-  }, [qParam]);
+  }, [qParam, categoryParam, browseAll]);
 
   useEffect(() => {
     setSavedIds(new Set(savedWorkflowIds));

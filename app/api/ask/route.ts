@@ -28,6 +28,16 @@ type MatchedChunk = {
 
 type MatchedActivity = { id: string; title: string; description: string | null; similarity: number };
 
+function isPreparedConversationSchemaMissing(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return (
+    error.code === "42P01" ||
+    error.code === "PGRST204" ||
+    error.code === "PGRST205" ||
+    error.message?.includes("ask_conversations") === true
+  );
+}
+
 export async function POST(req: NextRequest) {
   const { supabase, sessionResponse } = createRouteHandlerClient(req);
 
@@ -117,6 +127,40 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // The prepared conversation migration may not have been applied yet. When it
+  // exists, explicitly establish ownership before reading or appending turns;
+  // when it does not, retain the legacy message-only behavior.
+  const { data: existingConversation, error: conversationReadError } = await supabase
+    .from("ask_conversations")
+    .select("id, user_id, deleted_at")
+    .eq("id", sessionId)
+    .maybeSingle();
+
+  const conversationSchemaMissing = isPreparedConversationSchemaMissing(conversationReadError);
+  if (conversationReadError && !conversationSchemaMissing) {
+    return jsonWithSessionCookies(sessionResponse, { error: "Could not open that conversation." }, { status: 400 });
+  }
+  if (existingConversation && existingConversation.user_id !== user.id) {
+    return jsonWithSessionCookies(sessionResponse, { error: "Invalid conversation." }, { status: 403 });
+  }
+  if (existingConversation?.deleted_at) {
+    return jsonWithSessionCookies(sessionResponse, { error: "That conversation has been deleted." }, { status: 410 });
+  }
+  if (!existingConversation && !conversationSchemaMissing) {
+    const { error: conversationInsertError } = await supabase
+      .from("ask_conversations")
+      .insert({
+        id: sessionId,
+        user_id: user.id,
+        title: question.slice(0, 120),
+        model: "claude-sonnet-5",
+        effort: "medium",
+      });
+    if (conversationInsertError) {
+      return jsonWithSessionCookies(sessionResponse, { error: "Invalid conversation." }, { status: 400 });
+    }
+  }
+
   // Fetch prior turns *before* inserting the current question, so this naturally
   // excludes it. Scoped to this user + session so one account cannot attach to
   // another user's conversation.
@@ -134,9 +178,12 @@ export async function POST(req: NextRequest) {
     .reverse()
     .map((h) => ({ role: h.role as "user" | "assistant", content: h.content as string }));
 
-  await supabase.from("kb_chat_messages").insert({
+  const { error: userMessageInsertError } = await supabase.from("kb_chat_messages").insert({
     user_id: user.id, session_id: sessionId, role: "user", content: question,
   });
+  if (userMessageInsertError) {
+    return jsonWithSessionCookies(sessionResponse, { error: "Could not save your question." }, { status: 500 });
+  }
 
   // Fold recent *questions* into the retrieval query too — a bare follow-up like
   // "what about PDF instead?" has almost no signal on its own for the embedding
@@ -340,13 +387,39 @@ ${workflowsBlock}`;
     images: imagesByPage[`${e.documentId}:${e.pageNumber}`] ?? [],
   }));
 
-  await supabase.from("kb_chat_messages").insert({
+  const assistantMessage = {
     user_id: user.id,
     session_id: sessionId,
     role: "assistant",
     content: answer,
     cited_chunks: [...new Set(citedExcerpts.map((e) => e.sourceChunkId))],
+  } as const;
+
+  const { error: metadataInsertError } = await supabase.from("kb_chat_messages").insert({
+    ...assistantMessage,
+    metadata: {
+      citations,
+      suggestedWorkflows,
+      model: "claude-sonnet-5",
+      effort: "medium",
+    },
   });
+
+  if (metadataInsertError) {
+    // Backward compatibility for deployments where the migration has not been
+    // applied yet. The answer still persists, but structured cards cannot be
+    // restored until the metadata column exists.
+    if (isPreparedConversationSchemaMissing(metadataInsertError)) {
+      const { error: fallbackInsertError } = await supabase
+        .from("kb_chat_messages")
+        .insert(assistantMessage);
+      if (fallbackInsertError) {
+        console.error("[/api/ask] Could not persist assistant message:", fallbackInsertError);
+      }
+    } else {
+      console.error("[/api/ask] Could not persist assistant metadata:", metadataInsertError);
+    }
+  }
 
   return jsonWithSessionCookies(sessionResponse, { answer, citations, suggestedWorkflows });
 }

@@ -33,6 +33,7 @@ export default async function B2BLayout({ children }: { children: React.ReactNod
   return (
     <div className={styles.participantShell}>
       <B2BSidebar
+        userId={user.id}
         userName={userName}
         userEmail={userEmail}
         userInitials={initials(userName, userEmail)}

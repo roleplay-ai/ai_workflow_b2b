@@ -2,15 +2,24 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useNavigationLoading } from "@/components/NavigationLoading";
 import styles from "@/components/b2b-shell.module.css";
 
 type Props = {
+  userId: string;
   userName: string | null;
   userEmail: string | null;
   userInitials: string;
+};
+
+type ConversationSummary = {
+  id: string;
+  title: string;
+  is_saved: boolean;
+  is_pinned: boolean;
+  updated_at: string;
 };
 
 type NavItemProps = {
@@ -92,14 +101,40 @@ function Icon({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function B2BSidebar({ userName, userEmail, userInitials }: Props) {
+export default function B2BSidebar({ userId, userName, userEmail, userInitials }: Props) {
   const supabase = createClient();
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { startNavigating } = useNavigationLoading();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [signingOut, setSigningOut] = React.useState(false);
+  const [conversations, setConversations] = React.useState<ConversationSummary[]>([]);
+  const [historyAvailable, setHistoryAvailable] = React.useState(false);
+  const [historyMenuId, setHistoryMenuId] = React.useState<string | null>(null);
+  const [renameId, setRenameId] = React.useState<string | null>(null);
+  const [renameValue, setRenameValue] = React.useState("");
+  const activeConversationId = searchParams.get("conversation");
+
+  const refreshConversations = React.useCallback(async () => {
+    const { data, error } = await supabase
+      .from("ask_conversations")
+      .select("id, title, is_saved, is_pinned, updated_at")
+      .eq("user_id", userId)
+      .is("deleted_at", null)
+      .order("is_pinned", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .limit(10);
+
+    if (error) {
+      setHistoryAvailable(false);
+      setConversations([]);
+      return;
+    }
+    setHistoryAvailable(true);
+    setConversations((data ?? []) as ConversationSummary[]);
+  }, [supabase, userId]);
 
   React.useEffect(() => {
     const openDrawer = () => setDrawerOpen(true);
@@ -108,8 +143,16 @@ export default function B2BSidebar({ userName, userEmail, userInitials }: Props)
   }, []);
 
   React.useEffect(() => {
+    void refreshConversations();
+    const refresh = () => void refreshConversations();
+    window.addEventListener("ask:conversations-changed", refresh);
+    return () => window.removeEventListener("ask:conversations-changed", refresh);
+  }, [refreshConversations]);
+
+  React.useEffect(() => {
     setDrawerOpen(false);
     setMenuOpen(false);
+    setHistoryMenuId(null);
   }, [pathname]);
 
   React.useEffect(() => {
@@ -142,6 +185,43 @@ export default function B2BSidebar({ userName, userEmail, userInitials }: Props)
     event.preventDefault();
     startNavigating("/profile");
     router.push("/profile");
+  }
+
+  function startNewConversation() {
+    const nextId = crypto.randomUUID();
+    const href = `/ask-ai?new=${nextId}`;
+    setHistoryMenuId(null);
+    setDrawerOpen(false);
+    if (pathname !== "/ask-ai") startNavigating(href);
+    router.push(href);
+  }
+
+  function openConversation(event: React.MouseEvent<HTMLAnchorElement>, conversationId: string) {
+    event.preventDefault();
+    const href = `/ask-ai?conversation=${conversationId}`;
+    setHistoryMenuId(null);
+    setDrawerOpen(false);
+    if (pathname !== "/ask-ai") startNavigating(href);
+    router.push(href);
+  }
+
+  async function updateConversation(
+    conversationId: string,
+    updates: Partial<Pick<ConversationSummary, "title" | "is_saved" | "is_pinned">> & { deleted_at?: string },
+  ) {
+    const { error } = await supabase
+      .from("ask_conversations")
+      .update(updates)
+      .eq("id", conversationId)
+      .eq("user_id", userId);
+    if (!error) await refreshConversations();
+  }
+
+  async function commitRename(conversationId: string) {
+    const title = renameValue.trim();
+    setRenameId(null);
+    if (!title) return;
+    await updateConversation(conversationId, { title: title.slice(0, 120) });
   }
 
   const closeDrawer = () => setDrawerOpen(false);
@@ -206,6 +286,112 @@ export default function B2BSidebar({ userName, userEmail, userInitials }: Props)
             <FilterLink href="/workflows?q=Gemini" mark="✦" onNavigate={closeDrawer}>Gemini</FilterLink>
             <FilterLink href="/workflows?q=Copilot" mark="◈" onNavigate={closeDrawer}>Copilot</FilterLink>
           </section>
+
+          {historyAvailable && conversations.length > 0 ? (
+            <section className={`${styles.sidebarSection} ${styles.historySection}`} aria-labelledby="conversation-history-label">
+              <div className={styles.historyHeading}>
+                <h2 id="conversation-history-label" className={styles.sectionLabel}>Recent chats</h2>
+                <button type="button" onClick={startNewConversation} aria-label="Start a new conversation" title="New conversation">
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                    <path d="M8 3v10M3 8h10" />
+                  </svg>
+                </button>
+              </div>
+              <div className={styles.historyList}>
+                {conversations.map((conversation) => (
+                  <div
+                    className={`${styles.historyRow} ${activeConversationId === conversation.id ? styles.historyRowActive : ""}`}
+                    key={conversation.id}
+                  >
+                    {renameId === conversation.id ? (
+                      <input
+                        className={styles.historyRenameInput}
+                        value={renameValue}
+                        autoFocus
+                        maxLength={120}
+                        aria-label="Conversation title"
+                        onChange={(event) => setRenameValue(event.target.value)}
+                        onBlur={() => void commitRename(conversation.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") event.currentTarget.blur();
+                          if (event.key === "Escape") {
+                            setRenameId(null);
+                            setRenameValue("");
+                          }
+                        }}
+                      />
+                    ) : (
+                      <Link
+                        href={`/ask-ai?conversation=${conversation.id}`}
+                        onClick={(event) => openConversation(event, conversation.id)}
+                        title={conversation.title}
+                      >
+                        <span className={styles.historyMarkers} aria-hidden="true">
+                          {conversation.is_pinned ? "◆" : conversation.is_saved ? "★" : "·"}
+                        </span>
+                        <span>{conversation.title}</span>
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      className={styles.historyMoreButton}
+                      aria-label={`Actions for ${conversation.title}`}
+                      aria-expanded={historyMenuId === conversation.id}
+                      onClick={() => setHistoryMenuId((current) => current === conversation.id ? null : conversation.id)}
+                    >
+                      •••
+                    </button>
+                    {historyMenuId === conversation.id ? (
+                      <>
+                        <button type="button" className={styles.historyMenuBackdrop} aria-label="Close conversation actions" onClick={() => setHistoryMenuId(null)} />
+                        <div className={styles.historyMenu}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRenameId(conversation.id);
+                              setRenameValue(conversation.title);
+                              setHistoryMenuId(null);
+                            }}
+                          >
+                            Rename
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHistoryMenuId(null);
+                              void updateConversation(conversation.id, { is_pinned: !conversation.is_pinned });
+                            }}
+                          >
+                            {conversation.is_pinned ? "Unpin" : "Pin"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHistoryMenuId(null);
+                              void updateConversation(conversation.id, { is_saved: !conversation.is_saved });
+                            }}
+                          >
+                            {conversation.is_saved ? "Unsave" : "Save"}
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.historyDeleteButton}
+                            onClick={() => {
+                              setHistoryMenuId(null);
+                              void updateConversation(conversation.id, { deleted_at: new Date().toISOString() });
+                              if (activeConversationId === conversation.id) startNewConversation();
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
 
         <div className={styles.profileFooter}>

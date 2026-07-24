@@ -117,10 +117,17 @@ BEGIN
     NEW.created_at
   )
   ON CONFLICT (id) DO UPDATE
-    SET updated_at = GREATEST(
-      public.ask_conversations.updated_at,
-      EXCLUDED.updated_at
-    );
+    SET
+      title = CASE
+        WHEN public.ask_conversations.title = 'New conversation'
+          AND NEW.role = 'user'
+        THEN EXCLUDED.title
+        ELSE public.ask_conversations.title
+      END,
+      updated_at = GREATEST(
+        public.ask_conversations.updated_at,
+        EXCLUDED.updated_at
+      );
 
   RETURN NEW;
 END;
