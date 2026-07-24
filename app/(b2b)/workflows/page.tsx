@@ -1,16 +1,26 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { sumPointsFromProgress, type PointsStats, type LeaderboardStats } from "@/lib/points";
-import { rowsToToolLogoMap, rowsToTagLogoMap } from "@/lib/toolLogos";
-import { onboardingToolToSlug } from "@/lib/onboarding";
-import WorkflowsClient from "./WorkflowsClient";
+import { rowsToToolLogoMap } from "@/lib/toolLogos";
+import WorkflowsClient, {
+  type ContinueWorkflowProgress,
+  type WorkflowCategoryMetadata,
+} from "./WorkflowsClient";
 
 export const dynamic = "force-dynamic";
 
+type ProgressRow = {
+  activity_id: string;
+  status: string;
+  completed_steps: number[] | null;
+  updated_at: string;
+};
+
 export default async function WorkflowsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const [
@@ -18,9 +28,6 @@ export default async function WorkflowsPage() {
     { data: toolLogoRows },
     { data: viewRows },
     { data: progressRows },
-    { data: modules },
-    { data: categoryRows },
-    { data: tagRows },
     { data: savedWorkflowRows },
   ] = await Promise.all([
     supabase
@@ -30,110 +37,71 @@ export default async function WorkflowsPage() {
       .order("position"),
     supabase.from("tool_logos").select("tool, logo_url"),
     supabase.from("activity_view_counts").select("activity_id, count"),
-    user
-      ? supabase.from("user_progress").select("activity_id, status, quiz_score").eq("user_id", user.id)
-      : Promise.resolve({ data: [] as { activity_id: string; status: string }[] }),
     supabase
-      .from("fluency_modules")
-      .select("id, title, emoji, description, concepts, sort_order, is_locked, next_module_hint, html_path")
-      .eq("published", true)
-      .order("sort_order"),
+      .from("user_progress")
+      .select("activity_id, status, completed_steps, updated_at")
+      .eq("user_id", user.id),
     supabase
-      .from("activity_categories")
-      .select("name, thumbnail_url, description"),
-    supabase
-      .from("activity_tags")
-      .select("name, icon_url"),
-    user
-      ? supabase.from("user_saved_workflows").select("activity_id").eq("user_id", user.id)
-      : Promise.resolve({ data: [] as { activity_id: string }[] }),
+      .from("user_saved_workflows")
+      .select("activity_id, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
   ]);
+
+  let categoryMetadata: WorkflowCategoryMetadata[] = [];
+  const categoryResult = await supabase
+    .from("activity_categories")
+    .select("name, description, thumbnail_url, icon, display_order, is_visible")
+    .order("display_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (!categoryResult.error) {
+    categoryMetadata = (categoryResult.data ?? []) as WorkflowCategoryMetadata[];
+  } else {
+    // The page remains usable before the prepared display-metadata migration
+    // is applied; order and icons then use deterministic code fallbacks.
+    const fallbackResult = await supabase
+      .from("activity_categories")
+      .select("name, description, thumbnail_url")
+      .order("name", { ascending: true });
+    categoryMetadata = (fallbackResult.data ?? []).map((category) => ({
+      ...category,
+      icon: null,
+      display_order: 0,
+      is_visible: true,
+    }));
+  }
+
+  const typedProgressRows = (progressRows ?? []) as ProgressRow[];
+  const completedIds = typedProgressRows
+    .filter((progress) => progress.status === "completed")
+    .map((progress) => progress.activity_id);
+  const inProgressIds = typedProgressRows
+    .filter((progress) => progress.status === "in_progress")
+    .map((progress) => progress.activity_id);
+
+  const latestInProgress = typedProgressRows
+    .filter((progress) => progress.status === "in_progress")
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .find((progress) => (activities ?? []).some((activity) => activity.id === progress.activity_id));
+
+  let continueProgress: ContinueWorkflowProgress | null = null;
+  if (latestInProgress) {
+    const { count: totalSteps } = await supabase
+      .from("activity_steps")
+      .select("*", { count: "exact", head: true })
+      .eq("activity_id", latestInProgress.activity_id);
+    continueProgress = {
+      activityId: latestInProgress.activity_id,
+      completedSteps: latestInProgress.completed_steps?.length ?? 0,
+      totalSteps: totalSteps ?? 0,
+      updatedAt: latestInProgress.updated_at,
+    };
+  }
 
   const viewCounts: Record<string, number> = {};
   for (const row of viewRows ?? []) {
-    viewCounts[(row as { activity_id: string; count: number }).activity_id] =
-      Number((row as { activity_id: string; count: number }).count);
-  }
-
-  const completedIds = new Set(
-    (progressRows ?? [])
-      .filter((r: { activity_id: string; status: string }) => r.status === "completed")
-      .map((r: { activity_id: string; status: string }) => r.activity_id)
-  );
-
-  const inProgressIds = new Set(
-    (progressRows ?? [])
-      .filter((r: { activity_id: string; status: string }) => r.status === "in_progress")
-      .map((r: { activity_id: string; status: string }) => r.activity_id)
-  );
-
-  const savedWorkflowIds = new Set(
-    (savedWorkflowRows ?? []).map((r: { activity_id: string }) => r.activity_id)
-  );
-
-  const totalAvailable = (activities ?? []).length;
-  const completedCount = (progressRows ?? []).filter(
-    (r: { activity_id: string; status: string }) => r.status === "completed"
-  ).length;
-
-  const inProgressCount = (progressRows ?? []).filter(
-    (r: { activity_id: string; status: string }) => r.status === "in_progress"
-  ).length;
-
-  const activityPoints: Record<string, number> = {};
-  for (const row of activities ?? []) {
-    activityPoints[row.id as string] = Number((row as { points?: number }).points ?? 0);
-  }
-
-  let userTotalPoints = sumPointsFromProgress(
-    (progressRows ?? []) as { activity_id: string; status: string }[],
-    activityPoints,
-  );
-  let companyPercentile: number | null = null;
-  let companySize = 0;
-  let companyAvgPoints = 0;
-  let leaderboardRank: number | null = null;
-  let workflowsConfirmed = false;
-  let streakCount = 0;
-  let preferredToolSlug: string | null = null;
-
-  if (user) {
-    const [{ data: pointsStats }, { data: leaderboardStats }] = await Promise.all([
-      supabase.rpc("get_my_points_stats"),
-      supabase.rpc("get_company_leaderboard"),
-    ]);
-    if (pointsStats && typeof pointsStats === "object") {
-      const stats = pointsStats as PointsStats;
-      userTotalPoints = stats.user_points ?? userTotalPoints;
-      companyPercentile = stats.company_percentile ?? null;
-      companySize = stats.company_size ?? 0;
-      companyAvgPoints = stats.company_avg_points ?? 0;
-    }
-    if (leaderboardStats && typeof leaderboardStats === "object") {
-      const lb = leaderboardStats as LeaderboardStats;
-      leaderboardRank = lb.me?.rank ?? null;
-      if (lb.company_size > 0) companySize = lb.company_size;
-    }
-
-    const { data: profileExtras, error: profileExtrasError } = await supabase
-      .from("profiles")
-      .select("workflows_confirmed_at, streak_count, onboarding_tool")
-      .eq("id", user.id)
-      .single();
-    if (!profileExtrasError && profileExtras) {
-      workflowsConfirmed = !!profileExtras.workflows_confirmed_at;
-      streakCount = profileExtras.streak_count ?? 0;
-      preferredToolSlug = profileExtras.onboarding_tool ? onboardingToolToSlug(profileExtras.onboarding_tool) : null;
-    }
-  }
-
-  const categoryThumbnails: Record<string, string> = {};
-  const categoryDescriptions: Record<string, string> = {};
-  for (const row of categoryRows ?? []) {
-    const r = row as { name: string; thumbnail_url: string | null; description: string | null };
-    const key = r.name.toLowerCase();
-    if (r.thumbnail_url) categoryThumbnails[key] = r.thumbnail_url;
-    if (r.description) categoryDescriptions[key] = r.description;
+    viewCounts[row.activity_id as string] = Number(row.count ?? 0);
   }
 
   return (
@@ -141,26 +109,13 @@ export default async function WorkflowsPage() {
       <WorkflowsClient
         activities={(activities ?? []) as any}
         toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
-        tagLogos={rowsToTagLogoMap(tagRows ?? [])}
-        userId={user?.id ?? null}
+        userId={user.id}
         viewCounts={viewCounts}
         completedIds={completedIds}
         inProgressIds={inProgressIds}
-        savedWorkflowIds={savedWorkflowIds}
-        totalAvailable={totalAvailable}
-        completedCount={completedCount}
-        inProgressCount={inProgressCount}
-        userTotalPoints={userTotalPoints}
-        leaderboardRank={leaderboardRank}
-        companyPercentile={companyPercentile}
-        companySize={companySize}
-        companyAvgPoints={companyAvgPoints}
-        streakCount={streakCount}
-        modules={(modules ?? []) as any}
-        categoryThumbnails={categoryThumbnails}
-        categoryDescriptions={categoryDescriptions}
-        workflowsConfirmed={workflowsConfirmed}
-        preferredToolSlug={preferredToolSlug}
+        savedWorkflowIds={(savedWorkflowRows ?? []).map((row) => row.activity_id as string)}
+        categoryMetadata={categoryMetadata}
+        continueProgress={continueProgress}
       />
     </Suspense>
   );

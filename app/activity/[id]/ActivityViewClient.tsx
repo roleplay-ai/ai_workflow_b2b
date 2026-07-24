@@ -1,13 +1,15 @@
 "use client";
 import { useState, useRef, useEffect, useMemo } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import CompletionQuizModal from "@/components/CompletionQuizModal";
 import CelebrationModal from "@/components/CelebrationModal";
 import VideoModal from "@/components/VideoModal";
 import RotatingTools from "@/components/RotatingTools";
+import ToolIcon from "@/components/ToolIcon";
 import type { ToolLogoMap } from "@/lib/toolLogos";
-import { normalizeActivityTools, resolveActivityOpenLink } from "@/lib/tools";
+import { formatToolLabel, normalizeActivityTools, resolveActivityOpenLink } from "@/lib/tools";
 import MdText from "@/components/MdText";
 import SlideZoom from "@/components/SlideZoom";
 import type { WorkflowStep, Quiz } from "@/types";
@@ -15,8 +17,6 @@ import { buildCoachChatMessage } from "@/types";
 import { quizBonusPoints } from "@/lib/points";
 import type { Profile, Activity, ActivityContent, ActivityStep, UserProgress } from "@/lib/supabase/types";
 import s from "./activity-panel.module.css";
-
-const OVERVIEW_CARD_TONES = [s.overviewCardTone0, s.overviewCardTone1, s.overviewCardTone2];
 
 type Props = {
   profile: (Profile & { companies: { name: string } | null }) | null;
@@ -100,6 +100,8 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   const step = isOverview ? null : steps[current];
   const slideUrl = step?.slideUrl ?? null;
   const activityTools = normalizeActivityTools(activity.tools);
+  const primaryTool = activityTools[0] ?? "";
+  const primaryToolLabel = primaryTool ? formatToolLabel(primaryTool) : "AI";
   const openLink = resolveActivityOpenLink(activity.try_link, activityTools, toolTryUrls);
   const currentChips = isOverview ? (steps[0]?.try_asking ?? []) : (suggestions.length > 0 ? suggestions : (step?.try_asking ?? []));
   const hasInput = !!input.trim();
@@ -269,101 +271,142 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   }
 
   return (
-    <div className={s.pageWrap}>
-      <header className={s.topbar}>
-        <div className={s.titleBlock}>
-          {activityTools.length > 0 ? (
-            <RotatingTools tools={activityTools} toolLogos={toolLogos} iconSize={36} insetScale={0.9} />
-          ) : (
-            <div style={{ width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 800, fontSize: 14, background: "conic-gradient(from 35deg, #623cea, #3699fc, #23ce6b, #ffce00, #f68a29, #ed4551, #623cea)", boxShadow: "inset 0 0 0 3px rgba(255,255,255,0.40)", flexShrink: 0 }}>
-              {(activity.title?.trim()[0] ?? "A").toUpperCase()}
-            </div>
-          )}
-          <div className={s.titleText}>
-            <div className={s.titleRow}>
-              <div className={s.titleMain}>{activity.title}</div>
-              <div className={s.meta}>{activity.level} · {activity.time_estimate_minutes}m</div>
+    <div className={`${s.pageWrap} ${showOverview ? s.previewPageWrap : ""}`}>
+      {!showOverview ? (
+        <header className={s.topbar}>
+          <div className={s.titleBlock}>
+            {activityTools.length > 0 ? (
+              <RotatingTools tools={activityTools} toolLogos={toolLogos} iconSize={36} insetScale={0.9} />
+            ) : (
+              <div style={{ width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 800, fontSize: 14, background: "conic-gradient(from 35deg, #623cea, #3699fc, #23ce6b, #ffce00, #f68a29, #ed4551, #623cea)", boxShadow: "inset 0 0 0 3px rgba(255,255,255,0.40)", flexShrink: 0 }}>
+                {(activity.title?.trim()[0] ?? "A").toUpperCase()}
+              </div>
+            )}
+            <div className={s.titleText}>
+              <div className={s.titleRow}>
+                <div className={s.titleMain}>{activity.title}</div>
+                <div className={s.meta}>{activity.level} · {activity.time_estimate_minutes}m</div>
+              </div>
             </div>
           </div>
-        </div>
-        <div className={s.topActions}>
-          <div className={s.progressMini}>{isStarting ? 1 : isOverview ? 0 : current + 1}/{steps.length}</div>
-          <BackBtn />
-        </div>
-      </header>
+          <div className={s.topActions}>
+            <div className={s.progressMini}>{isStarting ? 1 : current + 1}/{steps.length}</div>
+            <BackBtn />
+          </div>
+        </header>
+      ) : null}
 
-      <main className={s.page}>
-        <section className={s.focusCard}>
+      <main className={showOverview ? s.previewPage : s.page}>
+        <section className={showOverview ? s.previewShell : s.focusCard}>
           {showOverview ? (
             <>
-              <div className={s.overviewWrap}>
-                <div className={s.overviewScroll}>
-                  <div className={s.overviewHero}>
-                    <div className={s.overviewHeroLeft}>
-                      <div className={s.overviewPill}>Workflow overview</div>
-                      <OverviewTitle title={activity.title} />
-                      {activity.description && (
-                        <p className={s.overviewDesc}>{activity.description.replace(/\*\*/g, "").replace(/\n+/g, " ").trim()}</p>
-                      )}
-                    </div>
-                    {content?.video_url && (
-                      <div className={s.overviewVideoCard}>
-                        <button type="button" className={s.overviewVideoThumbBtn} onClick={() => setShowVideo(true)} aria-label="Watch walkthrough video">
-                          {(videoThumb || activity.thumbnail_url) ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img className={s.overviewVideoThumbImg} src={videoThumb ?? activity.thumbnail_url ?? ""} alt="" />
-                          ) : (
-                            <div className={s.overviewVideoThumbPlaceholder} />
-                          )}
-                          <span className={s.overviewVideoPlay}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="8 5 19 12 8 19 8 5" /></svg>
-                          </span>
-                        </button>
-                        <div className={s.overviewVideoFooter}>
-                          <span className={s.overviewVideoLabel}>2-min walkthrough</span>
-                          <button type="button" className={s.overviewVideoLink} onClick={() => setShowVideo(true)}>
-                            Watch video <span aria-hidden="true">›</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+              <header className={s.previewHeader}>
+                <span>Workflow overview</span>
+                <BackBtn className={s.previewBackButton} />
+              </header>
 
-                  {whatYouGet.length > 0 && (
-                    <div className={s.overviewOutcomes}>
-                      <div className={s.overviewOutcomesHead}>
-                        <div className={s.overviewSectionLabel}>What you&apos;ll walk away with</div>
-                        {activity.points > 0 && (
-                          <div className={s.overviewPointsBadge}>
-                            <span className={s.overviewPointsIcon} aria-hidden="true">⚡</span>
-                            {activity.points} points available
-                          </div>
-                        )}
-                      </div>
-                      <div className={s.overviewCardGrid}>
-                        {whatYouGet.map((item, i) => (
-                          <div key={i} className={`${s.overviewCard} ${OVERVIEW_CARD_TONES[i % 3]}`}>
-                            <div className={s.overviewCardIcon}>{item.icon || "✨"}</div>
-                            <div className={s.overviewCardTitle}>{item.title}</div>
-                            <div className={s.overviewCardDesc}>{item.description}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+              <div className={s.previewHero}>
+                <div className={s.previewHeroCopy}>
+                  <h1>{activity.title.replace(/\*\*/g, "")}</h1>
+                  {activity.description ? (
+                    <p>{activity.description.replace(/\*\*/g, "").replace(/\n+/g, " ").trim()}</p>
+                  ) : null}
                 </div>
+
+                {openLink ? (
+                  <a
+                    href={openLink.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={s.previewToolBadge}
+                    aria-label={`Open ${openLink.label}`}
+                  >
+                    <span className={s.previewToolMark}>
+                      {primaryTool ? (
+                        <ToolIcon tool={primaryTool} size={22} logos={toolLogos} insetScale={0.9} />
+                      ) : (
+                        primaryToolLabel.slice(0, 1).toUpperCase()
+                      )}
+                    </span>
+                    <span className={s.previewToolCopy}>
+                      <small>AI used</small>
+                      <strong>{primaryToolLabel}</strong>
+                    </span>
+                  </a>
+                ) : (
+                  <div className={s.previewToolBadge}>
+                    <span className={s.previewToolMark}>
+                      {primaryTool ? (
+                        <ToolIcon tool={primaryTool} size={22} logos={toolLogos} insetScale={0.9} />
+                      ) : (
+                        primaryToolLabel.slice(0, 1).toUpperCase()
+                      )}
+                    </span>
+                    <span className={s.previewToolCopy}>
+                      <small>AI used</small>
+                      <strong>{primaryToolLabel}</strong>
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className={s.overviewFooter}>
-                <div className={s.overviewFooterActions}>
-                  {openLink && (
-                    <a href={openLink.url} target="_blank" rel="noreferrer" className={`${s.overviewBtn} ${s.overviewBtnGhost}`}>
-                      Open {openLink.label} ↗
-                    </a>
-                  )}
-                  <button type="button" onClick={startActivity} disabled={isStarting} className={`${s.overviewBtn} ${s.overviewBtnPrimary}`}>
-                    Let&apos;s start, Step 1 →
+
+              {whatYouGet.length > 0 ? (
+                <section className={s.previewOutcomes}>
+                  <h2>What you will create</h2>
+                  <div className={s.previewOutcomeGrid}>
+                    {whatYouGet.map((item, index) => (
+                      <article key={`${item.title}-${index}`} className={s.previewOutcomeCard}>
+                        <span className={s.previewOutcomeIcon}>{item.icon || "✨"}</span>
+                        <h3>{item.title}</h3>
+                        {item.description ? <p>{item.description}</p> : null}
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
+              <div className={`${s.previewActionGrid} ${content?.video_url ? "" : s.previewActionGridSingle}`}>
+                {content?.video_url ? (
+                  <article className={s.previewVideoCard}>
+                    <div className={s.previewVideoStage}>
+                      <span className={s.previewVideoLabel}>Watch video</span>
+                      <button type="button" className={s.previewVideoFrame} onClick={() => setShowVideo(true)} aria-label="Play walkthrough video">
+                        {(videoThumb || activity.thumbnail_url) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={videoThumb ?? activity.thumbnail_url ?? ""} alt="" />
+                        ) : (
+                          <span className={s.previewVideoPlaceholder} />
+                        )}
+                        <span className={s.previewPlayButton}>▶</span>
+                      </button>
+                    </div>
+                    <button type="button" className={s.previewVideoFooter} onClick={() => setShowVideo(true)}>
+                      <strong>2-minute walkthrough</strong>
+                      <span>Watch video →</span>
+                    </button>
+                  </article>
+                ) : null}
+
+                <article className={s.previewStartCard}>
+                  <span className={s.previewGuideLabel}>Guided workflow</span>
+                  <h2>AI-guided workflow</h2>
+                  {activity.points > 0 ? (
+                    <div className={s.previewPointsPill}>⚡ {activity.points} points available</div>
+                  ) : null}
+                  <div className={s.previewBrandPanel} aria-hidden="true">
+                    <Image
+                      src="/icon.png"
+                      alt=""
+                      width={58}
+                      height={58}
+                      className={s.previewBrandFavicon}
+                    />
+                  </div>
+                  <button type="button" onClick={startActivity} disabled={isStarting} className={s.previewStartButton}>
+                    Start workflow
                   </button>
-                </div>
+                  <p className={s.previewStartNote}>Complete the workflow to save your progress.</p>
+                </article>
               </div>
             </>
           ) : (
@@ -617,19 +660,6 @@ function BackBtn({ className }: { className?: string }) {
       {navigating && <span className={s.applyBtnSpinner} aria-hidden="true" />}
       <span aria-hidden="true">←</span> Back
     </Link>
-  );
-}
-
-function OverviewTitle({ title }: { title: string }) {
-  const parts = title.split(/(\*\*[^*]+\*\*)/g);
-  return (
-    <h2 className={s.overviewTitle}>
-      {parts.map((part, i) =>
-        part.startsWith("**") && part.endsWith("**")
-          ? <span key={i} className={s.overviewTitleAccent}>{part.slice(2, -2)}</span>
-          : <span key={i}>{part}</span>
-      )}
-    </h2>
   );
 }
 
