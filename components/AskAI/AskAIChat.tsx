@@ -116,8 +116,7 @@ export default function AskAIChat({
   existingAnswers = null,
 }: Props) {
   const searchParams = useSearchParams();
-  const forceOnboarding = searchParams.get("onboarding") === "update";
-  const effectiveNeedsOnboarding = needsOnboarding || forceOnboarding;
+  const effectiveNeedsOnboarding = needsOnboarding;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);

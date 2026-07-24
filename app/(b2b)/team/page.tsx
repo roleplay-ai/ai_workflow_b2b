@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { userNeedsOnboarding } from "@/lib/auth/onboardingGate";
 import B2BTopbar from "@/components/B2BTopbar";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +8,6 @@ export default async function TeamPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  if (await userNeedsOnboarding(supabase, user.id)) redirect("/ask-ai");
 
   return (
     <>

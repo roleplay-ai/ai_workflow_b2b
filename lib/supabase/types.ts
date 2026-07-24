@@ -75,6 +75,9 @@ export type ActivityCategory = {
   description: string | null;
   icon_url: string | null;
   thumbnail_url: string | null;
+  display_order: number;
+  icon: string | null;
+  is_visible: boolean;
   created_at: string;
 };
 
@@ -189,7 +192,28 @@ export type KbChatMessage = {
   role: "user" | "assistant";
   content: string;
   cited_chunks: string[];
+  metadata: Record<string, unknown>;
   created_at: string;
+};
+
+export type AskConversation = {
+  id: string;
+  user_id: string | null;
+  title: string;
+  model: string;
+  effort: "low" | "medium" | "high";
+  is_saved: boolean;
+  is_pinned: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+};
+
+export type UserFluencyProgress = {
+  user_id: string;
+  module_id: string;
+  points_awarded: number;
+  completed_at: string;
 };
 
 export type FluencyEntityType = "video" | "tool" | "tool_guide" | "deep_dive" | "module" | "page";
@@ -319,8 +343,8 @@ export type Database = {
       };
       activity_categories: {
         Row: ActivityCategory;
-        Insert: { name: string; description?: string | null; icon_url?: string | null; thumbnail_url?: string | null };
-        Update: { name?: string; description?: string | null; icon_url?: string | null; thumbnail_url?: string | null };
+        Insert: { name: string; description?: string | null; icon_url?: string | null; thumbnail_url?: string | null; display_order?: number; icon?: string | null; is_visible?: boolean };
+        Update: { name?: string; description?: string | null; icon_url?: string | null; thumbnail_url?: string | null; display_order?: number; icon?: string | null; is_visible?: boolean };
         Relationships: [];
       };
       activity_functions: {
@@ -332,6 +356,18 @@ export type Database = {
       user_saved_workflows: {
         Row: UserSavedWorkflow;
         Insert: { user_id: string; activity_id: string; source?: SavedWorkflowSource };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      ask_conversations: {
+        Row: AskConversation;
+        Insert: { id?: string; user_id?: string | null; title?: string; model?: string; effort?: AskConversation["effort"]; is_saved?: boolean; is_pinned?: boolean; created_at?: string; updated_at?: string; deleted_at?: string | null };
+        Update: { title?: string; model?: string; effort?: AskConversation["effort"]; is_saved?: boolean; is_pinned?: boolean; updated_at?: string; deleted_at?: string | null };
+        Relationships: [];
+      };
+      user_fluency_progress: {
+        Row: UserFluencyProgress;
+        Insert: { user_id: string; module_id: string; points_awarded?: number; completed_at?: string };
         Update: Record<string, never>;
         Relationships: [];
       };

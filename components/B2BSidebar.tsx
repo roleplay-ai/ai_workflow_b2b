@@ -1,117 +1,130 @@
 "use client";
+
 import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useNavigationLoading } from "@/components/NavigationLoading";
+import styles from "@/components/b2b-shell.module.css";
 
 type Props = {
-  companyName: string | null;
-  companyInitials: string;
   userName: string | null;
   userEmail: string | null;
   userInitials: string;
 };
 
-function NavItem({
-  href,
-  icon,
-  label,
-  badge,
-  badgeColor = "amber",
-}: {
+type NavItemProps = {
   href: string;
-  icon: React.ReactNode;
   label: string;
-  badge?: string | number;
-  badgeColor?: "amber" | "red";
-}) {
+  icon: React.ReactNode;
+  badge?: string;
+  activePaths?: string[];
+  onNavigate?: () => void;
+};
+
+function NavItem({ href, label, icon, badge, activePaths, onNavigate }: NavItemProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { startNavigating } = useNavigationLoading();
-  const active = pathname === href || pathname.startsWith(href + "/");
+  const active = activePaths
+    ? activePaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
+    : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <Link
+      className={`${styles.navItem} ${active ? styles.navItemActive : ""}`}
       href={href}
-      onClick={(e) => {
-        if (pathname === href) {
-          e.preventDefault();
+      aria-current={active ? "page" : undefined}
+      onClick={(event) => {
+        onNavigate?.();
+        if (pathname === href && window.location.search === "") {
+          event.preventDefault();
           return;
         }
-        e.preventDefault();
+        event.preventDefault();
         startNavigating(href);
         router.push(href);
       }}
-      style={{
-        display: "flex", alignItems: "center", gap: 10,
-        padding: "8px 12px", margin: "1px 8px",
-        borderRadius: 7, fontSize: 13, fontWeight: 650,
-        color: active ? "#FFCE00" : "rgba(255,255,255,.55)",
-        background: active ? "rgba(255,206,0,.13)" : "transparent",
-        transition: "background .12s, color .12s",
-        textDecoration: "none",
-      }}
-      onMouseEnter={e => {
-        if (!active) {
-          (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,.07)";
-          (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,.85)";
-        }
-      }}
-      onMouseLeave={e => {
-        if (!active) {
-          (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
-          (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,.55)";
-        }
-      }}
     >
-      <span style={{ flexShrink: 0, opacity: active ? 1 : 0.7, display: "flex" }}>{icon}</span>
-      <span style={{ flex: 1 }}>{label}</span>
-      {badge !== undefined && (
-        <span style={{
-          fontSize: 10, fontWeight: 800,
-          background: badgeColor === "red" ? "#ED4551" : "#FFCE00",
-          color: badgeColor === "red" ? "#fff" : "#1C1820",
-          borderRadius: 999, padding: "2px 7px",
-        }}>
-          {badge}
-        </span>
-      )}
+      <span className={styles.navIcon}>{icon}</span>
+      <span className={styles.navLabel}>{label}</span>
+      {badge ? <span className={styles.navBadge}>{badge}</span> : null}
     </Link>
   );
 }
 
-function SectionLabel({ children }: { children: string }) {
+function FilterLink({
+  href,
+  mark,
+  children,
+  onNavigate,
+}: {
+  href: string;
+  mark: string;
+  children: React.ReactNode;
+  onNavigate: () => void;
+}) {
+  const router = useRouter();
+  const { startNavigating } = useNavigationLoading();
+
   return (
-    <div style={{
-      fontSize: 10, fontWeight: 700, letterSpacing: ".09em",
-      textTransform: "uppercase", color: "rgba(255,255,255,.3)",
-      padding: "14px 18px 5px",
-    }}>
-      {children}
-    </div>
+    <Link
+      className={styles.filterLink}
+      href={href}
+      onClick={(event) => {
+        event.preventDefault();
+        onNavigate();
+        startNavigating(href);
+        router.push(href);
+      }}
+    >
+      <span className={styles.filterMark}>{mark}</span>
+      <span>{children}</span>
+    </Link>
   );
 }
 
-const GUIDE_CARD_DISMISSED_KEY = "b2b-sidebar-guide-dismissed";
+function Icon({ children }: { children: React.ReactNode }) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {children}
+    </svg>
+  );
+}
 
-export default function B2BSidebar({ companyName, companyInitials, userName, userEmail, userInitials }: Props) {
+export default function B2BSidebar({ userName, userEmail, userInitials }: Props) {
   const supabase = createClient();
   const pathname = usePathname();
   const router = useRouter();
   const { startNavigating } = useNavigationLoading();
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [signingOut, setSigningOut] = React.useState(false);
-  const [showGuideCard, setShowGuideCard] = React.useState(false);
 
   React.useEffect(() => {
-    setShowGuideCard(localStorage.getItem(GUIDE_CARD_DISMISSED_KEY) !== "1");
+    const openDrawer = () => setDrawerOpen(true);
+    window.addEventListener("b2b:open-sidebar", openDrawer);
+    return () => window.removeEventListener("b2b:open-sidebar", openDrawer);
   }, []);
 
-  function dismissGuideCard() {
-    localStorage.setItem(GUIDE_CARD_DISMISSED_KEY, "1");
-    setShowGuideCard(false);
-  }
+  React.useEffect(() => {
+    setDrawerOpen(false);
+    setMenuOpen(false);
+  }, [pathname]);
+
+  React.useEffect(() => {
+    if (!drawerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDrawerOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [drawerOpen]);
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -119,296 +132,115 @@ export default function B2BSidebar({ companyName, companyInitials, userName, use
     window.location.href = "/login";
   }
 
+  function goToProfile(event: React.MouseEvent<HTMLAnchorElement>) {
+    setMenuOpen(false);
+    setDrawerOpen(false);
+    if (pathname === "/profile" && window.location.search === "") {
+      event.preventDefault();
+      return;
+    }
+    event.preventDefault();
+    startNavigating("/profile");
+    router.push("/profile");
+  }
+
+  const closeDrawer = () => setDrawerOpen(false);
+
   return (
-    <aside style={{
-      width: "var(--sidebar-w)", minHeight: "100vh",
-      background: "#1C1820",
-      display: "flex", flexDirection: "column", flexShrink: 0,
-      position: "fixed", top: 0, left: 0, bottom: 0,
-      zIndex: 50, overflowY: "auto",
-    }}>
-      {/* Brand */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 9,
-        padding: "18px 16px 14px",
-        borderBottom: "1px solid rgba(255,255,255,.08)",
-      }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/nudgeable-logo.png" alt="Nudgeable" style={{ width: 28, height: 28, objectFit: "contain", flexShrink: 0 }} />
-        <div>
-          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#fff", letterSpacing: "-.01em" }}>AI Practice Lab</div>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,.4)", marginTop: 1 }}></div>
+    <>
+      <button
+        type="button"
+        className={`${styles.drawerBackdrop} ${drawerOpen ? styles.drawerBackdropVisible : ""}`}
+        aria-label="Close navigation"
+        tabIndex={drawerOpen ? 0 : -1}
+        onClick={closeDrawer}
+      />
+      <aside className={`${styles.sidebar} ${drawerOpen ? styles.sidebarOpen : ""}`} aria-label="Participant navigation">
+        <div className={styles.brandRow}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className={styles.brandLogo} src="/nudgeable-logo.png" alt="" />
+          <span className={styles.brandName}>AI Practice Lab</span>
+          <button type="button" className={styles.drawerClose} onClick={closeDrawer} aria-label="Close navigation">
+            <Icon><path d="M4 4l10 10M14 4L4 14" /></Icon>
+          </button>
         </div>
-      </div>
 
-      {/* Workspace pill */}
-      {companyName && (
-        <div style={{
-          margin: "12px 12px 6px",
-          background: "rgba(255,255,255,.07)",
-          border: "1px solid rgba(255,255,255,.1)",
-          borderRadius: 7, padding: "8px 10px",
-          display: "flex", alignItems: "center", gap: 9,
-        }}>
-          <div style={{
-            width: 24, height: 24, borderRadius: 6,
-            background: "#623CEA",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 10, fontWeight: 800, color: "#fff", flexShrink: 0,
-          }}>
-            {companyInitials}
-          </div>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: "#fff", flex: 1 }}>{companyName}</span>
-          <span style={{
-            fontSize: 9.5, fontWeight: 700, color: "#FFCE00",
-            background: "rgba(255,206,0,.12)",
-            border: "1px solid rgba(255,206,0,.25)",
-            borderRadius: 999, padding: "2px 6px",
-          }}>PRO</span>
+        <div className={styles.sidebarScroll}>
+          <nav className={styles.primaryNav} aria-label="Main">
+            <NavItem
+              href="/ask-ai"
+              label="Ask AI"
+              onNavigate={closeDrawer}
+              icon={<Icon><path d="M9 2l1.15 3.6L14 6.8l-3.85 1.2L9 11.6 7.85 8 4 6.8l3.85-1.2L9 2z" /></Icon>}
+            />
+            <NavItem
+              href="/workflows"
+              label="Workflows"
+              badge="New"
+              onNavigate={closeDrawer}
+              icon={<Icon><rect x="2.25" y="2.25" width="5.5" height="5.5" rx="1.2" /><rect x="10.25" y="2.25" width="5.5" height="5.5" rx="1.2" /><rect x="2.25" y="10.25" width="5.5" height="5.5" rx="1.2" /><rect x="10.25" y="10.25" width="5.5" height="5.5" rx="1.2" /></Icon>}
+            />
+            <NavItem
+              href="/updates"
+              label="Learn"
+              activePaths={["/updates", "/mastery"]}
+              onNavigate={closeDrawer}
+              icon={<Icon><path d="M3 3.5h8.3A2.7 2.7 0 0 1 14 6.2V15H5.7A2.7 2.7 0 0 1 3 12.3V3.5z" /><path d="M5.7 12.2H14M6 6.5h5M6 9h4" /></Icon>}
+            />
+          </nav>
+
+          <section className={styles.sidebarSection} aria-labelledby="capabilities-label">
+            <h2 id="capabilities-label" className={styles.sectionLabel}>Capabilities</h2>
+            <FilterLink href="/workflows?q=Skills" mark="✦" onNavigate={closeDrawer}>Skills</FilterLink>
+            <FilterLink href="/workflows?q=Projects" mark="⌁" onNavigate={closeDrawer}>Projects</FilterLink>
+            <FilterLink href="/workflows?q=Vibe%20coding" mark="⌘" onNavigate={closeDrawer}>Vibe coding</FilterLink>
+            <FilterLink href="/workflows?q=Scheduled%20actions" mark="◴" onNavigate={closeDrawer}>Scheduled actions</FilterLink>
+            <FilterLink href="/workflows?q=AI%20Agents" mark="◇" onNavigate={closeDrawer}>AI agents</FilterLink>
+            <FilterLink href="/workflows?q=Coding%20agents" mark="&lt;⁄&gt;" onNavigate={closeDrawer}>Coding agents</FilterLink>
+          </section>
+
+          <section className={styles.sidebarSection} aria-labelledby="providers-label">
+            <h2 id="providers-label" className={styles.sectionLabel}>Unique to each</h2>
+            <FilterLink href="/workflows?q=ChatGPT" mark="◎" onNavigate={closeDrawer}>ChatGPT</FilterLink>
+            <FilterLink href="/workflows?q=Claude" mark="A" onNavigate={closeDrawer}>Claude</FilterLink>
+            <FilterLink href="/workflows?q=Gemini" mark="✦" onNavigate={closeDrawer}>Gemini</FilterLink>
+            <FilterLink href="/workflows?q=Copilot" mark="◈" onNavigate={closeDrawer}>Copilot</FilterLink>
+          </section>
         </div>
-      )}
 
-      {/* Nav */}
-      <nav style={{ flex: 1, paddingBottom: 12 }}>
-        <SectionLabel>Practice</SectionLabel>
+        <div className={styles.profileFooter}>
+          {menuOpen ? (
+            <>
+              <button className={styles.profileMenuBackdrop} type="button" aria-label="Close profile menu" onClick={() => setMenuOpen(false)} />
+              <div className={styles.profileMenu}>
+                <div className={styles.profileMenuIdentity}>
+                  <strong>{userName ?? "User"}</strong>
+                  <span>{userEmail}</span>
+                </div>
+                <Link className={styles.profileMenuItem} href="/profile" onClick={goToProfile}>
+                  <Icon><circle cx="9" cy="6" r="3" /><path d="M3.5 16c.3-3.2 2.4-5 5.5-5s5.2 1.8 5.5 5" /></Icon>
+                  View profile
+                </Link>
+                <button className={`${styles.profileMenuItem} ${styles.signOutItem}`} type="button" disabled={signingOut} onClick={handleSignOut}>
+                  <Icon><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v9A1.5 1.5 0 0 0 3.5 15H7M12 12.5 15.5 9 12 5.5M15 9H7" /></Icon>
+                  {signingOut ? "Signing out…" : "Sign out"}
+                </button>
+              </div>
+            </>
+          ) : null}
 
-        <NavItem
-          href="/ask-ai"
-          label="Ask AI"
-          icon={
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 1.5L9.3 5.5 13.5 6.8 9.3 8.1 8 12.1 6.7 8.1 2.5 6.8 6.7 5.5z" />
-            </svg>
-          }
-        />
-
-        <NavItem
-          href="/workflows"
-          badge="New"
-          label="Workflows"
-          icon={
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2" />
-              <rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2" />
-              <rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2" />
-              <rect x="9" y="9" width="5.5" height="5.5" rx="1.2" />
-            </svg>
-          }
-        />
-
-        <NavItem
-          href="/mastery"
-          label="Course"
-          icon={
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 1.5L10 6h4.5L11 9l1.5 4.5L8 11l-4.5 2.5L5 9 1.5 6H6z" />
-            </svg>
-          }
-        />
-
-        <NavItem
-          href="/updates"
-          label="News"
-
-          badgeColor="red"
-          icon={
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="8" cy="8" r="6.5" />
-              <path d="M8 5v3l2 2" />
-            </svg>
-          }
-        />
-
-        <NavItem
-          href="/profile"
-          label="My Progress"
-          icon={
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2 12V8M6 12V5M10 12V3M14 12v-4" />
-            </svg>
-          }
-        />
-
-      </nav>
-
-      {/* Free guide card */}
-      {showGuideCard && (
-        <div style={{ margin: "0 10px 12px", background: "#0F0D12", border: "1px solid rgba(255,255,255,.1)", borderRadius: 8, padding: "10px", position: "relative" }}>
-          <button
-            type="button"
-            onClick={dismissGuideCard}
-            aria-label="Dismiss download card"
-            style={{
-              position: "absolute",
-              top: 6,
-              right: 6,
-              width: 22,
-              height: 22,
-              borderRadius: 6,
-              border: "none",
-              background: "rgba(255,255,255,.08)",
-              color: "rgba(255,255,255,.55)",
-              display: "grid",
-              placeItems: "center",
-              cursor: "pointer",
-              padding: 0,
-              fontFamily: "inherit",
-              transition: "background .12s, color .12s",
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,.14)";
-              (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,.9)";
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,.08)";
-              (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,.55)";
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M18 6L6 18M6 6l12 12" />
+          <button type="button" className={styles.profileButton} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
+            <span className={styles.avatar}>{userInitials}</span>
+            <span className={styles.profileText}>
+              <strong>{userName ?? "User"}</strong>
+              <span>{userEmail}</span>
+            </span>
+            <svg className={menuOpen ? styles.chevronOpen : ""} width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <path d="m3.5 5.5 4 4 4-4" />
             </svg>
           </button>
-
-          {/* Label + title row */}
-          <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: ".1em", textTransform: "uppercase", color: "#FFCE00", marginBottom: 3, paddingRight: 20 }}>
-            Free Download
-          </div>
-          <div style={{ fontSize: 11.5, fontWeight: 900, color: "#fff", lineHeight: 1.3, marginBottom: 6, letterSpacing: "-.01em" }}>
-            Prompt Engineering for AI Agents
-          </div>
-
-          {/* Description */}
-          <div style={{ fontSize: 10.5, color: "rgba(255,255,255,.45)", fontWeight: 500, lineHeight: 1.45, marginBottom: 8 }}>
-            30 techniques, 4 modules &amp; a 12-step workflow for writing AI agent prompts that work.
-          </div>
-
-          {/* Download button */}
-          <a
-            href="/prompt-engineering-guide.pdf"
-            download="PromptEngineering_FieldGuide.pdf"
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", padding: "7px 0", background: "#FFCE00", color: "#1C1820", borderRadius: 6, fontSize: 11, fontWeight: 900, textDecoration: "none", boxSizing: "border-box" }}
-          >
-            Download Guide
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-          </a>
         </div>
-      )}
-
-      {/* User footer */}
-      <div style={{ borderTop: "1px solid rgba(255,255,255,.08)", padding: "12px 12px 14px", position: "relative" }}>
-
-        {/* Sign-out popover */}
-        {menuOpen && (
-          <>
-            {/* Backdrop */}
-            <div
-              onClick={() => setMenuOpen(false)}
-              style={{ position: "fixed", inset: 0, zIndex: 49 }}
-            />
-            <div style={{
-              position: "absolute", bottom: "calc(100% + 6px)", left: 12, right: 12,
-              background: "#2A2430", border: "1px solid rgba(255,255,255,.12)",
-              borderRadius: 10, padding: "6px",
-              zIndex: 51, boxShadow: "0 8px 32px rgba(0,0,0,.45)",
-            }}>
-              <div style={{ padding: "8px 10px 10px", borderBottom: "1px solid rgba(255,255,255,.08)", marginBottom: 6 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: "#fff", marginBottom: 2 }}>{userName ?? "User"}</div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", fontWeight: 500 }}>{userEmail}</div>
-              </div>
-              <Link
-                href="/profile"
-                onClick={(e) => {
-                  setMenuOpen(false);
-                  if (pathname === "/profile") {
-                    e.preventDefault();
-                    return;
-                  }
-                  e.preventDefault();
-                  startNavigating("/profile");
-                  router.push("/profile");
-                }}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8, width: "100%",
-                  padding: "9px 10px", borderRadius: 7,
-                  background: "transparent",
-                  color: "rgba(255,255,255,.8)", fontSize: 13, fontWeight: 700, textAlign: "left",
-                  fontFamily: "inherit", textDecoration: "none",
-                  transition: "background .12s",
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="8" cy="5.5" r="3" />
-                  <path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
-                </svg>
-                View Profile
-              </Link>
-              <button
-                onClick={handleSignOut}
-                disabled={signingOut}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8, width: "100%",
-                  padding: "9px 10px", borderRadius: 7,
-                  background: "transparent", border: "none", cursor: signingOut ? "default" : "pointer",
-                  color: "#FF6B6B", fontSize: 13, fontWeight: 700, textAlign: "left",
-                  fontFamily: "inherit", opacity: signingOut ? 0.6 : 1,
-                  transition: "background .12s",
-                }}
-                onMouseEnter={e => { if (!signingOut) (e.currentTarget as HTMLElement).style.background = "rgba(255,107,107,.10)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 3H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3" />
-                  <path d="M11 11l3-3-3-3" />
-                  <path d="M14 8H6" />
-                </svg>
-                {signingOut ? "Signing out…" : "Sign out"}
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Profile row */}
-        <button
-          onClick={() => setMenuOpen(o => !o)}
-          style={{
-            display: "flex", alignItems: "center", gap: 9, width: "100%",
-            padding: "7px 6px", borderRadius: 7,
-            background: menuOpen ? "rgba(255,255,255,.09)" : "transparent",
-            border: "none", cursor: "pointer", textAlign: "left",
-            transition: "background .12s",
-          }}
-          onMouseEnter={e => { if (!menuOpen) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.06)"; }}
-          onMouseLeave={e => { if (!menuOpen) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-        >
-          <div style={{
-            width: 30, height: 30, borderRadius: "50%", background: "#623CEA",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 12, fontWeight: 800, color: "#fff", flexShrink: 0,
-          }}>
-            {userInitials}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {userName ?? "User"}
-            </div>
-            <div style={{ fontSize: 10.5, color: "rgba(255,255,255,.4)", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {userEmail}
-            </div>
-          </div>
-          <svg
-            style={{ color: "rgba(255,255,255,.3)", flexShrink: 0, transition: "transform .15s", transform: menuOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-            width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8"
-          >
-            <path d="M3 5l4 4 4-4" />
-          </svg>
-        </button>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

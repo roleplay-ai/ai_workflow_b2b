@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { userNeedsOnboarding } from "@/lib/auth/onboardingGate";
 import B2BTopbar from "@/components/B2BTopbar";
 import AskAIChat from "@/components/AskAI/AskAIChat";
 
@@ -36,14 +35,12 @@ export default async function AskAIPage() {
     interestsOther: profile?.onboarding_interests_other ?? null,
   };
 
-  const needsOnboarding = await userNeedsOnboarding(supabase, user.id);
-
   return (
     <>
       <B2BTopbar />
       <Suspense fallback={null}>
         <AskAIChat
-          needsOnboarding={needsOnboarding}
+          needsOnboarding={false}
           functionOptions={functionOptions}
           categoryOptions={categoryOptions}
           existingAnswers={existingAnswers}
