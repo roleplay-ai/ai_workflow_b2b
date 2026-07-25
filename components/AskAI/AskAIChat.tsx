@@ -104,7 +104,6 @@ export default function AskAIChat({ categories, userId }: Props) {
   const [loadingConversation, setLoadingConversation] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
-  const [conversationTitle, setConversationTitle] = useState("New conversation");
   const [zoomOpenKey, setZoomOpenKey] = useState<string | null>(null);
   const [teamDialogFor, setTeamDialogFor] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Record<number, "up" | "down">>({});
@@ -123,7 +122,6 @@ export default function AskAIChat({ categories, userId }: Props) {
     setLoading(false);
     setLoadingConversation(false);
     setLoadError(null);
-    setConversationTitle("New conversation");
     setFeedback({});
     setTeamDialogFor(null);
   }
@@ -189,13 +187,6 @@ export default function AskAIChat({ categories, userId }: Props) {
         messageError = fallbackMessageResult.error;
       }
 
-      const conversationResult = await supabase
-        .from("ask_conversations")
-        .select("title, model, effort")
-        .eq("id", requestedSessionId)
-        .eq("user_id", userId)
-        .maybeSingle();
-
       if (loadTokenRef.current !== token) return;
 
       if (messageError) {
@@ -216,11 +207,6 @@ export default function AskAIChat({ categories, userId }: Props) {
       });
 
       setMessages(restoredMessages);
-      setConversationTitle(
-        !conversationResult.error && conversationResult.data?.title
-          ? conversationResult.data.title
-          : restoredMessages.find((message) => message.role === "user")?.content.slice(0, 120) ?? "Conversation",
-      );
       setLoadingConversation(false);
     })();
   }, [conversationParam, newParam, userId]);
@@ -286,9 +272,6 @@ export default function AskAIChat({ categories, userId }: Props) {
         ]);
       }
 
-      if (conversationTitle === "New conversation") {
-        setConversationTitle(question.slice(0, 120));
-      }
       locationKeyRef.current = `conversation:${requestSessionId}`;
       router.replace(`/ask-ai?conversation=${requestSessionId}`, { scroll: false });
       window.dispatchEvent(new CustomEvent("ask:conversations-changed"));
@@ -344,10 +327,8 @@ export default function AskAIChat({ categories, userId }: Props) {
   );
 
   const newChatButton = (
-    <button type="button" className={styles.newChatButton} onClick={newChat} aria-label="Start a new conversation" title="New conversation">
-      <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M12.8 3.2 16.8 7.2M4 16l2.1-.4 9.5-9.5a1.4 1.4 0 0 0 0-2l-.7-.7a1.4 1.4 0 0 0-2 0L3.5 13 3 17l4-.5" />
-      </svg>
+    <button type="button" className={styles.newChatButton} onClick={newChat}>
+      New chat
     </button>
   );
 
@@ -365,7 +346,6 @@ export default function AskAIChat({ categories, userId }: Props) {
   if (messages.length === 0) {
     return (
       <main className={styles.landingPage}>
-        {newChatButton}
         <div className={styles.landingSpacer} aria-hidden="true" />
         <div className={styles.landingContent}>
           <h1>Ask anything about AI tools</h1>
@@ -412,13 +392,7 @@ export default function AskAIChat({ categories, userId }: Props) {
 
   return (
     <main className={styles.chatPage}>
-      <div className={styles.conversationHeader}>
-        <div className={styles.conversationIdentity}>
-          <strong>{conversationTitle}</strong>
-          <span>Sonnet · Medium</span>
-        </div>
-        {newChatButton}
-      </div>
+      {newChatButton}
 
       <div ref={listRef} className={styles.messageScroller}>
         <div className={styles.messageList}>
