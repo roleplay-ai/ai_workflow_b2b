@@ -32,14 +32,25 @@ export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  let completedModules: string[] = [];
-  if (user) {
-    const { data: rows } = await supabase
-      .from("ai_mastery_progress")
-      .select("module_id")
-      .eq("user_id", user.id);
-    completedModules = (rows ?? []).map(r => r.module_id as string);
+  if (!user) {
+    return new NextResponse("Unauthorized", { status: 401 });
   }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, aimastery_approved")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "superadmin" && !profile?.aimastery_approved) {
+    return new NextResponse("Course access required.", { status: 403 });
+  }
+
+  const { data: rows } = await supabase
+    .from("ai_mastery_progress")
+    .select("module_id")
+    .eq("user_id", user.id);
+  const completedModules = (rows ?? []).map(r => r.module_id as string);
   const completedJson = JSON.stringify(completedModules).replace(/'/g, "\\'");
 
   let html: string;

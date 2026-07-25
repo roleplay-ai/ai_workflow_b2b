@@ -2,11 +2,27 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { getValidModuleIds } from "@/lib/ai-mastery-course";
 
+async function hasMasteryAccess(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<boolean> {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, aimastery_approved")
+    .eq("id", userId)
+    .single();
+
+  return profile?.role === "superadmin" || Boolean(profile?.aimastery_approved);
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!await hasMasteryAccess(supabase, user.id)) {
+    return NextResponse.json({ error: "Course access required" }, { status: 403 });
+  }
 
   const body = await request.json().catch(() => null);
   const moduleId = body?.moduleId as string | undefined;
@@ -29,6 +45,9 @@ export async function DELETE(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!await hasMasteryAccess(supabase, user.id)) {
+    return NextResponse.json({ error: "Course access required" }, { status: 403 });
+  }
 
   const body = await request.json().catch(() => null);
   const moduleId = body?.moduleId as string | undefined;

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { TOTAL_MODULES } from "@/lib/ai-mastery-course";
 import UpdatesClient from "./UpdatesClient";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,8 @@ export default async function UpdatesPage() {
     { data: toolLogoRows },
     { data: featuredActivities },
     { data: deepDives },
+    { data: masteryProgress },
+    { data: masteryProfile },
   ] = await Promise.all([
     supabase
       .from("fluency_briefs")
@@ -54,6 +57,15 @@ export default async function UpdatesPage() {
       .select("id, title, description, tool, url, html_path, link_type")
       .eq("published", true)
       .order("position"),
+    supabase
+      .from("ai_mastery_progress")
+      .select("module_id")
+      .eq("user_id", user.id),
+    supabase
+      .from("profiles")
+      .select("role, aimastery_approved, aimastery_requested")
+      .eq("id", user.id)
+      .single(),
   ]);
 
   const toolLogos: Record<string, string> = {};
@@ -70,6 +82,10 @@ export default async function UpdatesPage() {
       toolLogos={toolLogos}
       deepDives={(deepDives ?? []) as any}
       newActivities={(featuredActivities ?? []) as any}
+      masteryCompletedCount={(masteryProgress ?? []).length}
+      masteryTotalModules={TOTAL_MODULES}
+      masteryApproved={masteryProfile?.role === "superadmin" || Boolean(masteryProfile?.aimastery_approved)}
+      masteryRequested={Boolean(masteryProfile?.aimastery_requested)}
     />
   );
 }

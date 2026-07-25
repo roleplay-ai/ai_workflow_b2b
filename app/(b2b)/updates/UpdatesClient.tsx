@@ -61,6 +61,10 @@ type Props = {
   toolLogos: ToolLogoMap;
   deepDives?: ToolDeepDive[];
   newActivities?: NewActivity[];
+  masteryCompletedCount: number;
+  masteryTotalModules: number;
+  masteryApproved: boolean;
+  masteryRequested: boolean;
 };
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -76,6 +80,19 @@ const GUIDE_ICON_SYMBOLS = ["✦", "●", "✧", "◆"];
 const THEME_TO_SLUG: Record<string, string> = {
   claude: "claude", gpt: "chatgpt", gemini: "gemini", copilot: "copilot",
 };
+
+const FOUNDATION_TOPICS = [
+  { icon: "◐", title: "Tokens", description: "Understand how AI breaks prompts into smaller pieces and why this affects cost and performance.", duration: "5 min" },
+  { icon: "▣", title: "Context Window", description: "Learn how much information an AI model can consider at one time.", duration: "6 min" },
+  { icon: "⚒", title: "Tool Calling", description: "See how chatbots use external tools to search, calculate, read files, or take actions.", duration: "7 min" },
+  { icon: "◉", title: "AI Agents", description: "Understand how agents plan, use tools, and complete multi-step tasks.", duration: "8 min" },
+  { icon: "⌁", title: "API", description: "Learn how software connects to AI models and sends instructions programmatically.", duration: "6 min" },
+  { icon: "✦", title: "Generative AI vs Other AI", description: "Understand the difference between prediction systems and content-generating systems.", duration: "5 min" },
+  { icon: "▧", title: "Image Generation", description: "See how models turn language into images and why prompts shape composition.", duration: "7 min" },
+  { icon: "🧠", title: "AI Memory", description: "Learn the difference between chat history, saved memory, and temporary context.", duration: "6 min" },
+  { icon: "⌨", title: "Vibe Coding", description: "Understand how non-coders can build simple tools by describing what they want.", duration: "6 min" },
+  { icon: "↗", title: "AI Economics", description: "Understand tokens, infrastructure costs, subscriptions, and why pricing changes.", duration: "8 min" },
+] as const;
 
 const WORK_QUESTIONS = [
   {
@@ -368,7 +385,7 @@ function ToolsSection({ tools, onOpenTool }: { tools: Tool[]; onOpenTool: (t: To
   }
 
   return (
-    <section style={{ marginBottom: 60 }}>
+    <section id="tools" style={{ marginBottom: 60 }}>
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 22, marginBottom: 16 }}>
         <SectionHeader label="Tools" title="Most Useful Tools" subtitle="AI products worth trying for real work." />
       </div>
@@ -830,9 +847,120 @@ function WorkQuestionsSection() {
   );
 }
 
+function AIFoundationsSection({
+  completedCount,
+  totalModules,
+  approved,
+  initiallyRequested,
+}: {
+  completedCount: number;
+  totalModules: number;
+  approved: boolean;
+  initiallyRequested: boolean;
+}) {
+  const [requested, setRequested] = useState(initiallyRequested);
+  const [requesting, setRequesting] = useState(false);
+  const [requestError, setRequestError] = useState("");
+  const progressPercent = totalModules > 0
+    ? Math.min(100, Math.round((completedCount / totalModules) * 100))
+    : 0;
+
+  async function requestCourseAccess() {
+    if (requesting || requested) return;
+    setRequesting(true);
+    setRequestError("");
+    try {
+      const response = await fetch("/api/ai-mastery/request-access", { method: "POST" });
+      if (!response.ok) throw new Error("Could not request access");
+      setRequested(true);
+    } catch {
+      setRequestError("Could not send your request. Please try again.");
+    } finally {
+      setRequesting(false);
+    }
+  }
+
+  return (
+    <section id="ai-foundations" className="upd-foundations-section">
+      <div className="upd-foundations-heading">
+        <SectionHeader
+          label="Foundations"
+          title="AI Foundations"
+          subtitle="Understand the core ideas behind modern AI before applying them at work."
+        />
+        <span>{FOUNDATION_TOPICS.length} essential topics</span>
+      </div>
+
+      <div className="upd-foundation-grid">
+        {FOUNDATION_TOPICS.map((topic) => (
+          <article className="upd-foundation-card" key={topic.title}>
+            <div className="upd-foundation-icon" aria-hidden="true">{topic.icon}</div>
+            <div>
+              <h3>{topic.title}</h3>
+              <p>{topic.description}</p>
+              <div className="upd-foundation-meta">
+                <span>{topic.duration}</span>
+                <span>Included in full course</span>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="upd-course-overview">
+        <div className="upd-course-copy">
+          <span className="upd-course-kicker">AI Mastery</span>
+          <h3>{completedCount > 0 ? "Continue your full course" : "Build complete AI confidence"}</h3>
+          <p>
+            {approved
+              ? `${completedCount} of ${totalModules} modules completed. Your progress is saved automatically.`
+              : "The complete guided course expands these foundations into practical AI capability."}
+          </p>
+        </div>
+
+        <div className="upd-course-actions">
+          {approved ? (
+            <>
+              <div className="upd-course-progress" aria-label={`${progressPercent}% course progress`}>
+                <div><span>Progress</span><strong>{progressPercent}%</strong></div>
+                <span><i style={{ width: `${progressPercent}%` }} /></span>
+              </div>
+              <a href="/mastery" target="_blank" rel="noopener noreferrer" className="upd-course-button">
+                Full course <span aria-hidden="true">↗</span>
+              </a>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="upd-course-button"
+              disabled={requesting || requested}
+              onClick={() => void requestCourseAccess()}
+            >
+              {requesting ? "Requesting…" : requested ? "Access requested" : "Request full course access"}
+            </button>
+          )}
+          {requestError ? <span className="upd-course-error" role="status">{requestError}</span> : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function UpdatesClient({ brief, videos, tools, toolGuides, toolLogos, deepDives = [], newActivities = [] }: Props) {
+export default function UpdatesClient({
+  brief,
+  videos,
+  tools,
+  toolGuides,
+  toolLogos,
+  deepDives = [],
+  newActivities = [],
+  masteryCompletedCount,
+  masteryTotalModules,
+  masteryApproved,
+  masteryRequested,
+}: Props) {
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [openDeepDive, setOpenDeepDive] = useState<{ id: string; title: string } | null>(null);
 
@@ -863,10 +991,10 @@ export default function UpdatesClient({ brief, videos, tools, toolGuides, toolLo
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
             <div>
               <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-.03em", color: "#1C1820", lineHeight: 1.1 }}>
-                News
+                Learn
               </h1>
               <p style={{ fontSize: 13.5, color: "#746F78", fontWeight: 600, marginTop: 4 }}>
-                Latest AI news, short launch videos, and practical perspectives — curated weekly for your team.
+                Follow important AI updates, watch practical videos, discover useful tools, and build core capability.
               </p>
             </div>
             <span style={{
@@ -880,6 +1008,15 @@ export default function UpdatesClient({ brief, videos, tools, toolGuides, toolLo
               Updated every week
             </span>
           </div>
+          <nav className="upd-learn-tabs" aria-label="Learning sections">
+            <a href="#latest">News</a>
+            {videos.length > 0 ? <a href="#videos">Latest Videos</a> : null}
+            {tools.length > 0 ? <a href="#tools">Popular Tools</a> : null}
+            <a href="#ai-foundations">AI Foundations</a>
+            <a href="/mastery" target="_blank" rel="noopener noreferrer">
+              Full course <span aria-hidden="true">↗</span>
+            </a>
+          </nav>
         </div>
 
         <main className="upd-main">
@@ -946,6 +1083,13 @@ export default function UpdatesClient({ brief, videos, tools, toolGuides, toolLo
             </div>
           </section>
         )}
+
+        <AIFoundationsSection
+          completedCount={masteryCompletedCount}
+          totalModules={masteryTotalModules}
+          approved={masteryApproved}
+          initiallyRequested={masteryRequested}
+        />
 
         {/* AI at Work Questions */}
         <WorkQuestionsSection />
