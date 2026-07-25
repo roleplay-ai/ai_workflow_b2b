@@ -351,6 +351,97 @@
   color: #b54248;
 }
 
+.capabilityMenuRow {
+  position: relative;
+}
+
+.capabilityMenuRow > .filterLink {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.capabilityMenuChevron {
+  margin-left: auto;
+  color: #a8a49c;
+  font-size: 13px;
+}
+
+.capabilityMenuBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 530;
+  border: 0;
+  background: transparent;
+}
+
+/* Fixed so it escapes the scrollable sidebar; desktop position is computed in
+   JS (inline left/top) to sit to the right of the trigger. Below 900px, JS
+   clears the inline style and this base rule renders it as a bottom sheet. */
+.capabilityMenu {
+  position: fixed;
+  z-index: 540;
+  left: 12px;
+  right: 12px;
+  top: auto;
+  bottom: 12px;
+  width: auto;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid #e5e5e5;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, .14);
+}
+
+@media (min-width: 901px) {
+  .capabilityMenu {
+    right: auto;
+    bottom: auto;
+    width: 270px;
+  }
+}
+
+.capabilityMenuTitle {
+  padding: 8px 10px 7px;
+  color: #111;
+  font-size: 13.5px;
+  font-weight: 650;
+}
+
+.capabilityMenu > a {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 6px 9px;
+  border-radius: 11px;
+  color: #302e29;
+  font-size: 12.5px;
+  font-weight: 610;
+  text-decoration: none;
+}
+
+.capabilityMenu > a:hover {
+  background: #f1f1f1;
+}
+
+.capabilityMenuIcon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #f3f3f3;
+  font-size: 13px;
+  overflow: hidden;
+}
+
 .profileFooter {
   position: relative;
   padding: 11px 12px 13px;

@@ -4,20 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Activity } from "@/lib/supabase/types";
-import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
+import { formatToolLabel, normalizeActivityTools, normalizeToolSlug } from "@/lib/tools";
 import type { ToolLogoMap } from "@/lib/toolLogos";
 import B2BTopbar from "@/components/B2BTopbar";
-import ToolIcon from "@/components/ToolIcon";
+import {
+  HeartIcon,
+  WorkflowCard,
+  categoryIcon,
+  type WorkflowCategoryMetadata,
+} from "@/components/WorkflowCard";
+import { useSavedWorkflows } from "@/hooks/useSavedWorkflows";
 import styles from "./workflows.module.css";
 
-export type WorkflowCategoryMetadata = {
-  name: string;
-  description: string | null;
-  thumbnail_url: string | null;
-  icon: string | null;
-  display_order: number;
-  is_visible: boolean;
-};
+export type { WorkflowCategoryMetadata };
 
 export type ContinueWorkflowProgress = {
   activityId: string;
@@ -42,25 +41,6 @@ type CategorySummary = WorkflowCategoryMetadata & {
   count: number;
 };
 
-const CATEGORY_ICON_FALLBACKS: Record<string, string> = {
-  "get set up": "⚙",
-  "automate email & tasks": "✉",
-  "make presentations": "▧",
-  "organize knowledge in one place": "▤",
-  "analyze data": "▥",
-  "delegate multi-step work to an agent": "✦",
-  "generate videos": "▶",
-  "make your chatbot remember you": "◉",
-  "build a voice chatbot": "⌁",
-  "build a web app": "</>",
-  "teach ai your way of working": "✎",
-  "build a text chatbot": "◌",
-  "research the market": "⌕",
-  "generate images": "◇",
-  "build a website": "▦",
-  "data security": "⌾",
-};
-
 const CATEGORY_ORDER_FALLBACKS: Record<string, number> = {
   "get set up": 10,
   "automate email & tasks": 20,
@@ -82,94 +62,12 @@ const CATEGORY_ORDER_FALLBACKS: Record<string, number> = {
 
 const REDUNDANT_LEGACY_CATEGORIES = new Set(["automate", "build", "chat", "setup"]);
 
-function categoryIcon(category: WorkflowCategoryMetadata | undefined): string {
-  if (!category) return "✦";
-  return category.icon || CATEGORY_ICON_FALLBACKS[category.name.toLowerCase()] || "◇";
-}
-
-function formatViewCount(count: number): string {
-  if (count >= 1000) return `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}K`;
-  return String(count);
-}
-
 function SearchIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
       <circle cx="8" cy="8" r="5" />
       <path d="m12 12 3.5 3.5" />
     </svg>
-  );
-}
-
-function HeartIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0L12 5.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l8.9 8.8 8.8-8.8a5.5 5.5 0 0 0 0-7.8Z" />
-    </svg>
-  );
-}
-
-function WorkflowCard({
-  activity,
-  category,
-  toolLogos,
-  viewCount,
-  isCompleted,
-  isInProgress,
-  isSaved,
-  isSavePending,
-  onToggleSave,
-}: {
-  activity: Activity;
-  category?: WorkflowCategoryMetadata;
-  toolLogos: ToolLogoMap;
-  viewCount: number;
-  isCompleted: boolean;
-  isInProgress: boolean;
-  isSaved: boolean;
-  isSavePending: boolean;
-  onToggleSave: (activityId: string) => void;
-}) {
-  const tools = normalizeActivityTools(activity.tools);
-  const primaryTool = tools[0] ?? "";
-  const [navigating, setNavigating] = useState(false);
-
-  return (
-    <article className={`${styles.workflowCard} ${navigating ? styles.workflowCardNavigating : ""}`}>
-      <button
-        type="button"
-        className={`${styles.saveCardButton} ${isSaved ? styles.saveCardButtonActive : ""}`}
-        aria-label={isSaved ? `Remove ${activity.title} from saved workflows` : `Save ${activity.title}`}
-        aria-pressed={isSaved}
-        aria-busy={isSavePending}
-        disabled={isSavePending}
-        onClick={() => onToggleSave(activity.id)}
-      >
-        <HeartIcon filled={isSaved} />
-      </button>
-      <Link href={`/activity/${activity.id}`} onClick={() => setNavigating(true)} aria-busy={navigating}>
-        <div className={styles.workflowCardTop}>
-          <span className={styles.workflowNatureIcon}>{categoryIcon(category)}</span>
-          {primaryTool ? (
-            <span className={styles.toolLabel}>
-              <ToolIcon tool={primaryTool} size={16} logos={toolLogos} insetScale={0.88} />
-              {formatToolLabel(primaryTool)}
-            </span>
-          ) : null}
-        </div>
-        <h3>{activity.title}</h3>
-        {activity.description ? <p>{activity.description}</p> : null}
-        <div className={styles.workflowCardFooter}>
-          <span>
-            {viewCount > 0 ? `${formatViewCount(viewCount)} views` : `${activity.time_estimate_minutes ?? 0} min`}
-          </span>
-          <span className={isCompleted ? styles.doneStatus : isInProgress ? styles.progressStatus : ""}>
-            {isCompleted ? "Completed" : isInProgress ? "Continue →" : activity.is_locked ? "Locked" : "Start →"}
-          </span>
-        </div>
-      </Link>
-      {navigating ? <span className={styles.cardSpinner} aria-hidden="true" /> : null}
-    </article>
   );
 }
 
@@ -190,12 +88,11 @@ export default function WorkflowsClient({
   const queryParam = searchParams.get("q") ?? "";
   const selectedTag = searchParams.get("tag");
   const contentTypeParam = searchParams.get("content_type");
+  const toolParam = searchParams.get("tool");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
   const [categorySearch, setCategorySearch] = useState("");
   const [workflowSearch, setWorkflowSearch] = useState(queryParam);
-  const [savedIds, setSavedIds] = useState(() => new Set(savedWorkflowIds));
-  const [savePendingIds, setSavePendingIds] = useState(() => new Set<string>());
-  const [saveError, setSaveError] = useState("");
+  const { savedIds, savePendingIds, saveError, toggleSaveWorkflow } = useSavedWorkflows(userId, savedWorkflowIds);
   const [savedDrawerOpen, setSavedDrawerOpen] = useState(false);
   const completedIds = useMemo(() => new Set(completedIdList), [completedIdList]);
   const inProgressIds = useMemo(() => new Set(inProgressIdList), [inProgressIdList]);
@@ -204,10 +101,6 @@ export default function WorkflowsClient({
     setSelectedCategory(categoryParam);
     setWorkflowSearch(queryParam);
   }, [categoryParam, queryParam]);
-
-  useEffect(() => {
-    setSavedIds(new Set(savedWorkflowIds));
-  }, [savedWorkflowIds]);
 
   useEffect(() => {
     if (!savedDrawerOpen) return;
@@ -303,6 +196,10 @@ export default function WorkflowsClient({
         (activity) => (activity.content_type ?? "").toLowerCase() === contentTypeParam.toLowerCase(),
       );
     }
+    if (toolParam) {
+      const normalizedTool = normalizeToolSlug(toolParam);
+      result = result.filter((activity) => normalizeActivityTools(activity.tools).includes(normalizedTool));
+    }
     const query = workflowSearch.trim().toLowerCase();
     if (query) {
       result = result.filter((activity) =>
@@ -316,7 +213,7 @@ export default function WorkflowsClient({
       );
     }
     return result;
-  }, [activities, selectedCategory, selectedTag, contentTypeParam, workflowSearch]);
+  }, [activities, selectedCategory, selectedTag, contentTypeParam, toolParam, workflowSearch]);
 
   const savedActivities = useMemo(() => {
     const activityById = new Map(activities.map((activity) => [activity.id, activity]));
@@ -329,7 +226,7 @@ export default function WorkflowsClient({
     ? activities.find((activity) => activity.id === continueProgress.activityId) ?? null
     : null;
 
-  const isResultView = Boolean(selectedCategory || selectedTag || contentTypeParam || queryParam.trim());
+  const isResultView = Boolean(selectedCategory || selectedTag || contentTypeParam || toolParam || queryParam.trim());
   const selectedCategoryMetadata = selectedCategory
     ? metadataByName.get(selectedCategory.toLowerCase())
     : undefined;
@@ -347,55 +244,6 @@ export default function WorkflowsClient({
     setSelectedCategory(null);
     setWorkflowSearch("");
     router.replace("/workflows?browse=all", { scroll: false });
-  }
-
-  function toggleSaveWorkflow(activityId: string) {
-    if (!userId || savePendingIds.has(activityId)) return;
-    const wasSaved = savedIds.has(activityId);
-    setSaveError("");
-    setSavePendingIds((current) => new Set(current).add(activityId));
-    setSavedIds((current) => {
-      const next = new Set(current);
-      if (wasSaved) next.delete(activityId);
-      else {
-        next.delete(activityId);
-        return new Set([activityId, ...next]);
-      }
-      return next;
-    });
-
-    void fetch("/api/workflows/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activityId }),
-      keepalive: true,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Could not update saved workflow");
-        const body = await response.json() as { saved?: boolean };
-        setSavedIds((current) => {
-          const next = new Set(current);
-          next.delete(activityId);
-          if (body.saved) return new Set([activityId, ...next]);
-          return next;
-        });
-      })
-      .catch(() => {
-        setSaveError("Your saved workflows could not be updated. Please try again.");
-        setSavedIds((current) => {
-          const next = new Set(current);
-          if (wasSaved) return new Set([activityId, ...next]);
-          else next.delete(activityId);
-          return next;
-        });
-      })
-      .finally(() => {
-        setSavePendingIds((current) => {
-          const next = new Set(current);
-          next.delete(activityId);
-          return next;
-        });
-      });
   }
 
   function renderWorkflowCard(activity: Activity) {
@@ -419,12 +267,16 @@ export default function WorkflowsClient({
   const resultTitle = selectedCategory
     ? selectedCategory
     : contentTypeParam
-      ? contentTypeParam
-      : selectedTag
-        ? selectedTag
-        : queryParam.trim()
-          ? `Results for “${queryParam.trim()}”`
-          : "All workflows";
+      ? toolParam
+        ? `${contentTypeParam} · ${formatToolLabel(toolParam)}`
+        : contentTypeParam
+      : toolParam
+        ? formatToolLabel(toolParam)
+        : selectedTag
+          ? selectedTag
+          : queryParam.trim()
+            ? `Results for “${queryParam.trim()}”`
+            : "All workflows";
 
   return (
     <>

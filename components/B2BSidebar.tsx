@@ -5,6 +5,15 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useNavigationLoading } from "@/components/NavigationLoading";
+import {
+  CAPABILITIES,
+  PROVIDER_TOOLS,
+  PROVIDERS,
+  capabilityLabelForTool,
+  type CapabilitySlug,
+  type ProviderTool,
+} from "@/lib/capabilities";
+import ToolIcon from "@/components/ToolIcon";
 import styles from "@/components/b2b-shell.module.css";
 
 type Props = {
@@ -62,34 +71,158 @@ function NavItem({ href, label, icon, badge, activePaths, onNavigate }: NavItemP
   );
 }
 
-function FilterLink({
-  href,
-  mark,
+const FLYOUT_MOBILE_BREAKPOINT = 900;
+const FLYOUT_WIDTH = 270;
+const FLYOUT_GAP = 8;
+
+/** Computes a fixed position to the right of `button`, flipping/clamping to stay on-screen. */
+function useFlyoutPosition(open: boolean, buttonRef: React.RefObject<HTMLButtonElement | null>) {
+  const [style, setStyle] = React.useState<React.CSSProperties>({});
+
+  React.useLayoutEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const button = buttonRef.current;
+      if (!button) return;
+      if (window.innerWidth <= FLYOUT_MOBILE_BREAKPOINT) {
+        setStyle({});
+        return;
+      }
+      const rect = button.getBoundingClientRect();
+      let left = rect.right + FLYOUT_GAP;
+      if (left + FLYOUT_WIDTH > window.innerWidth - 12) {
+        left = Math.max(12, rect.left - FLYOUT_WIDTH - FLYOUT_GAP);
+      }
+      const estimatedHeight = 320;
+      let top = rect.top;
+      if (top + estimatedHeight > window.innerHeight - 12) {
+        top = Math.max(12, window.innerHeight - estimatedHeight - 12);
+      }
+      setStyle({ left, top });
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [open, buttonRef]);
+
+  return style;
+}
+
+/** Shared flyout shell: a sidebar row that opens a fixed panel to the right, matching the reference design. */
+function SidebarFlyout({
+  triggerIcon,
+  triggerLabel,
+  panelTitle,
+  open,
+  onToggle,
+  onClose,
   children,
-  onNavigate,
 }: {
-  href: string;
-  mark: string;
+  triggerIcon: React.ReactNode;
+  triggerLabel: string;
+  panelTitle: string;
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
   children: React.ReactNode;
-  onNavigate: () => void;
 }) {
-  const router = useRouter();
-  const { startNavigating } = useNavigationLoading();
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const style = useFlyoutPosition(open, buttonRef);
 
   return (
-    <Link
-      className={styles.filterLink}
-      href={href}
-      onClick={(event) => {
-        event.preventDefault();
-        onNavigate();
-        startNavigating(href);
-        router.push(href);
-      }}
+    <div className={styles.capabilityMenuRow}>
+      <button
+        ref={buttonRef}
+        type="button"
+        className={styles.filterLink}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <span className={styles.filterMark}>{triggerIcon}</span>
+        <span>{triggerLabel}</span>
+        <span className={styles.capabilityMenuChevron} aria-hidden="true">›</span>
+      </button>
+      {open ? (
+        <>
+          <button type="button" className={styles.capabilityMenuBackdrop} aria-label="Close menu" onClick={onClose} />
+          <div className={styles.capabilityMenu} role="menu" style={style}>
+            <div className={styles.capabilityMenuTitle}>{panelTitle}</div>
+            {children}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+/** Sidebar trigger for a Capability: opens a menu of tool-specific variants before landing on an info page. */
+function CapabilityMenuTrigger({
+  slug,
+  mark,
+  open,
+  onToggle,
+  onNavigate,
+}: {
+  slug: CapabilitySlug;
+  mark: string;
+  open: boolean;
+  onToggle: () => void;
+  onNavigate: () => void;
+}) {
+  const def = CAPABILITIES[slug];
+
+  return (
+    <SidebarFlyout
+      triggerIcon={mark}
+      triggerLabel={def.contentType}
+      panelTitle={def.contentType}
+      open={open}
+      onToggle={onToggle}
+      onClose={onToggle}
     >
-      <span className={styles.filterMark}>{mark}</span>
-      <span>{children}</span>
-    </Link>
+      {PROVIDER_TOOLS.map((tool) => (
+        <Link key={tool} href={`/capabilities/${slug}/${tool}`} onClick={onNavigate}>
+          <span className={styles.capabilityMenuIcon}><ToolIcon tool={tool} size={18} /></span>
+          <span>{capabilityLabelForTool(slug, tool)}</span>
+        </Link>
+      ))}
+    </SidebarFlyout>
+  );
+}
+
+const CAPABILITY_ENTRIES = Object.entries(CAPABILITIES) as [CapabilitySlug, (typeof CAPABILITIES)[CapabilitySlug]][];
+
+/** Sidebar trigger for a Provider (tool): opens a menu of that tool's capabilities before landing on an info page. */
+function ProviderMenuTrigger({
+  tool,
+  open,
+  onToggle,
+  onNavigate,
+}: {
+  tool: ProviderTool;
+  open: boolean;
+  onToggle: () => void;
+  onNavigate: () => void;
+}) {
+  const provider = PROVIDERS[tool];
+
+  return (
+    <SidebarFlyout
+      triggerIcon={<ToolIcon tool={tool} size={18} />}
+      triggerLabel={provider.label}
+      panelTitle={provider.label}
+      open={open}
+      onToggle={onToggle}
+      onClose={onToggle}
+    >
+      {CAPABILITY_ENTRIES.map(([slug, def]) => (
+        <Link key={slug} href={`/capabilities/${slug}/${tool}`} onClick={onNavigate}>
+          <span className={styles.capabilityMenuIcon}>{def.mark}</span>
+          <span>{capabilityLabelForTool(slug, tool)}</span>
+        </Link>
+      ))}
+    </SidebarFlyout>
   );
 }
 
@@ -115,6 +248,8 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials }
   const [historyMenuId, setHistoryMenuId] = React.useState<string | null>(null);
   const [renameId, setRenameId] = React.useState<string | null>(null);
   const [renameValue, setRenameValue] = React.useState("");
+  const [capabilityMenuKey, setCapabilityMenuKey] = React.useState<CapabilitySlug | null>(null);
+  const [providerMenuKey, setProviderMenuKey] = React.useState<ProviderTool | null>(null);
   const activeConversationId = searchParams.get("conversation");
 
   const refreshConversations = React.useCallback(async () => {
@@ -153,6 +288,8 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials }
     setDrawerOpen(false);
     setMenuOpen(false);
     setHistoryMenuId(null);
+    setCapabilityMenuKey(null);
+    setProviderMenuKey(null);
   }, [pathname]);
 
   React.useEffect(() => {
@@ -245,7 +382,13 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials }
           </button>
         </div>
 
-        <div className={styles.sidebarScroll}>
+        <div
+          className={styles.sidebarScroll}
+          onScroll={() => {
+            setCapabilityMenuKey(null);
+            setProviderMenuKey(null);
+          }}
+        >
           <nav className={styles.primaryNav} aria-label="Main">
             <NavItem
               href="/ask-ai"
@@ -271,20 +414,35 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials }
 
           <section className={styles.sidebarSection} aria-labelledby="capabilities-label">
             <h2 id="capabilities-label" className={styles.sectionLabel}>Capabilities</h2>
-            <FilterLink href="/workflows?content_type=Skills" mark="✦" onNavigate={closeDrawer}>Skills</FilterLink>
-            <FilterLink href="/workflows?content_type=Projects" mark="⌁" onNavigate={closeDrawer}>Projects</FilterLink>
-            <FilterLink href="/workflows?content_type=Vibe%20coding" mark="⌘" onNavigate={closeDrawer}>Vibe coding</FilterLink>
-            <FilterLink href="/workflows?content_type=Scheduled%20actions" mark="◴" onNavigate={closeDrawer}>Scheduled actions</FilterLink>
-            <FilterLink href="/workflows?content_type=AI%20agents" mark="◇" onNavigate={closeDrawer}>AI agents</FilterLink>
-            <FilterLink href="/workflows?content_type=Coding%20agents" mark="&lt;⁄&gt;" onNavigate={closeDrawer}>Coding agents</FilterLink>
+            {(["skills", "projects", "vibe-coding", "scheduled-actions", "ai-agents", "coding-agents"] as CapabilitySlug[]).map((slug) => (
+              <CapabilityMenuTrigger
+                key={slug}
+                slug={slug}
+                mark={CAPABILITIES[slug].mark}
+                open={capabilityMenuKey === slug}
+                onToggle={() => setCapabilityMenuKey((current) => (current === slug ? null : slug))}
+                onNavigate={() => {
+                  setCapabilityMenuKey(null);
+                  closeDrawer();
+                }}
+              />
+            ))}
           </section>
 
           <section className={styles.sidebarSection} aria-labelledby="providers-label">
             <h2 id="providers-label" className={styles.sectionLabel}>Unique to each</h2>
-            <FilterLink href="/workflows?q=ChatGPT" mark="◎" onNavigate={closeDrawer}>ChatGPT</FilterLink>
-            <FilterLink href="/workflows?q=Claude" mark="A" onNavigate={closeDrawer}>Claude</FilterLink>
-            <FilterLink href="/workflows?q=Gemini" mark="✦" onNavigate={closeDrawer}>Gemini</FilterLink>
-            <FilterLink href="/workflows?q=Copilot" mark="◈" onNavigate={closeDrawer}>Copilot</FilterLink>
+            {PROVIDER_TOOLS.map((tool) => (
+              <ProviderMenuTrigger
+                key={tool}
+                tool={tool}
+                open={providerMenuKey === tool}
+                onToggle={() => setProviderMenuKey((current) => (current === tool ? null : tool))}
+                onNavigate={() => {
+                  setProviderMenuKey(null);
+                  closeDrawer();
+                }}
+              />
+            ))}
           </section>
 
           {historyAvailable && conversations.length > 0 ? (
