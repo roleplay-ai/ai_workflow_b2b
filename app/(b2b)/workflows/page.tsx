@@ -32,7 +32,7 @@ export default async function WorkflowsPage() {
   ] = await Promise.all([
     supabase
       .from("activities")
-      .select("id, title, description, tools, categories, tags, points, time_estimate_minutes, is_locked, is_featured, published, position, created_at, thumbnail_url")
+      .select("id, title, description, tools, categories, tags, points, time_estimate_minutes, is_locked, is_featured, published, position, created_at, thumbnail_url, content_type")
       .eq("published", true)
       .order("position"),
     supabase.from("tool_logos").select("tool, logo_url"),

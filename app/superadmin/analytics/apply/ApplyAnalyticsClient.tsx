@@ -76,7 +76,12 @@ function DailyTrafficBarChart({ data, color = "#FFCE00" }: { data: { date: strin
 }
 
 const CAT_COLORS: Record<string, string> = {
-  chat: "#6240EA", build: "#23CE68", automate: "#F68A29",
+  Skills: "#6240EA",
+  Projects: "#23CE68",
+  "Vibe coding": "#F68A29",
+  "Scheduled actions": "#0E7490",
+  "AI agents": "#BE185D",
+  "Coding agents": "#1E40AF",
 };
 
 // Derive a stable visitor key: prefer user_id, then IP, then session_id

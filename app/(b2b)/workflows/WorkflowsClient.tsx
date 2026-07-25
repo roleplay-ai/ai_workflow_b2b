@@ -189,6 +189,7 @@ export default function WorkflowsClient({
   const categoryParam = searchParams.get("category");
   const queryParam = searchParams.get("q") ?? "";
   const selectedTag = searchParams.get("tag");
+  const contentTypeParam = searchParams.get("content_type");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
   const [categorySearch, setCategorySearch] = useState("");
   const [workflowSearch, setWorkflowSearch] = useState(queryParam);
@@ -297,6 +298,11 @@ export default function WorkflowsClient({
         (activity.tags ?? []).some((tag) => tag.toLowerCase() === selectedTag.toLowerCase()),
       );
     }
+    if (contentTypeParam) {
+      result = result.filter(
+        (activity) => (activity.content_type ?? "").toLowerCase() === contentTypeParam.toLowerCase(),
+      );
+    }
     const query = workflowSearch.trim().toLowerCase();
     if (query) {
       result = result.filter((activity) =>
@@ -310,7 +316,7 @@ export default function WorkflowsClient({
       );
     }
     return result;
-  }, [activities, selectedCategory, selectedTag, workflowSearch]);
+  }, [activities, selectedCategory, selectedTag, contentTypeParam, workflowSearch]);
 
   const savedActivities = useMemo(() => {
     const activityById = new Map(activities.map((activity) => [activity.id, activity]));
@@ -323,7 +329,7 @@ export default function WorkflowsClient({
     ? activities.find((activity) => activity.id === continueProgress.activityId) ?? null
     : null;
 
-  const isResultView = Boolean(selectedCategory || selectedTag || queryParam.trim());
+  const isResultView = Boolean(selectedCategory || selectedTag || contentTypeParam || queryParam.trim());
   const selectedCategoryMetadata = selectedCategory
     ? metadataByName.get(selectedCategory.toLowerCase())
     : undefined;
@@ -412,11 +418,13 @@ export default function WorkflowsClient({
 
   const resultTitle = selectedCategory
     ? selectedCategory
-    : selectedTag
-      ? selectedTag
-      : queryParam.trim()
-        ? `Results for “${queryParam.trim()}”`
-        : "All workflows";
+    : contentTypeParam
+      ? contentTypeParam
+      : selectedTag
+        ? selectedTag
+        : queryParam.trim()
+          ? `Results for “${queryParam.trim()}”`
+          : "All workflows";
 
   return (
     <>

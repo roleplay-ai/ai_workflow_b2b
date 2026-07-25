@@ -271,12 +271,12 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials }
 
           <section className={styles.sidebarSection} aria-labelledby="capabilities-label">
             <h2 id="capabilities-label" className={styles.sectionLabel}>Capabilities</h2>
-            <FilterLink href="/workflows?q=Skills" mark="✦" onNavigate={closeDrawer}>Skills</FilterLink>
-            <FilterLink href="/workflows?q=Projects" mark="⌁" onNavigate={closeDrawer}>Projects</FilterLink>
-            <FilterLink href="/workflows?q=Vibe%20coding" mark="⌘" onNavigate={closeDrawer}>Vibe coding</FilterLink>
-            <FilterLink href="/workflows?q=Scheduled%20actions" mark="◴" onNavigate={closeDrawer}>Scheduled actions</FilterLink>
-            <FilterLink href="/workflows?q=AI%20Agents" mark="◇" onNavigate={closeDrawer}>AI agents</FilterLink>
-            <FilterLink href="/workflows?q=Coding%20agents" mark="&lt;⁄&gt;" onNavigate={closeDrawer}>Coding agents</FilterLink>
+            <FilterLink href="/workflows?content_type=Skills" mark="✦" onNavigate={closeDrawer}>Skills</FilterLink>
+            <FilterLink href="/workflows?content_type=Projects" mark="⌁" onNavigate={closeDrawer}>Projects</FilterLink>
+            <FilterLink href="/workflows?content_type=Vibe%20coding" mark="⌘" onNavigate={closeDrawer}>Vibe coding</FilterLink>
+            <FilterLink href="/workflows?content_type=Scheduled%20actions" mark="◴" onNavigate={closeDrawer}>Scheduled actions</FilterLink>
+            <FilterLink href="/workflows?content_type=AI%20agents" mark="◇" onNavigate={closeDrawer}>AI agents</FilterLink>
+            <FilterLink href="/workflows?content_type=Coding%20agents" mark="&lt;⁄&gt;" onNavigate={closeDrawer}>Coding agents</FilterLink>
           </section>
 
           <section className={styles.sidebarSection} aria-labelledby="providers-label">

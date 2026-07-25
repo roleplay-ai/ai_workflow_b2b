@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import ActivityEditClient from "./ActivityEditClient";
 import { buildToolSelectOptions, rowsToToolLogoMap } from "@/lib/toolLogos";
+import { ACTIVITY_CONTENT_TYPES } from "@/lib/contentTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -24,12 +25,11 @@ export default async function ActivityEditPage({ params }: { params: Promise<{ i
     .order("step_number", { ascending: true });
 
   // Tool & tag options for the Info dropdowns
-  const [{ data: toolLogoRows }, { data: tagRows }, { data: categoryRows }, { data: functionRows }, { data: contentTypeRows }] = await Promise.all([
+  const [{ data: toolLogoRows }, { data: tagRows }, { data: categoryRows }, { data: functionRows }] = await Promise.all([
     supabase.from("tool_logos").select("tool, logo_url").order("tool"),
     supabase.from("activity_tags").select("name, icon_url").order("name"),
     supabase.from("activity_categories").select("name, icon_url").order("name"),
     supabase.from("activity_functions").select("name, icon_url").order("name"),
-    supabase.from("activities").select("content_type").not("content_type", "is", null).not("content_type", "eq", ""),
   ]);
 
   const toolLogos      = rowsToToolLogoMap(toolLogoRows ?? []);
@@ -37,7 +37,7 @@ export default async function ActivityEditPage({ params }: { params: Promise<{ i
   const tagOptions     = (tagRows ?? []).map(r => ({ name: r.name, imageUrl: r.icon_url || null }));
   const categoryOptions = (categoryRows ?? []).map(r => ({ name: r.name, imageUrl: r.icon_url || null }));
   const functionOptions = (functionRows ?? []).map(r => ({ name: r.name, imageUrl: r.icon_url || null }));
-  const contentTypes    = [...new Set((contentTypeRows ?? []).map(r => r.content_type).filter(Boolean))] as string[];
+  const contentTypes    = [...ACTIVITY_CONTENT_TYPES];
 
   return (
     <ActivityEditClient
