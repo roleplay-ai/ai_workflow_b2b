@@ -117,6 +117,7 @@ function WorkflowCard({
   isCompleted,
   isInProgress,
   isSaved,
+  isSavePending,
   onToggleSave,
 }: {
   activity: Activity;
@@ -126,6 +127,7 @@ function WorkflowCard({
   isCompleted: boolean;
   isInProgress: boolean;
   isSaved: boolean;
+  isSavePending: boolean;
   onToggleSave: (activityId: string) => void;
 }) {
   const tools = normalizeActivityTools(activity.tools);
@@ -139,6 +141,8 @@ function WorkflowCard({
         className={`${styles.saveCardButton} ${isSaved ? styles.saveCardButtonActive : ""}`}
         aria-label={isSaved ? `Remove ${activity.title} from saved workflows` : `Save ${activity.title}`}
         aria-pressed={isSaved}
+        aria-busy={isSavePending}
+        disabled={isSavePending}
         onClick={() => onToggleSave(activity.id)}
       >
         <HeartIcon filled={isSaved} />
@@ -189,6 +193,8 @@ export default function WorkflowsClient({
   const [categorySearch, setCategorySearch] = useState("");
   const [workflowSearch, setWorkflowSearch] = useState(queryParam);
   const [savedIds, setSavedIds] = useState(() => new Set(savedWorkflowIds));
+  const [savePendingIds, setSavePendingIds] = useState(() => new Set<string>());
+  const [saveError, setSaveError] = useState("");
   const [savedDrawerOpen, setSavedDrawerOpen] = useState(false);
   const completedIds = useMemo(() => new Set(completedIdList), [completedIdList]);
   const inProgressIds = useMemo(() => new Set(inProgressIdList), [inProgressIdList]);
@@ -306,10 +312,12 @@ export default function WorkflowsClient({
     return result;
   }, [activities, selectedCategory, selectedTag, workflowSearch]);
 
-  const savedActivities = useMemo(
-    () => activities.filter((activity) => savedIds.has(activity.id)),
-    [activities, savedIds],
-  );
+  const savedActivities = useMemo(() => {
+    const activityById = new Map(activities.map((activity) => [activity.id, activity]));
+    return [...savedIds]
+      .map((activityId) => activityById.get(activityId))
+      .filter((activity): activity is Activity => Boolean(activity));
+  }, [activities, savedIds]);
 
   const continueActivity = continueProgress
     ? activities.find((activity) => activity.id === continueProgress.activityId) ?? null
@@ -336,12 +344,17 @@ export default function WorkflowsClient({
   }
 
   function toggleSaveWorkflow(activityId: string) {
-    if (!userId) return;
+    if (!userId || savePendingIds.has(activityId)) return;
     const wasSaved = savedIds.has(activityId);
+    setSaveError("");
+    setSavePendingIds((current) => new Set(current).add(activityId));
     setSavedIds((current) => {
       const next = new Set(current);
       if (wasSaved) next.delete(activityId);
-      else next.add(activityId);
+      else {
+        next.delete(activityId);
+        return new Set([activityId, ...next]);
+      }
       return next;
     });
 
@@ -356,16 +369,24 @@ export default function WorkflowsClient({
         const body = await response.json() as { saved?: boolean };
         setSavedIds((current) => {
           const next = new Set(current);
-          if (body.saved) next.add(activityId);
-          else next.delete(activityId);
+          next.delete(activityId);
+          if (body.saved) return new Set([activityId, ...next]);
           return next;
         });
       })
       .catch(() => {
+        setSaveError("Your saved workflows could not be updated. Please try again.");
         setSavedIds((current) => {
           const next = new Set(current);
-          if (wasSaved) next.add(activityId);
+          if (wasSaved) return new Set([activityId, ...next]);
           else next.delete(activityId);
+          return next;
+        });
+      })
+      .finally(() => {
+        setSavePendingIds((current) => {
+          const next = new Set(current);
+          next.delete(activityId);
           return next;
         });
       });
@@ -383,6 +404,7 @@ export default function WorkflowsClient({
         isCompleted={completedIds.has(activity.id)}
         isInProgress={inProgressIds.has(activity.id)}
         isSaved={savedIds.has(activity.id)}
+        isSavePending={savePendingIds.has(activity.id)}
         onToggleSave={toggleSaveWorkflow}
       />
     );
@@ -409,13 +431,20 @@ export default function WorkflowsClient({
               </div>
               <div className={styles.headerActions}>
                 {recentlyAdded ? <span className={styles.updatedPill}>Updated this week</span> : null}
-                <button type="button" className={styles.savedTrigger} onClick={() => setSavedDrawerOpen(true)}>
+                <button
+                  type="button"
+                  className={styles.savedTrigger}
+                  aria-expanded={savedDrawerOpen}
+                  aria-controls="saved-workflows-drawer"
+                  onClick={() => setSavedDrawerOpen(true)}
+                >
                   <HeartIcon filled={false} />
                   Saved workflows
                   {savedIds.size > 0 ? <span>{savedIds.size}</span> : null}
                 </button>
               </div>
             </header>
+            {saveError ? <p className={styles.saveError} role="status">{saveError}</p> : null}
 
             <div className={styles.searchBox}>
               <SearchIcon />
@@ -524,11 +553,19 @@ export default function WorkflowsClient({
         tabIndex={savedDrawerOpen ? 0 : -1}
         onClick={() => setSavedDrawerOpen(false)}
       />
-      <aside className={`${styles.savedDrawer} ${savedDrawerOpen ? styles.savedDrawerOpen : ""}`} aria-label="Saved workflows">
+      <aside
+        id="saved-workflows-drawer"
+        className={`${styles.savedDrawer} ${savedDrawerOpen ? styles.savedDrawerOpen : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-hidden={!savedDrawerOpen}
+        aria-labelledby="saved-workflows-title"
+        inert={!savedDrawerOpen}
+      >
         <header>
           <div>
-            <h2>Saved workflows</h2>
-            <p>Workflows you saved by selecting the heart.</p>
+            <h2 id="saved-workflows-title">Saved workflows</h2>
+            <p>Workflows you saved for quick access.</p>
           </div>
           <button type="button" onClick={() => setSavedDrawerOpen(false)} aria-label="Close saved workflows">×</button>
         </header>
@@ -537,9 +574,10 @@ export default function WorkflowsClient({
             <div className={styles.savedList}>{savedActivities.map(renderWorkflowCard)}</div>
           ) : (
             <div className={styles.savedEmpty}>
-              <HeartIcon filled={false} />
+              <span className={styles.savedEmptyIcon}><HeartIcon filled={false} /></span>
               <strong>No saved workflows yet</strong>
-              <span>Select the heart on any workflow to keep it here.</span>
+              <span>Select the heart on any workflow to keep it here for quick access.</span>
+              <button type="button" onClick={() => setSavedDrawerOpen(false)}>Browse workflows</button>
             </div>
           )}
         </div>

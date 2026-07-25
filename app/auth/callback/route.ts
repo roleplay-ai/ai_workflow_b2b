@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getB2BEntryPath } from "@/lib/auth/onboardingGate";
+import { getPostLoginPath } from "@/lib/auth/postLogin";
 import type { Role } from "@/lib/supabase/types";
 import { NextResponse } from "next/server";
 
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
       const role = (profile?.role ?? "user") as Role;
       const destination = user
-        ? await getB2BEntryPath(supabase, user.id, role, requestedPath)
+        ? getPostLoginPath(role, requestedPath)
         : "/workflows";
       return NextResponse.redirect(`${origin}${destination}`);
     }

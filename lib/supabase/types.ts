@@ -90,7 +90,7 @@ export type ActivityFunction = {
   created_at: string;
 };
 
-export type SavedWorkflowSource = "onboarding" | "liked";
+export type SavedWorkflowSource = "liked";
 
 export type UserSavedWorkflow = {
   id: string;

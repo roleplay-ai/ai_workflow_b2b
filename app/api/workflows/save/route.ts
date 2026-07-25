@@ -14,9 +14,23 @@ export async function POST(req: NextRequest) {
     return jsonWithSessionCookies(sessionResponse, { error: "Missing activityId" }, { status: 400 });
   }
 
+  const { data: activity, error: activityError } = await supabase
+    .from("activities")
+    .select("id")
+    .eq("id", activityId)
+    .eq("published", true)
+    .maybeSingle();
+
+  if (activityError) {
+    return jsonWithSessionCookies(sessionResponse, { error: activityError.message }, { status: 500 });
+  }
+  if (!activity) {
+    return jsonWithSessionCookies(sessionResponse, { error: "Workflow not found" }, { status: 404 });
+  }
+
   const { data: existing, error: lookupError } = await supabase
     .from("user_saved_workflows")
-    .select("id")
+    .select("id, source")
     .eq("user_id", user.id)
     .eq("activity_id", activityId)
     .maybeSingle();
@@ -33,7 +47,12 @@ export async function POST(req: NextRequest) {
       .eq("activity_id", activityId);
 
     if (error) return jsonWithSessionCookies(sessionResponse, { error: error.message }, { status: 500 });
-    return jsonWithSessionCookies(sessionResponse, { saved: false });
+
+    // Old onboarding-generated rows are not user saves. The first explicit
+    // heart replaces that legacy row with a genuine liked save.
+    if (existing.source === "liked") {
+      return jsonWithSessionCookies(sessionResponse, { saved: false });
+    }
   }
 
   const { error } = await supabase

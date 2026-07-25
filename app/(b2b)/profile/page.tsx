@@ -45,7 +45,11 @@ export default async function ProfilePage() {
       ? supabase.from("profiles").select("streak_count").eq("id", user.id).single()
       : Promise.resolve({ data: null as { streak_count: number } | null }),
     user
-      ? supabase.from("user_saved_workflows").select("activity_id").eq("user_id", user.id)
+      ? supabase
+          .from("user_saved_workflows")
+          .select("activity_id")
+          .eq("user_id", user.id)
+          .eq("source", "liked")
       : Promise.resolve({ data: [] as { activity_id: string }[] }),
   ]);
 

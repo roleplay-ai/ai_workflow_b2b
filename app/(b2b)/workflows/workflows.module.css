@@ -75,6 +75,17 @@
   background: #f7f7f4;
 }
 
+.saveError {
+  margin: -10px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #f0c8c5;
+  border-radius: 10px;
+  background: #fff7f6;
+  color: #a8342d;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .savedTrigger > span {
   min-width: 20px;
   height: 20px;
@@ -527,6 +538,11 @@
   color: #6b5900;
 }
 
+.saveCardButton:disabled {
+  cursor: wait;
+  opacity: .58;
+}
+
 .workflowCardNavigating {
   pointer-events: none;
   opacity: .72;
@@ -666,10 +682,21 @@
   text-align: center;
 }
 
-.savedEmpty > svg {
-  width: 28px;
-  height: 28px;
+.savedEmptyIcon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
   margin-bottom: 6px;
+  border: 1px solid #ead77d;
+  border-radius: 14px;
+  background: #fff6cf;
+  color: #665600;
+}
+
+.savedEmptyIcon > svg {
+  width: 23px;
+  height: 23px;
 }
 
 .savedEmpty strong {
@@ -681,6 +708,20 @@
   max-width: 260px;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.savedEmpty > button {
+  min-height: 38px;
+  margin-top: 8px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #111;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
 }
 
 .savedTrigger:focus-visible,

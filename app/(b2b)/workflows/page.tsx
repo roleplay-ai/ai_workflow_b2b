@@ -45,6 +45,7 @@ export default async function WorkflowsPage() {
       .from("user_saved_workflows")
       .select("activity_id, created_at")
       .eq("user_id", user.id)
+      .eq("source", "liked")
       .order("created_at", { ascending: false }),
   ]);
 

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getB2BEntryPath } from "@/lib/auth/onboardingGate";
+import { getPostLoginPath } from "@/lib/auth/postLogin";
 import { rowsToToolLogoMap } from "@/lib/toolLogos";
 import type { Role } from "@/lib/supabase/types";
 import { redirect } from "next/navigation";
@@ -19,7 +19,7 @@ export default async function LoginPage({
     const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
     const role = (profile?.role ?? "user") as Role;
     const params = await searchParams;
-    const destination = await getB2BEntryPath(supabase, user.id, role, params.redirect ?? null);
+    const destination = getPostLoginPath(role, params.redirect ?? null);
     redirect(destination);
   }
 
