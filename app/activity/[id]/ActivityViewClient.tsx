@@ -305,108 +305,110 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                 <BackBtn className={s.previewBackButton} />
               </header>
 
-              <div className={s.previewHero}>
-                <div className={s.previewHeroCopy}>
-                  <h1>{activity.title.replace(/\*\*/g, "")}</h1>
-                  {activity.description ? (
-                    <p>{activity.description.replace(/\*\*/g, "").replace(/\n+/g, " ").trim()}</p>
-                  ) : null}
+              <div className={s.previewBody}>
+                <div className={s.previewHero}>
+                  <div className={s.previewHeroCopy}>
+                    <h1>{activity.title.replace(/\*\*/g, "")}</h1>
+                    {activity.description ? (
+                      <p>{activity.description.replace(/\*\*/g, "").replace(/\n+/g, " ").trim()}</p>
+                    ) : null}
+                  </div>
+
+                  {openLink ? (
+                    <a
+                      href={openLink.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={s.previewToolBadge}
+                      aria-label={`Open ${openLink.label}`}
+                    >
+                      <span className={s.previewToolMark}>
+                        {primaryTool ? (
+                          <ToolIcon tool={primaryTool} size={22} logos={toolLogos} insetScale={0.9} />
+                        ) : (
+                          primaryToolLabel.slice(0, 1).toUpperCase()
+                        )}
+                      </span>
+                      <span className={s.previewToolCopy}>
+                        <small>AI used</small>
+                        <strong>{primaryToolLabel}</strong>
+                      </span>
+                    </a>
+                  ) : (
+                    <div className={s.previewToolBadge}>
+                      <span className={s.previewToolMark}>
+                        {primaryTool ? (
+                          <ToolIcon tool={primaryTool} size={22} logos={toolLogos} insetScale={0.9} />
+                        ) : (
+                          primaryToolLabel.slice(0, 1).toUpperCase()
+                        )}
+                      </span>
+                      <span className={s.previewToolCopy}>
+                        <small>AI used</small>
+                        <strong>{primaryToolLabel}</strong>
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {openLink ? (
-                  <a
-                    href={openLink.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={s.previewToolBadge}
-                    aria-label={`Open ${openLink.label}`}
-                  >
-                    <span className={s.previewToolMark}>
-                      {primaryTool ? (
-                        <ToolIcon tool={primaryTool} size={22} logos={toolLogos} insetScale={0.9} />
-                      ) : (
-                        primaryToolLabel.slice(0, 1).toUpperCase()
-                      )}
-                    </span>
-                    <span className={s.previewToolCopy}>
-                      <small>AI used</small>
-                      <strong>{primaryToolLabel}</strong>
-                    </span>
-                  </a>
-                ) : (
-                  <div className={s.previewToolBadge}>
-                    <span className={s.previewToolMark}>
-                      {primaryTool ? (
-                        <ToolIcon tool={primaryTool} size={22} logos={toolLogos} insetScale={0.9} />
-                      ) : (
-                        primaryToolLabel.slice(0, 1).toUpperCase()
-                      )}
-                    </span>
-                    <span className={s.previewToolCopy}>
-                      <small>AI used</small>
-                      <strong>{primaryToolLabel}</strong>
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {whatYouGet.length > 0 ? (
-                <section className={s.previewOutcomes}>
-                  <h2>What you will create</h2>
-                  <div className={s.previewOutcomeGrid}>
-                    {whatYouGet.map((item, index) => (
-                      <article key={`${item.title}-${index}`} className={s.previewOutcomeCard}>
-                        <span className={s.previewOutcomeIcon}>{item.icon || "✨"}</span>
-                        <h3>{item.title}</h3>
-                        {item.description ? <p>{item.description}</p> : null}
-                      </article>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-
-              <div className={`${s.previewActionGrid} ${content?.video_url ? "" : s.previewActionGridSingle}`}>
-                {content?.video_url ? (
-                  <article className={s.previewVideoCard}>
-                    <div className={s.previewVideoStage}>
-                      <span className={s.previewVideoLabel}>Watch video</span>
-                      <button type="button" className={s.previewVideoFrame} onClick={() => setShowVideo(true)} aria-label="Play walkthrough video">
-                        {(videoThumb || activity.thumbnail_url) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={videoThumb ?? activity.thumbnail_url ?? ""} alt="" />
-                        ) : (
-                          <span className={s.previewVideoPlaceholder} />
-                        )}
-                        <span className={s.previewPlayButton}>▶</span>
-                      </button>
+                {whatYouGet.length > 0 ? (
+                  <section className={s.previewOutcomes}>
+                    <h2>What you will create</h2>
+                    <div className={s.previewOutcomeGrid}>
+                      {whatYouGet.map((item, index) => (
+                        <article key={`${item.title}-${index}`} className={s.previewOutcomeCard}>
+                          <span className={s.previewOutcomeIcon}>{item.icon || "✨"}</span>
+                          <h3>{item.title}</h3>
+                          {item.description ? <p>{item.description}</p> : null}
+                        </article>
+                      ))}
                     </div>
-                    <button type="button" className={s.previewVideoFooter} onClick={() => setShowVideo(true)}>
-                      <strong>2-minute walkthrough</strong>
-                      <span>Watch video →</span>
-                    </button>
-                  </article>
+                  </section>
                 ) : null}
 
-                <article className={s.previewStartCard}>
-                  <span className={s.previewGuideLabel}>Guided workflow</span>
-                  <h2>AI-guided workflow</h2>
-                  {activity.points > 0 ? (
-                    <div className={s.previewPointsPill}>⚡ {activity.points} points available</div>
+                <div className={`${s.previewActionGrid} ${content?.video_url ? "" : s.previewActionGridSingle}`}>
+                  {content?.video_url ? (
+                    <article className={s.previewVideoCard}>
+                      <div className={s.previewVideoStage}>
+                        <span className={s.previewVideoLabel}>Watch video</span>
+                        <button type="button" className={s.previewVideoFrame} onClick={() => setShowVideo(true)} aria-label="Play walkthrough video">
+                          {(videoThumb || activity.thumbnail_url) ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={videoThumb ?? activity.thumbnail_url ?? ""} alt="" />
+                          ) : (
+                            <span className={s.previewVideoPlaceholder} />
+                          )}
+                          <span className={s.previewPlayButton}>▶</span>
+                        </button>
+                      </div>
+                      <button type="button" className={s.previewVideoFooter} onClick={() => setShowVideo(true)}>
+                        <strong>2-minute walkthrough</strong>
+                        <span>Watch video →</span>
+                      </button>
+                    </article>
                   ) : null}
-                  <div className={s.previewBrandPanel} aria-hidden="true">
-                    <Image
-                      src="/icon.png"
-                      alt=""
-                      width={58}
-                      height={58}
-                      className={s.previewBrandFavicon}
-                    />
-                  </div>
-                  <button type="button" onClick={startActivity} disabled={isStarting} className={s.previewStartButton}>
-                    Start workflow
-                  </button>
-                  <p className={s.previewStartNote}>Complete the workflow to save your progress.</p>
-                </article>
+
+                  <article className={s.previewStartCard}>
+                    <span className={s.previewGuideLabel}>Guided workflow</span>
+                    <h2>AI-guided workflow</h2>
+                    {activity.points > 0 ? (
+                      <div className={s.previewPointsPill}>⚡ {activity.points} points available</div>
+                    ) : null}
+                    <div className={s.previewBrandPanel} aria-hidden="true">
+                      <Image
+                        src="/icon.png"
+                        alt=""
+                        width={58}
+                        height={58}
+                        className={s.previewBrandFavicon}
+                      />
+                    </div>
+                    <button type="button" onClick={startActivity} disabled={isStarting} className={s.previewStartButton}>
+                      Start workflow
+                    </button>
+                    <p className={s.previewStartNote}>Complete the workflow to save your progress.</p>
+                  </article>
+                </div>
               </div>
             </>
           ) : (
