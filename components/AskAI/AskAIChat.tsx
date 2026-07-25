@@ -366,12 +366,12 @@ export default function AskAIChat({ categories, userId }: Props) {
     return (
       <main className={styles.landingPage}>
         {newChatButton}
+        <div className={styles.landingSpacer} aria-hidden="true" />
         <div className={styles.landingContent}>
           <h1>Ask anything about AI tools</h1>
 
           <div className={styles.landingComposer}>{composer(true)}</div>
           <p className={styles.scopeLine}>Answers questions about AI tools and how to use them</p>
-
           {loadError ? <div className={styles.loadError}>{loadError}</div> : null}
 
           <section className={styles.landingSection} aria-labelledby="popular-questions">
@@ -389,7 +389,7 @@ export default function AskAIChat({ categories, userId }: Props) {
             <section className={`${styles.landingSection} ${styles.categorySection}`} aria-labelledby="compare-by-task">
               <div className={styles.sectionHeading}>
                 <h2 id="compare-by-task">Compare tools by task</h2>
-                <button type="button" onClick={() => openCategory("")}>See all categories</button>
+                <button type="button" onClick={() => openCategory("")}>See all →</button>
               </div>
               <div className={styles.categoryGrid}>
                 {categories.map((category, index) => (
@@ -405,6 +405,7 @@ export default function AskAIChat({ categories, userId }: Props) {
             </section>
           ) : null}
         </div>
+        <div className={styles.landingSpacer} aria-hidden="true" />
       </main>
     );
   }
