@@ -31,7 +31,7 @@ export default function ToolCapabilityClient({ slug, tool, count }: Props) {
           <span className={styles.badge}>{page.badge}</span>
         </div>
 
-        <div className={`${styles.infoGrid} ${page.cards.length === 4 ? styles.infoGridPairs : ""}`}>
+        <div className={`${styles.infoGrid} ${page.cards.length % 2 === 0 && page.cards.length <= 4 ? styles.infoGridPairs : ""}`}>
           {page.cards.map((card) => (
             <article className={styles.infoCard} key={card.heading}>
               <span className={styles.infoCardIcon}>{card.icon}</span>

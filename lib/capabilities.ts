@@ -1115,7 +1115,7 @@ export const PROVIDER_FEATURES: Record<ProviderTool, ProviderFeatureDef[]> = {
         heading: "Explore ChatGPT Sites Workflows",
         description: "Open guided workflows for building, refining, publishing and sharing lightweight websites and apps with ChatGPT Sites.",
       },
-      workflowsHref: "/workflows?tool=chatgpt",
+      workflowsHref: "/workflows?tool=chatgpt&tag=Sites",
     },
     {
       slug: "image-generation",

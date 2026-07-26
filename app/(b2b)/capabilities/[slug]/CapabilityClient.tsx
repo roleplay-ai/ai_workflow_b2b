@@ -38,7 +38,7 @@ export default function CapabilityClient({ slug, totalCount, toolCounts, toolLog
           <span className={styles.badge}>{def.badge}</span>
         </div>
 
-        <div className={`${styles.infoGrid} ${def.cards.length === 4 ? styles.infoGridPairs : ""}`}>
+        <div className={`${styles.infoGrid} ${def.cards.length % 2 === 0 && def.cards.length <= 4 ? styles.infoGridPairs : ""}`}>
           {def.cards.map((card) => (
             <article className={styles.infoCard} key={card.heading}>
               <span className={styles.infoCardIcon}>{card.icon}</span>
