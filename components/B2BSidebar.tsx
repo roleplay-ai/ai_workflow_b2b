@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useNavigationLoading } from "@/components/NavigationLoading";
 import {
   CAPABILITIES,
+  INSIDER_GUIDE_ITEM,
+  PROVIDER_FEATURES,
   PROVIDER_TOOLS,
   PROVIDERS,
   capabilityLabelForTool,
@@ -14,6 +16,7 @@ import {
   type ProviderTool,
 } from "@/lib/capabilities";
 import ToolIcon from "@/components/ToolIcon";
+import type { ToolLogoMap } from "@/lib/toolLogos";
 import styles from "@/components/b2b-shell.module.css";
 
 type Props = {
@@ -21,6 +24,7 @@ type Props = {
   userName: string | null;
   userEmail: string | null;
   userInitials: string;
+  toolLogos: ToolLogoMap;
 };
 
 type ConversationSummary = {
@@ -163,12 +167,14 @@ function CapabilityMenuTrigger({
   open,
   onToggle,
   onNavigate,
+  toolLogos,
 }: {
   slug: CapabilitySlug;
   mark: string;
   open: boolean;
   onToggle: () => void;
   onNavigate: () => void;
+  toolLogos: ToolLogoMap;
 }) {
   const def = CAPABILITIES[slug];
 
@@ -183,7 +189,7 @@ function CapabilityMenuTrigger({
     >
       {PROVIDER_TOOLS.map((tool) => (
         <Link key={tool} href={`/capabilities/${slug}/${tool}`} onClick={onNavigate}>
-          <span className={styles.capabilityMenuIcon}><ToolIcon tool={tool} size={18} /></span>
+          <span className={styles.capabilityMenuIcon}><ToolIcon tool={tool} size={18} logos={toolLogos} /></span>
           <span>{capabilityLabelForTool(slug, tool)}</span>
         </Link>
       ))}
@@ -191,35 +197,41 @@ function CapabilityMenuTrigger({
   );
 }
 
-const CAPABILITY_ENTRIES = Object.entries(CAPABILITIES) as [CapabilitySlug, (typeof CAPABILITIES)[CapabilitySlug]][];
-
-/** Sidebar trigger for a Provider (tool): opens a menu of that tool's capabilities before landing on an info page. */
+/** Sidebar trigger for a Provider (tool): opens a menu of that tool's own distinct features, mirroring the reference design's "Unique to each" panel exactly (Insider Guide + that tool's specific features — not the shared capabilities). */
 function ProviderMenuTrigger({
   tool,
   open,
   onToggle,
   onNavigate,
+  toolLogos,
 }: {
   tool: ProviderTool;
   open: boolean;
   onToggle: () => void;
   onNavigate: () => void;
+  toolLogos: ToolLogoMap;
 }) {
   const provider = PROVIDERS[tool];
+  const features = PROVIDER_FEATURES[tool];
 
   return (
     <SidebarFlyout
-      triggerIcon={<ToolIcon tool={tool} size={18} />}
+      triggerIcon={<ToolIcon tool={tool} size={18} logos={toolLogos} />}
       triggerLabel={provider.label}
       panelTitle={provider.label}
       open={open}
       onToggle={onToggle}
       onClose={onToggle}
     >
-      {CAPABILITY_ENTRIES.map(([slug, def]) => (
-        <Link key={slug} href={`/capabilities/${slug}/${tool}`} onClick={onNavigate}>
-          <span className={styles.capabilityMenuIcon}>{def.mark}</span>
-          <span>{capabilityLabelForTool(slug, tool)}</span>
+      <Link href={`/capabilities/tool/${tool}/insider-guide`} onClick={onNavigate}>
+        <span className={styles.capabilityMenuIcon}>{INSIDER_GUIDE_ITEM.mark}</span>
+        <span>{INSIDER_GUIDE_ITEM.label}</span>
+      </Link>
+      {features.map((feature) => (
+        <Link key={feature.slug} href={`/capabilities/tool/${tool}/${feature.slug}`} onClick={onNavigate}>
+          <span className={styles.capabilityMenuIcon}>{feature.mark}</span>
+          <span>{feature.label}</span>
+          {feature.isNew ? <span className={styles.capabilityMenuNewBadge}>New</span> : null}
         </Link>
       ))}
     </SidebarFlyout>
@@ -234,7 +246,7 @@ function Icon({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function B2BSidebar({ userId, userName, userEmail, userInitials }: Props) {
+export default function B2BSidebar({ userId, userName, userEmail, userInitials, toolLogos }: Props) {
   const supabase = createClient();
   const pathname = usePathname();
   const router = useRouter();
@@ -425,6 +437,7 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials }
                   setCapabilityMenuKey(null);
                   closeDrawer();
                 }}
+                toolLogos={toolLogos}
               />
             ))}
           </section>
@@ -441,6 +454,7 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials }
                   setProviderMenuKey(null);
                   closeDrawer();
                 }}
+                toolLogos={toolLogos}
               />
             ))}
           </section>

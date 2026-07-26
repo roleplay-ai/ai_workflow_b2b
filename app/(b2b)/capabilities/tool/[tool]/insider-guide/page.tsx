@@ -1,12 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isProviderTool, type ProviderTool } from "@/lib/capabilities";
-import { rowsToToolLogoMap } from "@/lib/toolLogos";
-import ProviderClient from "./ProviderClient";
+import InsiderGuideClient from "./InsiderGuideClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProviderPage({ params }: { params: Promise<{ tool: string }> }) {
+export default async function InsiderGuidePage({ params }: { params: Promise<{ tool: string }> }) {
   const { tool } = await params;
   if (!isProviderTool(tool)) notFound();
 
@@ -16,7 +15,5 @@ export default async function ProviderPage({ params }: { params: Promise<{ tool:
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: toolLogoRows } = await supabase.from("tool_logos").select("tool, logo_url");
-
-  return <ProviderClient tool={tool as ProviderTool} toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])} />;
+  return <InsiderGuideClient tool={tool as ProviderTool} />;
 }

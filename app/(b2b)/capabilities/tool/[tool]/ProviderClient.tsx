@@ -3,23 +3,18 @@
 import Link from "next/link";
 import B2BTopbar from "@/components/B2BTopbar";
 import ToolIcon from "@/components/ToolIcon";
-import {
-  CAPABILITIES,
-  CONTENT_TYPE_TO_SLUG,
-  PROVIDERS,
-  capabilityLabelForTool,
-  type ProviderTool,
-} from "@/lib/capabilities";
+import { INSIDER_GUIDE_ITEM, PROVIDER_FEATURES, PROVIDERS, type ProviderTool } from "@/lib/capabilities";
+import type { ToolLogoMap } from "@/lib/toolLogos";
 import styles from "../../capabilities.module.css";
 
 type Props = {
   tool: ProviderTool;
-  capabilityCounts: Record<string, number>;
+  toolLogos: ToolLogoMap;
 };
 
-export default function ProviderClient({ tool, capabilityCounts }: Props) {
+export default function ProviderClient({ tool, toolLogos }: Props) {
   const provider = PROVIDERS[tool];
-  const capabilityEntries = Object.values(CAPABILITIES);
+  const features = PROVIDER_FEATURES[tool];
 
   return (
     <>
@@ -34,27 +29,24 @@ export default function ProviderClient({ tool, capabilityCounts }: Props) {
             <p>{provider.blurb}</p>
           </div>
           <span className={styles.badge}>
-            <ToolIcon tool={tool} size={18} />
+            <ToolIcon tool={tool} size={18} logos={toolLogos} />
             <span style={{ marginLeft: 7 }}>{provider.label}</span>
           </span>
         </div>
 
-        <div className={styles.sectionHeading}>
-          <h2>Capabilities</h2>
-        </div>
         <div className={styles.tileGrid}>
-          {capabilityEntries.map((capability) => {
-            const slug = CONTENT_TYPE_TO_SLUG[capability.contentType];
-            const label = capabilityLabelForTool(slug, tool);
-            const count = capabilityCounts[capability.contentType] ?? 0;
-            return (
-              <Link key={slug} href={`/capabilities/${slug}/${tool}`} className={styles.tile}>
-                <span className={styles.tileIcon}>{capability.mark}</span>
-                <strong>{label}</strong>
-                <span>{count} workflow{count === 1 ? "" : "s"}</span>
-              </Link>
-            );
-          })}
+          <Link href={`/capabilities/tool/${tool}/insider-guide`} className={styles.tile}>
+            <span className={styles.tileIcon}>{INSIDER_GUIDE_ITEM.mark}</span>
+            <strong>{INSIDER_GUIDE_ITEM.label}</strong>
+            <span>Plans, launches and practice notes</span>
+          </Link>
+          {features.map((feature) => (
+            <Link key={feature.slug} href={`/capabilities/tool/${tool}/${feature.slug}`} className={styles.tile}>
+              <span className={styles.tileIcon}>{feature.mark}</span>
+              <strong>{feature.label}</strong>
+              <span>{feature.badge}</span>
+            </Link>
+          ))}
         </div>
       </main>
     </>

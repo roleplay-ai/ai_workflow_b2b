@@ -9,15 +9,17 @@ import {
 } from "@/lib/capabilities";
 import B2BTopbar from "@/components/B2BTopbar";
 import ToolIcon from "@/components/ToolIcon";
+import type { ToolLogoMap } from "@/lib/toolLogos";
 import styles from "../capabilities.module.css";
 
 type Props = {
   slug: CapabilitySlug;
   totalCount: number;
   toolCounts: Record<string, number>;
+  toolLogos: ToolLogoMap;
 };
 
-export default function CapabilityClient({ slug, totalCount, toolCounts }: Props) {
+export default function CapabilityClient({ slug, totalCount, toolCounts, toolLogos }: Props) {
   const def = CAPABILITIES[slug];
   const workflowsHref = `/workflows?content_type=${encodeURIComponent(def.contentType)}`;
 
@@ -36,7 +38,7 @@ export default function CapabilityClient({ slug, totalCount, toolCounts }: Props
           <span className={styles.badge}>{def.badge}</span>
         </div>
 
-        <div className={styles.infoGrid}>
+        <div className={`${styles.infoGrid} ${def.cards.length === 4 ? styles.infoGridPairs : ""}`}>
           {def.cards.map((card) => (
             <article className={styles.infoCard} key={card.heading}>
               <span className={styles.infoCardIcon}>{card.icon}</span>
@@ -57,7 +59,7 @@ export default function CapabilityClient({ slug, totalCount, toolCounts }: Props
             const count = toolCounts[tool] ?? 0;
             return (
               <Link key={tool} href={`/capabilities/${slug}/${tool}`} className={styles.tile}>
-                <span className={styles.tileIcon}><ToolIcon tool={tool} size={22} /></span>
+                <span className={styles.tileIcon}><ToolIcon tool={tool} size={22} logos={toolLogos} /></span>
                 <strong>{label}</strong>
                 <span>{count} workflow{count === 1 ? "" : "s"}</span>
               </Link>

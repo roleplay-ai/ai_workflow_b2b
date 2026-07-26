@@ -442,6 +442,17 @@
   overflow: hidden;
 }
 
+.capabilityMenuNewBadge {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #ffce00;
+  color: #221d23;
+  font-size: 9.5px;
+  font-weight: 750;
+}
+
 .profileFooter {
   position: relative;
   padding: 11px 12px 13px;
