@@ -7,6 +7,9 @@ export async function POST(req: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return jsonWithSessionCookies(sessionResponse, { error: "Unauthorized" }, { status: 401 });
+  if (user.is_anonymous) {
+    return jsonWithSessionCookies(sessionResponse, { error: "Log in to contact our team.", code: "LOGIN_REQUIRED" }, { status: 401 });
+  }
 
   const replyToEmail = user.email ?? "";
   if (!isValidEmail(replyToEmail)) {

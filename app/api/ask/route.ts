@@ -44,6 +44,30 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return jsonWithSessionCookies(sessionResponse, { error: "Unauthorized" }, { status: 401 });
 
+  // Anonymous (no-account) visitors get a handful of free questions per rolling
+  // 24h day before they're required to log in — checked before any other work
+  // so a visitor who's already hit the wall doesn't pay for an embedding/model
+  // call. Resets daily rather than being a lifetime cap.
+  let remainingFreeChats: number | undefined;
+  if (user.is_anonymous) {
+    const anonDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count: anonUserMessageCount } = await supabase
+      .from("kb_chat_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("role", "user")
+      .gte("created_at", anonDayAgo);
+
+    if ((anonUserMessageCount ?? 0) >= ASK_LIMITS.anonymousFreeMessagesPerDay) {
+      return jsonWithSessionCookies(
+        sessionResponse,
+        { error: "You've used your free questions — log in to keep chatting.", code: "FREE_LIMIT_REACHED" },
+        { status: 403 },
+      );
+    }
+    remainingFreeChats = ASK_LIMITS.anonymousFreeMessagesPerDay - (anonUserMessageCount ?? 0) - 1;
+  }
+
   const body = (await req.json().catch(() => ({}))) as {
     question?: string;
     sessionId?: string;
@@ -421,5 +445,5 @@ ${workflowsBlock}`;
     }
   }
 
-  return jsonWithSessionCookies(sessionResponse, { answer, citations, suggestedWorkflows });
+  return jsonWithSessionCookies(sessionResponse, { answer, citations, suggestedWorkflows, remainingFreeChats });
 }

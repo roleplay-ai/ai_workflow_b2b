@@ -6,6 +6,7 @@ export const ASK_LIMITS = {
   maxWorkflowContextChars: 500,
   hourlyUserMessages: 50,
   dailyUserMessages: 100,
+  anonymousFreeMessagesPerDay: 4,
   maxWebSearchUses: 5,
   minRepeatIntervalMs: 3000,
   maxSupportContextChars: 500,

@@ -758,6 +758,21 @@
   color: #c39f00;
 }
 
+.freeChatsPill {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border-radius: 9px;
+  font-size: 11.5px;
+  font-weight: 740;
+  white-space: nowrap;
+  border: 1px solid #d9cdfa;
+  background: #f1ecff;
+  color: #4b3ea6;
+}
+
 .mobileMenuButton {
   display: none;
   width: 38px;

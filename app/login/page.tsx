@@ -15,7 +15,7 @@ export default async function LoginPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (user) {
+  if (user && !user.is_anonymous) {
     const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
     const role = (profile?.role ?? "user") as Role;
     const params = await searchParams;

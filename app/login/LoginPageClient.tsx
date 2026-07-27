@@ -54,13 +54,13 @@ type Props = {
 };
 
 function safeRedirect(raw: string | null): string {
-  if (!raw) return "/workflows";
+  if (!raw) return "/ask-ai";
   try {
     const url = new URL(raw, window.location.origin);
-    if (url.origin !== window.location.origin) return "/workflows";
+    if (url.origin !== window.location.origin) return "/ask-ai";
     return url.pathname + url.search;
   } catch {
-    return "/workflows";
+    return "/ask-ai";
   }
 }
 
@@ -143,7 +143,7 @@ export default function LoginPageClient({ toolLogos, featuredTags }: Props) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [redirectTo, setRedirectTo] = useState("/workflows");
+  const [redirectTo, setRedirectTo] = useState("/ask-ai");
   const [focused, setFocused] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(true);
   const supabase = createClient();

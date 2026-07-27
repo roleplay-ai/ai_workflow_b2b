@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import B2BTopbar from "@/components/B2BTopbar";
 import AskAIChat from "@/components/AskAI/AskAIChat";
+import { ASK_LIMITS } from "@/lib/ask/guardrails";
 
 export const dynamic = "force-dynamic";
 
@@ -146,11 +147,24 @@ export default async function AskAIPage() {
 
   const categories = matchReferenceCategories(categoryRows);
 
+  const isAnonymous = user.is_anonymous === true;
+  let freeChatsLeft: number | null = null;
+  if (isAnonymous) {
+    const anonDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count: anonUserMessageCount } = await supabase
+      .from("kb_chat_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("role", "user")
+      .gte("created_at", anonDayAgo);
+    freeChatsLeft = Math.max(0, ASK_LIMITS.anonymousFreeMessagesPerDay - (anonUserMessageCount ?? 0));
+  }
+
   return (
     <>
-      <B2BTopbar />
+      <B2BTopbar isAnonymous={isAnonymous} freeChatsLeft={freeChatsLeft} />
       <Suspense fallback={null}>
-        <AskAIChat categories={categories} userId={user.id} />
+        <AskAIChat categories={categories} userId={user.id} isAnonymous={isAnonymous} />
       </Suspense>
     </>
   );
