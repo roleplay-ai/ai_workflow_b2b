@@ -18,6 +18,8 @@ export default async function UpdatesPage() {
     { data: toolLogoRows },
     { data: featuredActivities },
     { data: deepDives },
+    { data: fluencyModules },
+    { data: fluencyProgress },
     { data: masteryProgress },
     { data: masteryProfile },
   ] = await Promise.all([
@@ -58,6 +60,15 @@ export default async function UpdatesPage() {
       .eq("published", true)
       .order("position"),
     supabase
+      .from("fluency_modules")
+      .select("id, title, description, emoji, concepts, sort_order, is_locked, next_module_hint, html_path")
+      .eq("published", true)
+      .order("sort_order"),
+    supabase
+      .from("user_fluency_progress")
+      .select("module_id")
+      .eq("user_id", user.id),
+    supabase
       .from("ai_mastery_progress")
       .select("module_id")
       .eq("user_id", user.id),
@@ -82,6 +93,8 @@ export default async function UpdatesPage() {
       toolLogos={toolLogos}
       deepDives={(deepDives ?? []) as any}
       newActivities={(featuredActivities ?? []) as any}
+      fluencyModules={(fluencyModules ?? []) as any}
+      completedFluencyModuleIds={(fluencyProgress ?? []).map((r: any) => r.module_id as string)}
       masteryCompletedCount={(masteryProgress ?? []).length}
       masteryCompletedModuleIds={(masteryProgress ?? []).map((r: any) => r.module_id as string)}
       masteryTotalModules={TOTAL_MODULES}

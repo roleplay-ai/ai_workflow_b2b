@@ -2,10 +2,12 @@
 
 import { useRef, useState, useMemo, useEffect } from "react";
 import B2BTopbar from "@/components/B2BTopbar";
+import ModuleHtmlModal from "@/components/ModuleHtmlModal";
 import { parseNewsContent, formatBriefNewsDate, safeExternalUrl } from "@/components/BriefNewsCard";
 import { normalizeToolSlug } from "@/lib/tools";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import { trackFluencyView } from "@/lib/trackFluencyView";
+import { createClient } from "@/lib/supabase/client";
 import { COURSE_PARTS, getAllModules, type CourseModule } from "@/lib/ai-mastery-course";
 import "./updates.css";
 
@@ -54,6 +56,18 @@ type ToolDeepDive = {
   link_type: "external" | "html" | null;
 };
 
+type FluencyModule = {
+  id: string;
+  title: string;
+  description: string | null;
+  emoji: string;
+  concepts: string[];
+  sort_order: number;
+  is_locked: boolean;
+  next_module_hint: string | null;
+  html_path: string | null;
+};
+
 type Props = {
   brief: Brief | null;
   videos: Video[];
@@ -62,6 +76,8 @@ type Props = {
   toolLogos: ToolLogoMap;
   deepDives?: ToolDeepDive[];
   newActivities?: NewActivity[];
+  fluencyModules: FluencyModule[];
+  completedFluencyModuleIds: string[];
   masteryCompletedCount: number;
   masteryCompletedModuleIds: string[];
   masteryTotalModules: number;
@@ -90,19 +106,6 @@ const GUIDE_ICON_SYMBOLS = ["✦", "●", "✧", "◆"];
 const THEME_TO_SLUG: Record<string, string> = {
   claude: "claude", gpt: "chatgpt", gemini: "gemini", copilot: "copilot",
 };
-
-const FOUNDATION_TOPICS = [
-  { icon: "◐", title: "Tokens", description: "Understand how AI breaks prompts into smaller pieces and why this affects cost and performance.", duration: "5 min" },
-  { icon: "▣", title: "Context Window", description: "Learn how much information an AI model can consider at one time.", duration: "6 min" },
-  { icon: "⚒", title: "Tool Calling", description: "See how chatbots use external tools to search, calculate, read files, or take actions.", duration: "7 min" },
-  { icon: "◉", title: "AI Agents", description: "Understand how agents plan, use tools, and complete multi-step tasks.", duration: "8 min" },
-  { icon: "⌁", title: "API", description: "Learn how software connects to AI models and sends instructions programmatically.", duration: "6 min" },
-  { icon: "✦", title: "Generative AI vs Other AI", description: "Understand the difference between prediction systems and content-generating systems.", duration: "5 min" },
-  { icon: "▧", title: "Image Generation", description: "See how models turn language into images and why prompts shape composition.", duration: "7 min" },
-  { icon: "🧠", title: "AI Memory", description: "Learn the difference between chat history, saved memory, and temporary context.", duration: "6 min" },
-  { icon: "⌨", title: "Vibe Coding", description: "Understand how non-coders can build simple tools by describing what they want.", duration: "6 min" },
-  { icon: "↗", title: "AI Economics", description: "Understand tokens, infrastructure costs, subscriptions, and why pricing changes.", duration: "8 min" },
-] as const;
 
 const WORK_QUESTIONS = [
   {
@@ -612,7 +615,7 @@ function NewsPanel({ brief }: { brief: Brief | null }) {
       </div>
 
       {items.length === 0 ? (
-        <div className="upd-foundation-card" style={{ justifyContent: "center", color: "#746F78" }}>No updates available yet.</div>
+        <div className="upd-foundation-card" style={{ justifyContent: "center", color: "#746F78", cursor: "default" }}>No updates available yet.</div>
       ) : (
         <div className="upd-news-grid">
           {items.map(item => {
@@ -656,7 +659,7 @@ function VideosPanel({ videos }: { videos: Video[] }) {
       </div>
 
       {videos.length === 0 ? (
-        <div className="upd-foundation-card" style={{ justifyContent: "center", color: "#746F78" }}>No videos available yet.</div>
+        <div className="upd-foundation-card" style={{ justifyContent: "center", color: "#746F78", cursor: "default" }}>No videos available yet.</div>
       ) : (
         <div className="upd-vgrid">
           {videos.map((v, i) => {
@@ -723,7 +726,7 @@ function ToolsPanel({
       </div>
 
       {tools.length === 0 ? (
-        <div className="upd-foundation-card" style={{ justifyContent: "center", color: "#746F78" }}>No tools available yet.</div>
+        <div className="upd-foundation-card" style={{ justifyContent: "center", color: "#746F78", cursor: "default" }}>No tools available yet.</div>
       ) : (
         <div className="upd-tgrid">
           {tools.map(t => (
@@ -771,7 +774,14 @@ function ToolsPanel({
 
 // ── AI Foundations tab ─────────────────────────────────────────────────────────
 
-function FoundationsPanel() {
+function FoundationsPanel({
+  modules, completedModuleIds,
+}: {
+  modules: FluencyModule[];
+  completedModuleIds: string[];
+}) {
+  const [openModule, setOpenModule] = useState<FluencyModule | null>(null);
+  const [completed, setCompleted] = useState<Set<string>>(() => new Set(completedModuleIds));
   const questionRefs = useRef<(HTMLDetailsElement | null)[]>([]);
 
   function handleToggle(index: number) {
@@ -780,6 +790,19 @@ function FoundationsPanel() {
     questionRefs.current.forEach((el, i) => { if (el && i !== index) el.open = false; });
   }
 
+  function openModuleAndMarkComplete(mod: FluencyModule) {
+    setOpenModule(mod);
+    if (completed.has(mod.id)) return;
+    setCompleted(prev => new Set(prev).add(mod.id));
+    const supabase = createClient();
+    void supabase.rpc("complete_fluency_module", { p_module_id: mod.id });
+  }
+
+  const sortedModules = useMemo(
+    () => [...modules].sort((a, b) => a.sort_order - b.sort_order),
+    [modules],
+  );
+
   return (
     <section>
       <div className="upd-intro">
@@ -787,24 +810,59 @@ function FoundationsPanel() {
           <h2>AI Foundations</h2>
           <p>Understand the core ideas behind modern AI before applying them at work.</p>
         </div>
-        <span className="upd-badge">{FOUNDATION_TOPICS.length} essential topics</span>
+        <span className="upd-badge">{completed.size} of {sortedModules.length} completed</span>
       </div>
 
-      <div className="upd-foundation-grid">
-        {FOUNDATION_TOPICS.map((topic) => (
-          <article className="upd-foundation-card" key={topic.title}>
-            <div className="upd-foundation-icon" aria-hidden="true">{topic.icon}</div>
-            <div>
-              <h3>{topic.title}</h3>
-              <p>{topic.description}</p>
-              <div className="upd-foundation-meta">
-                <span>{topic.duration}</span>
-                <span>Included in full course</span>
-              </div>
-            </div>
-          </article>
-        ))}
-      </div>
+      {sortedModules.length === 0 ? (
+        <div className="upd-foundation-card" style={{ justifyContent: "center", color: "#746F78", cursor: "default" }}>No foundation modules published yet.</div>
+      ) : (
+        <div className="upd-foundation-grid">
+          {sortedModules.map((mod) => {
+            const isDone = completed.has(mod.id);
+            if (mod.is_locked) {
+              return (
+                <div className="upd-foundation-card" key={mod.id} style={{ cursor: "default", opacity: 0.6 }}>
+                  <div className="upd-foundation-icon" aria-hidden="true">{mod.emoji}</div>
+                  <div>
+                    <h3>{mod.title}</h3>
+                    <p>{mod.description || (mod.concepts.length > 0 ? mod.concepts.join(" · ") : "")}</p>
+                    <div className="upd-foundation-meta">
+                      <span>🔒 Locked</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <button
+                type="button"
+                className="upd-foundation-card"
+                key={mod.id}
+                onClick={() => openModuleAndMarkComplete(mod)}
+              >
+                <div className="upd-foundation-icon" aria-hidden="true">{mod.emoji}</div>
+                <div>
+                  <h3>{mod.title}</h3>
+                  <p>{mod.description || (mod.concepts.length > 0 ? mod.concepts.join(" · ") : "")}</p>
+                  <div className="upd-foundation-meta">
+                    {mod.concepts.length > 0 ? <span>{mod.concepts.length} concepts</span> : null}
+                    <span>{isDone ? "Completed" : "Start"}</span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {openModule && (
+        <ModuleHtmlModal
+          moduleId={openModule.id}
+          moduleTitle={openModule.title}
+          moduleEmoji={openModule.emoji}
+          onClose={() => setOpenModule(null)}
+        />
+      )}
 
       {/*
       <div className="upd-subsection">
@@ -987,6 +1045,8 @@ export default function UpdatesClient({
   toolLogos,
   deepDives = [],
   newActivities = [],
+  fluencyModules,
+  completedFluencyModuleIds,
   masteryCompletedCount,
   masteryCompletedModuleIds,
   masteryTotalModules,
@@ -1042,7 +1102,9 @@ export default function UpdatesClient({
           {activeTab === "tools" && (
             <ToolsPanel tools={tools} toolGuides={toolGuides} toolLogos={toolLogos} deepDiveByTool={deepDiveByTool} />
           )}
-          {activeTab === "foundations" && <FoundationsPanel />}
+          {activeTab === "foundations" && (
+            <FoundationsPanel modules={fluencyModules} completedModuleIds={completedFluencyModuleIds} />
+          )}
           {activeTab === "course" && (
             <CoursePanel
               completedCount={masteryCompletedCount}
