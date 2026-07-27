@@ -17,7 +17,15 @@ import {
 } from "@/lib/capabilities";
 import ToolIcon from "@/components/ToolIcon";
 import type { ToolLogoMap } from "@/lib/toolLogos";
+import PersonalizationModal, { type PersonalizationKey } from "@/components/PersonalizationModal";
 import styles from "@/components/b2b-shell.module.css";
+
+const PERSONALIZATION_ITEMS: { key: PersonalizationKey; icon: string; name: string; description: string }[] = [
+  { key: "customInstructions", icon: "✎", name: "Custom Instructions", description: "Your fixed response preferences" },
+  { key: "userProfile", icon: "◉", name: "User Profile", description: "A profile that updates over time" },
+  { key: "memoryFiles", icon: "▤", name: "Memory Files", description: "Detailed context pulled when relevant" },
+  { key: "importMemory", icon: "⇩", name: "Import Memory", description: "Bring useful context from another AI" },
+];
 
 type Props = {
   userId: string;
@@ -262,6 +270,7 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
   const [renameValue, setRenameValue] = React.useState("");
   const [capabilityMenuKey, setCapabilityMenuKey] = React.useState<CapabilitySlug | null>(null);
   const [providerMenuKey, setProviderMenuKey] = React.useState<ProviderTool | null>(null);
+  const [personalizationOpen, setPersonalizationOpen] = React.useState<PersonalizationKey | null>(null);
   const activeConversationId = searchParams.get("conversation");
 
   const refreshConversations = React.useCallback(async () => {
@@ -575,6 +584,28 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
                   <strong>{userName ?? "User"}</strong>
                   <span>{userEmail}</span>
                 </div>
+
+                <div className={styles.profileMenuSectionLabel}>Personalization</div>
+                {PERSONALIZATION_ITEMS.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    className={styles.profileMenuItem}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setPersonalizationOpen(item.key);
+                    }}
+                  >
+                    <span className={styles.profileMenuItemIcon} aria-hidden="true">{item.icon}</span>
+                    <span className={styles.profileMenuItemCopy}>
+                      <span className={styles.profileMenuItemName}>{item.name}</span>
+                      <span className={styles.profileMenuItemDesc}>{item.description}</span>
+                    </span>
+                  </button>
+                ))}
+
+                <div className={styles.profileMenuDivider} />
+
                 <Link className={styles.profileMenuItem} href="/profile" onClick={goToProfile}>
                   <Icon><circle cx="9" cy="6" r="3" /><path d="M3.5 16c.3-3.2 2.4-5 5.5-5s5.2 1.8 5.5 5" /></Icon>
                   View profile
@@ -599,6 +630,10 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
           </button>
         </div>
       </aside>
+
+      {personalizationOpen ? (
+        <PersonalizationModal personalizationKey={personalizationOpen} onClose={() => setPersonalizationOpen(null)} />
+      ) : null}
     </>
   );
 }

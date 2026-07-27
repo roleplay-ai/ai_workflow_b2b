@@ -2,10 +2,11 @@
 
 import { useRef, useState, useMemo, useEffect } from "react";
 import B2BTopbar from "@/components/B2BTopbar";
-import BriefNewsCard, { type BriefNewsItem } from "@/components/BriefNewsCard";
+import { parseNewsContent, formatBriefNewsDate, safeExternalUrl } from "@/components/BriefNewsCard";
 import { normalizeToolSlug } from "@/lib/tools";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import { trackFluencyView } from "@/lib/trackFluencyView";
+import { COURSE_PARTS, getAllModules, type CourseModule } from "@/lib/ai-mastery-course";
 import "./updates.css";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -62,18 +63,27 @@ type Props = {
   deepDives?: ToolDeepDive[];
   newActivities?: NewActivity[];
   masteryCompletedCount: number;
+  masteryCompletedModuleIds: string[];
   masteryTotalModules: number;
   masteryApproved: boolean;
   masteryRequested: boolean;
 };
+
+type TabKey = "news" | "videos" | "tools" | "foundations" | "course";
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "news", label: "News" },
+  { key: "videos", label: "Latest Videos" },
+  { key: "tools", label: "Popular Tools" },
+  { key: "foundations", label: "AI Foundations" },
+  { key: "course", label: "Course" },
+];
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const GROUP_ACCENT: Record<string, string> = {
   Features: "#A855F7", Apps: "#EC4899", Workflows: "#F68A29", Skills: "#3699FC",
 };
-
-const TOOLS_PAGE_SIZE = 10;
 
 const GUIDE_ICON_SYMBOLS = ["✦", "●", "✧", "◆"];
 
@@ -184,7 +194,12 @@ function resolveGuideSlug(guide: ToolGuide): string {
   return normalizeToolSlug(guide.name);
 }
 
-// ── Section header ─────────────────────────────────────────────────────────────
+function extractYouTubeId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+// ── Section header (used for sub-sections nested inside a tab) ─────────────────
 
 function SectionHeader({ label, title, subtitle }: { label: string; title: string; subtitle: string }) {
   return (
@@ -348,87 +363,6 @@ function ToolModal({ tool, onClose }: { tool: Tool; onClose: () => void }) {
         </div>
       </div>
     </div>
-  );
-}
-
-// ── Tools Section ──────────────────────────────────────────────────────────────
-
-function ToolsSection({ tools, onOpenTool }: { tools: Tool[]; onOpenTool: (t: Tool) => void }) {
-  const categories = useMemo(
-    () => ["All", ...Array.from(new Set(tools.map(t => t.category_label)))],
-    [tools],
-  );
-  const [filter, setFilter] = useState("All");
-  const [visibleCount, setVisibleCount] = useState(TOOLS_PAGE_SIZE);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setVisibleCount(TOOLS_PAGE_SIZE);
-    scrollRef.current?.scrollTo({ left: 0 });
-  }, [filter]);
-
-  const filtered = useMemo(
-    () => filter === "All" ? tools : tools.filter(t => t.category_label === filter),
-    [tools, filter],
-  );
-  const visibleItems = filtered.slice(0, visibleCount);
-  const hasMore = visibleCount < filtered.length;
-
-  function scroll(dir: "left" | "right") {
-    const row = scrollRef.current;
-    if (!row) return;
-    if (dir === "right") {
-      const atEnd = row.scrollLeft + row.clientWidth >= row.scrollWidth - 10;
-      if (atEnd && hasMore) { setVisibleCount(c => Math.min(filtered.length, c + TOOLS_PAGE_SIZE)); return; }
-    }
-    row.scrollBy({ left: dir === "left" ? -330 : 330, behavior: "smooth" });
-  }
-
-  return (
-    <section id="tools" style={{ marginBottom: 60 }}>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 22, marginBottom: 16 }}>
-        <SectionHeader label="Tools" title="Most Useful Tools" subtitle="AI products worth trying for real work." />
-      </div>
-
-      {/* Filter chips */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-        {categories.map(cat => (
-          <button
-            key={cat}
-            onClick={() => setFilter(cat)}
-            style={{
-              padding: "8px 18px", borderRadius: 999, fontSize: 12, fontWeight: 750,
-              border: "1px solid", cursor: "pointer", transition: "all .15s",
-              background: filter === cat ? "#221D23" : "#fff",
-              color: filter === cat ? "#FFCE00" : "#221D23",
-              borderColor: filter === cat ? "#221D23" : "#E9E4DC",
-              fontFamily: "inherit",
-            }}
-          >{cat}</button>
-        ))}
-      </div>
-
-      {/* Scroll row */}
-      <div className="upd-carousel-rail">
-        <button className="upd-arrow-btn" onClick={() => scroll("left")} aria-label="Previous">‹</button>
-        <div ref={scrollRef} className="upd-slider upd-tool-slider">
-          {visibleItems.map((t, i) => (
-            <article key={t.id} className="upd-tool-card">
-              <div className={`upd-tool-icon upd-tool-icon--${(i % 4) + 1}`}>
-                {t.letter ?? t.icon_emoji ?? t.name[0]?.toUpperCase()}
-              </div>
-              <div className="upd-tool-cat">{t.category_label}</div>
-              <h4 className="upd-tool-name">{t.name}</h4>
-              <p className="upd-tool-desc">{t.description}</p>
-              <button type="button" className="upd-tool-details-link" onClick={() => onOpenTool(t)}>
-                Details ›
-              </button>
-            </article>
-          ))}
-        </div>
-        <button className="upd-arrow-btn" onClick={() => scroll("right")} aria-label="Next">›</button>
-      </div>
-    </section>
   );
 }
 
@@ -658,142 +592,186 @@ function VideoModal({ video, onClose }: { video: Video; onClose: () => void }) {
   );
 }
 
-// ── Video Carousel ─────────────────────────────────────────────────────────────
+// ── News tab ───────────────────────────────────────────────────────────────────
 
-function extractYouTubeId(url: string): string | null {
-  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  return m ? m[1] : null;
-}
-
-function VideoCarousel({ videos }: { videos: Video[] }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [selected, setSelected] = useState<Video | null>(null);
-  const scroll = (dir: "left" | "right") =>
-    scrollRef.current?.scrollBy({ left: dir === "left" ? -290 : 290, behavior: "smooth" });
-
-  if (videos.length === 0) {
-    return (
-      <div style={{
-        padding: "48px 32px", textAlign: "center", color: "#746F78",
-        background: "#fff", border: "1px solid #E9E4DC", borderRadius: 24,
-      }}>No videos available yet.</div>
-    );
-  }
+function NewsPanel({ brief }: { brief: Brief | null }) {
+  const items = useMemo(
+    () => [...(brief?.fluency_brief_items ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+    [brief],
+  );
+  const displayDate = formatBriefNewsDate(brief?.published_date);
 
   return (
-    <>
-      <div className="upd-carousel-rail">
-        <button className="upd-arrow-btn" onClick={() => scroll("left")} aria-label="Previous">‹</button>
+    <section>
+      <div className="upd-intro">
+        <div>
+          <h2>News</h2>
+          <p>Short, practical updates on AI products, capabilities, and ways of working.</p>
+        </div>
+        <span className="upd-badge">Updated weekly</span>
+      </div>
 
-        <div ref={scrollRef} className="upd-slider" style={{
-          display: "grid", gridAutoFlow: "column", gridAutoColumns: 268,
-          gap: 14, overflowX: "auto", padding: "4px 0 30px", scrollSnapType: "x mandatory",
-        }}>
-          {videos.map(v => {
-            const accent = GROUP_ACCENT[v.group_name ?? ""] ?? "#623CEA";
-            const ytId = v.video_url ? extractYouTubeId(v.video_url) : null;
-
-            return (
-              <article
-                key={v.id}
-                className="upd-video-card"
-                onClick={() => setSelected(v)}
-                style={{
-                  scrollSnapAlign: "start", borderRadius: 18, overflow: "hidden",
-                  background: "#fff", border: "1px solid rgba(34,29,35,.06)",
-                  boxShadow: "0 2px 12px rgba(0,0,0,.06)", cursor: "pointer",
-                  display: "flex", flexDirection: "column",
-                }}
-              >
-                {/* Thumbnail */}
-                <div style={{
-                  position: "relative", height: 132, flexShrink: 0, overflow: "hidden",
-                  background: v.thumbnail_url
-                    ? "transparent"
-                    : `linear-gradient(155deg,${accent} 0%,#1a1030 48%,#0f0a18 100%)`,
-                }}>
-                  {v.thumbnail_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={v.thumbnail_url}
-                      alt=""
-                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  ) : ytId ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
-                      alt=""
-                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  ) : null}
-
-                  <div style={{
-                    position: "absolute", inset: 0,
-                    background: "linear-gradient(to top, rgba(0,0,0,.55) 0%, rgba(0,0,0,.15) 50%, rgba(0,0,0,.25) 100%)",
-                  }} />
-
-                  {/* Play button */}
-                  <div style={{
-                    position: "absolute", left: "50%", top: "50%",
-                    transform: "translate(-50%,-50%)", zIndex: 2,
-                    width: 52, height: 52, borderRadius: "50%",
-                    background: "#fff", boxShadow: "0 6px 24px rgba(0,0,0,.20)",
-                    display: "grid", placeItems: "center",
-                  }}>
-                    <span style={{
-                      width: 0, height: 0, marginLeft: 3,
-                      borderTop: "9px solid transparent",
-                      borderBottom: "9px solid transparent",
-                      borderLeft: "14px solid #221D23",
-                      display: "block",
-                    }} />
-                  </div>
-
-                  {v.duration && (
-                    <span style={{
-                      position: "absolute", bottom: 8, right: 8, zIndex: 2,
-                      background: "rgba(0,0,0,.80)", color: "#fff",
-                      padding: "2px 6px", borderRadius: 4,
-                      fontFamily: "monospace", fontSize: 11, fontWeight: 500,
-                    }}>{v.duration}</span>
-                  )}
-                </div>
-
-                {/* Body */}
-                <div style={{ padding: "12px 14px 14px", flex: 1, background: "#fff" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7 }}>
-                    <span style={{
-                      width: 8, height: 8, borderRadius: 2, flexShrink: 0,
-                      background: accent, display: "inline-block",
-                    }} />
-                    <span style={{
-                      fontSize: 10, fontWeight: 800, letterSpacing: ".12em",
-                      textTransform: "uppercase" as const, color: "#6B6670",
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      flex: 1, minWidth: 0,
-                    }}>
-                      {v.category_tag ?? v.group_name ?? "Feature"}
-                    </span>
-                  </div>
-                  <h3 className="upd-card-title">{v.title}</h3>
-                </div>
-              </article>
+      {items.length === 0 ? (
+        <div className="upd-foundation-card" style={{ justifyContent: "center", color: "#746F78" }}>No updates available yet.</div>
+      ) : (
+        <div className="upd-news-grid">
+          {items.map(item => {
+            const { title, description } = parseNewsContent(item.content);
+            const href = safeExternalUrl(item.link_url);
+            const inner = (
+              <>
+                <div className="upd-news-date">{displayDate}</div>
+                <h3>{title}</h3>
+                <p>{description}</p>
+                <span className="upd-news-link">Read update →</span>
+              </>
+            );
+            return href ? (
+              <a key={item.id} href={href} target="_blank" rel="noopener noreferrer" className="upd-news-card">
+                {inner}
+              </a>
+            ) : (
+              <article key={item.id} className="upd-news-card">{inner}</article>
             );
           })}
         </div>
-
-        <button className="upd-arrow-btn" onClick={() => scroll("right")} aria-label="Next">›</button>
-      </div>
-
-      {selected && <VideoModal video={selected} onClose={() => setSelected(null)} />}
-    </>
+      )}
+    </section>
   );
 }
 
-// ── AI at Work questions ───────────────────────────────────────────────────────
+// ── Videos tab ─────────────────────────────────────────────────────────────────
 
-function WorkQuestionsSection() {
+function VideosPanel({ videos }: { videos: Video[] }) {
+  const [selected, setSelected] = useState<Video | null>(null);
+
+  return (
+    <section>
+      <div className="upd-intro">
+        <div>
+          <h2>Latest Videos</h2>
+          <p>Short demonstrations that show how new AI features and workflows work in practice.</p>
+        </div>
+        <span className="upd-badge">New videos added regularly</span>
+      </div>
+
+      {videos.length === 0 ? (
+        <div className="upd-foundation-card" style={{ justifyContent: "center", color: "#746F78" }}>No videos available yet.</div>
+      ) : (
+        <div className="upd-vgrid">
+          {videos.map((v, i) => {
+            const ytId = v.video_url ? extractYouTubeId(v.video_url) : null;
+            const thumb = v.thumbnail_url || (ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : null);
+            return (
+              <button type="button" key={v.id} className="upd-vcard" onClick={() => setSelected(v)}>
+                <div className="upd-vthumb">
+                  {thumb ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={thumb} alt="" />
+                  ) : null}
+                  <span className="upd-vnum">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="upd-vplay" aria-hidden="true">▶</span>
+                </div>
+                <div className="upd-vcopy">
+                  {v.duration ? <div className="upd-vduration">{v.duration}</div> : null}
+                  <h3>{v.title}</h3>
+                  {v.description ? <p>{v.description.split("\n\n")[0]}</p> : null}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {selected && <VideoModal video={selected} onClose={() => setSelected(null)} />}
+    </section>
+  );
+}
+
+// ── Tools tab ──────────────────────────────────────────────────────────────────
+
+function ToolsPanel({
+  tools, toolGuides, toolLogos, deepDiveByTool,
+}: {
+  tools: Tool[];
+  toolGuides: ToolGuide[];
+  toolLogos: ToolLogoMap;
+  deepDiveByTool: Map<string, ToolDeepDive>;
+}) {
+  const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
+  const [openDeepDive, setOpenDeepDive] = useState<{ id: string; title: string } | null>(null);
+
+  function resolveGuideLink(guide: ToolGuide): { resolvedUrl: string | null; isHtml: boolean; deepDiveId: string | null; deepDiveTitle: string } {
+    if (guide.guide_url?.trim()) return { resolvedUrl: guide.guide_url.trim(), isHtml: false, deepDiveId: null, deepDiveTitle: "" };
+    const slug = resolveGuideSlug(guide);
+    const dive = deepDiveByTool.get(slug);
+    if (!dive) return { resolvedUrl: null, isHtml: false, deepDiveId: null, deepDiveTitle: "" };
+    if ((dive.link_type ?? "external") === "html" && dive.html_path) {
+      return { resolvedUrl: `/api/fluency/deep-dive/${dive.id}/html`, isHtml: true, deepDiveId: dive.id, deepDiveTitle: dive.title };
+    }
+    return { resolvedUrl: dive.url?.trim() || null, isHtml: false, deepDiveId: null, deepDiveTitle: "" };
+  }
+
+  return (
+    <section>
+      <div className="upd-intro">
+        <div>
+          <h2>Popular Tools</h2>
+          <p>Explore widely used AI tools and understand the work each one is best suited for.</p>
+        </div>
+        <span className="upd-badge">Curated tool directory</span>
+      </div>
+
+      {tools.length === 0 ? (
+        <div className="upd-foundation-card" style={{ justifyContent: "center", color: "#746F78" }}>No tools available yet.</div>
+      ) : (
+        <div className="upd-tgrid">
+          {tools.map(t => (
+            <button type="button" key={t.id} className="upd-tcard2" onClick={() => setSelectedTool(t)}>
+              <div className="upd-tlogo2">{t.letter ?? t.icon_emoji ?? t.name[0]?.toUpperCase()}</div>
+              <h3>{t.name}</h3>
+              <p>{t.description}</p>
+              <span className="upd-topen">Explore tool →</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/*
+      {toolGuides.length > 0 && (
+        <div className="upd-subsection">
+          <SectionHeader label="Guides" title="AI Tool Guides" subtitle="Understand how each major AI tool fits into real work." />
+          <div className="upd-guide-grid" style={{ marginTop: 20 }}>
+            {toolGuides.map((g, i) => {
+              const { resolvedUrl, isHtml, deepDiveId, deepDiveTitle } = resolveGuideLink(g);
+              return (
+                <ToolGuideCard
+                  key={g.id}
+                  guide={g}
+                  sortIndex={i}
+                  toolLogos={toolLogos}
+                  resolvedUrl={resolvedUrl}
+                  isHtml={isHtml}
+                  onOpenHtml={isHtml && deepDiveId ? () => setOpenDeepDive({ id: deepDiveId, title: deepDiveTitle }) : undefined}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+      */}
+
+      {selectedTool && <ToolModal tool={selectedTool} onClose={() => setSelectedTool(null)} />}
+      {openDeepDive && (
+        <DeepDiveModal deepDiveId={openDeepDive.id} title={openDeepDive.title} onClose={() => setOpenDeepDive(null)} />
+      )}
+    </section>
+  );
+}
+
+// ── AI Foundations tab ─────────────────────────────────────────────────────────
+
+function FoundationsPanel() {
   const questionRefs = useRef<(HTMLDetailsElement | null)[]>([]);
 
   function handleToggle(index: number) {
@@ -803,92 +781,13 @@ function WorkQuestionsSection() {
   }
 
   return (
-    <section className="upd-questions-section" id="questions">
-      <div style={{ marginBottom: 24 }}>
-        <SectionHeader
-          label="Perspective"
-          title="AI at Work: Questions"
-          subtitle="Practical takes on adoption, automation, and work redesign."
-        />
-      </div>
-
-      <div className="upd-faq-grid">
-        {WORK_QUESTIONS.map((item, index) => (
-          <details
-            key={item.question}
-            className="upd-faq-item"
-            ref={el => { questionRefs.current[index] = el; }}
-            onToggle={() => handleToggle(index)}
-          >
-            <summary className="upd-faq-summary">
-              <span className="upd-faq-emoji">{item.emoji}</span>
-              <span className="upd-faq-q">{item.question}</span>
-              <span className="upd-faq-toggle" aria-hidden>+</span>
-            </summary>
-            <div className="upd-faq-answer">
-              <p className="upd-faq-lead">{item.short}</p>
-              <p>{item.bullets.join(" ")}</p>
-            </div>
-          </details>
-        ))}
-      </div>
-
-      <div className="upd-footer-cta">
-        <div className="upd-footer-cta-left">
-          <div className="upd-footer-cta-spark" aria-hidden>✦</div>
-          <div>
-            <h3>Stay updated. Then practice.</h3>
-            <p>Track what matters and apply it through Workflows.</p>
-          </div>
+    <section>
+      <div className="upd-intro">
+        <div>
+          <h2>AI Foundations</h2>
+          <p>Understand the core ideas behind modern AI before applying them at work.</p>
         </div>
-        <a href="/workflows" className="upd-footer-cta-btn">Go to Workflows ›</a>
-      </div>
-    </section>
-  );
-}
-
-function AIFoundationsSection({
-  completedCount,
-  totalModules,
-  approved,
-  initiallyRequested,
-}: {
-  completedCount: number;
-  totalModules: number;
-  approved: boolean;
-  initiallyRequested: boolean;
-}) {
-  const [requested, setRequested] = useState(initiallyRequested);
-  const [requesting, setRequesting] = useState(false);
-  const [requestError, setRequestError] = useState("");
-  const progressPercent = totalModules > 0
-    ? Math.min(100, Math.round((completedCount / totalModules) * 100))
-    : 0;
-
-  async function requestCourseAccess() {
-    if (requesting || requested) return;
-    setRequesting(true);
-    setRequestError("");
-    try {
-      const response = await fetch("/api/ai-mastery/request-access", { method: "POST" });
-      if (!response.ok) throw new Error("Could not request access");
-      setRequested(true);
-    } catch {
-      setRequestError("Could not send your request. Please try again.");
-    } finally {
-      setRequesting(false);
-    }
-  }
-
-  return (
-    <section id="ai-foundations" className="upd-foundations-section">
-      <div className="upd-foundations-heading">
-        <SectionHeader
-          label="Foundations"
-          title="AI Foundations"
-          subtitle="Understand the core ideas behind modern AI before applying them at work."
-        />
-        <span>{FOUNDATION_TOPICS.length} essential topics</span>
+        <span className="upd-badge">{FOUNDATION_TOPICS.length} essential topics</span>
       </div>
 
       <div className="upd-foundation-grid">
@@ -907,14 +806,116 @@ function AIFoundationsSection({
         ))}
       </div>
 
+      {/*
+      <div className="upd-subsection">
+        <section className="upd-questions-section">
+          <div style={{ marginBottom: 24 }}>
+            <SectionHeader
+              label="Perspective"
+              title="AI at Work: Questions"
+              subtitle="Practical takes on adoption, automation, and work redesign."
+            />
+          </div>
+
+          <div className="upd-faq-grid">
+            {WORK_QUESTIONS.map((item, index) => (
+              <details
+                key={item.question}
+                className="upd-faq-item"
+                ref={el => { questionRefs.current[index] = el; }}
+                onToggle={() => handleToggle(index)}
+              >
+                <summary className="upd-faq-summary">
+                  <span className="upd-faq-emoji">{item.emoji}</span>
+                  <span className="upd-faq-q">{item.question}</span>
+                  <span className="upd-faq-toggle" aria-hidden>+</span>
+                </summary>
+                <div className="upd-faq-answer">
+                  <p className="upd-faq-lead">{item.short}</p>
+                  <p>{item.bullets.join(" ")}</p>
+                </div>
+              </details>
+            ))}
+          </div>
+
+          <div className="upd-footer-cta">
+            <div className="upd-footer-cta-left">
+              <div className="upd-footer-cta-spark" aria-hidden>✦</div>
+              <div>
+                <h3>Stay updated. Then practice.</h3>
+                <p>Track what matters and apply it through Workflows.</p>
+              </div>
+            </div>
+            <a href="/workflows" className="upd-footer-cta-btn">Go to Workflows ›</a>
+          </div>
+        </section>
+      </div>
+      */}
+    </section>
+  );
+}
+
+// ── Course tab ─────────────────────────────────────────────────────────────────
+
+function CoursePanel({
+  completedCount, completedModuleIds, totalModules, approved, initiallyRequested,
+}: {
+  completedCount: number;
+  completedModuleIds: string[];
+  totalModules: number;
+  approved: boolean;
+  initiallyRequested: boolean;
+}) {
+  const [requested, setRequested] = useState(initiallyRequested);
+  const [requesting, setRequesting] = useState(false);
+  const [requestError, setRequestError] = useState("");
+  const progressPercent = totalModules > 0
+    ? Math.min(100, Math.round((completedCount / totalModules) * 100))
+    : 0;
+
+  const doneIds = useMemo(() => new Set(completedModuleIds), [completedModuleIds]);
+  const allModules = useMemo(() => getAllModules(), []);
+  const nextModule: CourseModule | null = useMemo(
+    () => allModules.find(m => !doneIds.has(m.id)) ?? null,
+    [allModules, doneIds],
+  );
+  const activePart = useMemo(() => {
+    if (nextModule) return COURSE_PARTS.find(p => p.number === nextModule.partNumber) ?? null;
+    return COURSE_PARTS[COURSE_PARTS.length - 1] ?? null;
+  }, [nextModule]);
+
+  async function requestCourseAccess() {
+    if (requesting || requested) return;
+    setRequesting(true);
+    setRequestError("");
+    try {
+      const response = await fetch("/api/ai-mastery/request-access", { method: "POST" });
+      if (!response.ok) throw new Error("Could not request access");
+      setRequested(true);
+    } catch {
+      setRequestError("Could not send your request. Please try again.");
+    } finally {
+      setRequesting(false);
+    }
+  }
+
+  return (
+    <section>
+      <div className="upd-intro">
+        <div>
+          <h2>Course</h2>
+          <p>The full guided course that turns these foundations into practical AI capability.</p>
+        </div>
+      </div>
+
       <div className="upd-course-overview">
         <div className="upd-course-copy">
           <span className="upd-course-kicker">AI Mastery</span>
-          <h3>{completedCount > 0 ? "Continue your full course" : "Build complete AI confidence"}</h3>
+          <h3>{approved ? (completedCount > 0 ? "Continue your course" : "Start your course") : "Build complete AI confidence"}</h3>
           <p>
             {approved
-              ? `${completedCount} of ${totalModules} modules completed. Your progress is saved automatically.`
-              : "The complete guided course expands these foundations into practical AI capability."}
+              ? `You have completed ${completedCount} of ${totalModules} modules.${nextModule ? ` Your next module is “${nextModule.title}.”` : " You've completed every module."}`
+              : "Request access to unlock the complete guided course, saved progress, and practical examples."}
           </p>
         </div>
 
@@ -942,6 +943,36 @@ function AIFoundationsSection({
           {requestError ? <span className="upd-course-error" role="status">{requestError}</span> : null}
         </div>
       </div>
+
+      {approved && activePart ? (
+        <div className="upd-module-group">
+          <div className="upd-module-group-title">Part {activePart.number} · {activePart.title}</div>
+          <div className="upd-module-list">
+            {activePart.modules.map((m, i) => {
+              const done = doneIds.has(m.id);
+              const isNext = nextModule?.id === m.id;
+              return (
+                <div className="upd-module-row" key={m.id}>
+                  <div className="upd-module-num">{done ? "✓" : i + 1}</div>
+                  <div className="upd-module-copy">
+                    <div className="upd-module-title">{m.title}</div>
+                    <div className="upd-module-desc">{m.sections} sections</div>
+                  </div>
+                  <a
+                    href="/mastery"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="upd-course-button"
+                    style={{ minHeight: 34, padding: "0 14px" }}
+                  >
+                    {done ? "Review" : isNext ? "Continue" : "Start"}
+                  </a>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -957,156 +988,73 @@ export default function UpdatesClient({
   deepDives = [],
   newActivities = [],
   masteryCompletedCount,
+  masteryCompletedModuleIds,
   masteryTotalModules,
   masteryApproved,
   masteryRequested,
 }: Props) {
-  const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
-  const [openDeepDive, setOpenDeepDive] = useState<{ id: string; title: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>("news");
 
   const deepDiveByTool = useMemo(
     () => new Map((deepDives).filter(d => d.tool).map(d => [normalizeToolSlug(d.tool!), d])),
     [deepDives],
   );
 
-  function resolveGuideLink(guide: ToolGuide): { resolvedUrl: string | null; isHtml: boolean; deepDiveId: string | null; deepDiveTitle: string } {
-    if (guide.guide_url?.trim()) return { resolvedUrl: guide.guide_url.trim(), isHtml: false, deepDiveId: null, deepDiveTitle: "" };
-    const slug = resolveGuideSlug(guide);
-    const dive = deepDiveByTool.get(slug);
-    if (!dive) return { resolvedUrl: null, isHtml: false, deepDiveId: null, deepDiveTitle: "" };
-    if ((dive.link_type ?? "external") === "html" && dive.html_path) {
-      return { resolvedUrl: `/api/fluency/deep-dive/${dive.id}/html`, isHtml: true, deepDiveId: dive.id, deepDiveTitle: dive.title };
-    }
-    return { resolvedUrl: dive.url?.trim() || null, isHtml: false, deepDiveId: null, deepDiveTitle: "" };
-  }
-
   return (
     <>
       <B2BTopbar newActivities={newActivities} />
 
-      <div style={{ flex: 1, background: "var(--bg)" }}>
+      <div style={{ flex: 1, background: "#fff" }}>
+        <div className="upd-page-inner">
 
-        {/* Page header — matches Workflows pattern */}
-        <div style={{ background: "var(--bg)", borderBottom: "1px solid #E9E4DC", padding: "22px 28px 20px" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+        {/* Page header */}
+        <div className="upd-page-header">
+          <div className="upd-page-header-row">
             <div>
-              <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-.03em", color: "#1C1820", lineHeight: 1.1 }}>
-                Learn
-              </h1>
-              <p style={{ fontSize: 13.5, color: "#746F78", fontWeight: 600, marginTop: 4 }}>
-                Follow important AI updates, watch practical videos, discover useful tools, and build core capability.
-              </p>
+              <h1>Learn</h1>
+              <p>Follow important AI updates, watch practical videos, discover useful tools, and build core capability.</p>
             </div>
-            <span style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              fontSize: 11, fontWeight: 700, letterSpacing: ".06em",
-              textTransform: "uppercase", borderRadius: 999, padding: "5px 12px",
-              background: "rgba(255,206,0,.10)", color: "#6B5000",
-              border: "1px solid rgba(255,206,0,.40)", whiteSpace: "nowrap",
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#FFCE00", display: "inline-block" }} />
+            <span className="upd-page-pill">
+              <i aria-hidden="true" />
               Updated every week
             </span>
           </div>
-          <nav className="upd-learn-tabs" aria-label="Learning sections">
-            <a href="#latest">News</a>
-            {videos.length > 0 ? <a href="#videos">Latest Videos</a> : null}
-            {tools.length > 0 ? <a href="#tools">Popular Tools</a> : null}
-            <a href="#ai-foundations">AI Foundations</a>
-            <a href="/mastery" target="_blank" rel="noopener noreferrer">
-              Full course <span aria-hidden="true">↗</span>
-            </a>
-          </nav>
+
+          <div className="upd-tabs" role="tablist" aria-label="Learning sections">
+            {TABS.map(tab => (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.key}
+                className={`upd-tab ${activeTab === tab.key ? "active" : ""}`}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <main className="upd-main">
-
-        {/* Latest AI News */}
-        <section id="latest" style={{ marginBottom: 60 }}>
-          <div style={{ marginBottom: 22 }}>
-            <SectionHeader
-              label="News"
-              title="Latest AI News"
-              subtitle="Short, useful updates for people applying AI at work."
+        <main className="upd-main upd-tabpanel">
+          {activeTab === "news" && <NewsPanel brief={brief} />}
+          {activeTab === "videos" && <VideosPanel videos={videos} />}
+          {activeTab === "tools" && (
+            <ToolsPanel tools={tools} toolGuides={toolGuides} toolLogos={toolLogos} deepDiveByTool={deepDiveByTool} />
+          )}
+          {activeTab === "foundations" && <FoundationsPanel />}
+          {activeTab === "course" && (
+            <CoursePanel
+              completedCount={masteryCompletedCount}
+              completedModuleIds={masteryCompletedModuleIds}
+              totalModules={masteryTotalModules}
+              approved={masteryApproved}
+              initiallyRequested={masteryRequested}
             />
-          </div>
-          <BriefNewsCard
-            items={(brief?.fluency_brief_items ?? []) as BriefNewsItem[]}
-            publishedDate={brief?.published_date}
-          />
-        </section>
-
-        {/* Videos */}
-        {videos.length > 0 && (
-          <section id="videos" style={{ marginBottom: 60 }}>
-            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 22, marginBottom: 22 }}>
-              <SectionHeader
-                label="Videos"
-                title="Latest Launches"
-                subtitle="Short videos on new launches across AI tools."
-              />
-            </div>
-            <VideoCarousel videos={videos} />
-          </section>
-        )}
-
-        {/* Most Useful Tools */}
-        {tools.length > 0 && (
-          <ToolsSection tools={tools} onOpenTool={setSelectedTool} />
-        )}
-
-        {/* AI Tool Guides */}
-        {toolGuides.length > 0 && (
-          <section style={{ marginBottom: 60 }}>
-            <div style={{ marginBottom: 24 }}>
-              <SectionHeader
-                label="Guides"
-                title="AI Tool Guides"
-                subtitle="Understand how each major AI tool fits into real work."
-              />
-            </div>
-            <div className="upd-guide-grid">
-              {toolGuides.map((g, i) => {
-                const { resolvedUrl, isHtml, deepDiveId, deepDiveTitle } = resolveGuideLink(g);
-                return (
-                  <ToolGuideCard
-                    key={g.id}
-                    guide={g}
-                    sortIndex={i}
-                    toolLogos={toolLogos}
-                    resolvedUrl={resolvedUrl}
-                    isHtml={isHtml}
-                    onOpenHtml={isHtml && deepDiveId ? () => setOpenDeepDive({ id: deepDiveId, title: deepDiveTitle }) : undefined}
-                  />
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        <AIFoundationsSection
-          completedCount={masteryCompletedCount}
-          totalModules={masteryTotalModules}
-          approved={masteryApproved}
-          initiallyRequested={masteryRequested}
-        />
-
-        {/* AI at Work Questions */}
-        <WorkQuestionsSection />
-
-      </main>
+          )}
+        </main>
+        </div>
       </div>
-
-      {selectedTool && (
-        <ToolModal tool={selectedTool} onClose={() => setSelectedTool(null)} />
-      )}
-      {openDeepDive && (
-        <DeepDiveModal
-          deepDiveId={openDeepDive.id}
-          title={openDeepDive.title}
-          onClose={() => setOpenDeepDive(null)}
-        />
-      )}
     </>
   );
 }

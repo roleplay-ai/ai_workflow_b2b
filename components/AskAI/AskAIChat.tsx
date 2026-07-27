@@ -408,20 +408,6 @@ export default function AskAIChat({ categories, userId }: Props) {
                 <div className={styles.assistantBody}>
                   <AnswerSections content={message.content} />
 
-                  {message.citations && message.citations.length > 0 ? (
-                    <div className={styles.sources}>
-                      <h2>Sources</h2>
-                      <div className={styles.sourceList}>
-                        {message.citations.map((citation, citationIndex) => (
-                          <details key={`${citation.documentTitle}-${citation.pageNumber}-${citationIndex}`}>
-                            <summary>{citation.documentTitle} · p. {citation.pageNumber}</summary>
-                            {citation.excerpt ? <p>{citation.excerpt}</p> : null}
-                          </details>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-
                   {message.citations?.some((citation) => citation.images.length > 0) ? (
                     <div className={styles.screenshotGrid}>
                       {message.citations.flatMap((citation, citationIndex) =>

@@ -13,7 +13,7 @@ export type BriefNewsItem = {
 const SCROLL_CARD_WIDTH = 280;
 const SCROLL_GAP = 20;
 
-function parseNewsContent(content: string): { title: string; description: string } {
+export function parseNewsContent(content: string): { title: string; description: string } {
   const cleaned = content.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\s]+/u, "").trim();
   const colonIdx = cleaned.indexOf(": ");
 
@@ -27,7 +27,7 @@ function parseNewsContent(content: string): { title: string; description: string
   return { title: cleaned, description: "" };
 }
 
-function safeExternalUrl(value?: string | null) {
+export function safeExternalUrl(value?: string | null) {
   const raw = value?.trim();
   if (!raw) return undefined;
   const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;

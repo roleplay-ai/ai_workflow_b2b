@@ -603,6 +603,54 @@
   color: #bd3f45;
 }
 
+.profileMenuSectionLabel {
+  padding: 8px 9px 4px;
+  color: #9b9791;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.profileMenuItemIcon {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #f5f5f1;
+  font-size: 13px;
+}
+
+.profileMenuItemCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.profileMenuItemName {
+  color: #292823;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.profileMenuItemDesc {
+  overflow: hidden;
+  color: #88857f;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profileMenuDivider {
+  height: 1px;
+  margin: 5px 4px;
+  background: #ecece8;
+}
+
 .signOutItem:disabled {
   opacity: .55;
   cursor: wait;

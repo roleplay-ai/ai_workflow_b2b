@@ -83,6 +83,7 @@ export default async function UpdatesPage() {
       deepDives={(deepDives ?? []) as any}
       newActivities={(featuredActivities ?? []) as any}
       masteryCompletedCount={(masteryProgress ?? []).length}
+      masteryCompletedModuleIds={(masteryProgress ?? []).map((r: any) => r.module_id as string)}
       masteryTotalModules={TOTAL_MODULES}
       masteryApproved={masteryProfile?.role === "superadmin" || Boolean(masteryProfile?.aimastery_approved)}
       masteryRequested={Boolean(masteryProfile?.aimastery_requested)}
