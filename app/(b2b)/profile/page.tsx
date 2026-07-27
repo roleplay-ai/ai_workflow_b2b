@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { userNeedsOnboarding } from "@/lib/auth/onboardingGate";
 import { sumPointsFromProgress, aiLevelForPoints, quizBonusPoints, type PointsStats, type LeaderboardStats } from "@/lib/points";
 import ProfileClient from "./ProfileClient";
 
@@ -27,7 +26,6 @@ export default async function ProfilePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  if (await userNeedsOnboarding(supabase, user.id)) redirect("/ask-ai");
 
   const [
     { data: activities },
@@ -47,7 +45,11 @@ export default async function ProfilePage() {
       ? supabase.from("profiles").select("streak_count").eq("id", user.id).single()
       : Promise.resolve({ data: null as { streak_count: number } | null }),
     user
-      ? supabase.from("user_saved_workflows").select("activity_id").eq("user_id", user.id)
+      ? supabase
+          .from("user_saved_workflows")
+          .select("activity_id")
+          .eq("user_id", user.id)
+          .eq("source", "liked")
       : Promise.resolve({ data: [] as { activity_id: string }[] }),
   ]);
 

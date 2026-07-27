@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import ToolDeepDivesManager from "@/components/ToolDeepDivesManager";
 import type { Profile, Company, Activity, ActivityTag, ToolDeepDive } from "@/lib/supabase/types";
 import { DEFAULT_TOOLS, formatToolLabel, normalizeActivityTools } from "@/lib/tools";
+import { ACTIVITY_CONTENT_TYPES, ACTIVITY_CONTENT_TYPE_COLORS } from "@/lib/contentTypes";
 
 type ActivityContentSummary = {
   id: string;
@@ -52,8 +53,6 @@ type Props = {
   deepDives: ToolDeepDive[];
 };
 
-const CONTENT_TYPES = ["chat", "build", "automate"];
-
 export default function SuperadminClient({ companies, activities: initActivities, allAssignments: initAssignments, tags: initTags, availableTools, deepDives }: Props) {
   const [activities,   setActivities]   = useState(initActivities);
   const [assignments,  setAssignments]  = useState(initAssignments);
@@ -86,7 +85,7 @@ export default function SuperadminClient({ companies, activities: initActivities
     const nextPosition = activities.reduce((max, a) => Math.max(max, a.position), -1) + 1;
     const { data, error } = await supabase.from("activities").insert({
       title: "Untitled Activity", description: "", level: "Beginner", time_estimate_minutes: 15,
-      points: 50, tools: [availableTools[0] ?? DEFAULT_TOOLS[0]], content_type: "chat", published: false, position: nextPosition,
+      points: 50, tools: [availableTools[0] ?? DEFAULT_TOOLS[0]], content_type: ACTIVITY_CONTENT_TYPES[0], published: false, position: nextPosition,
     }).select().single();
     if (!error && data) {
       setActivities(prev => [...prev, { ...(data as ActivityRow), activity_content: null, activity_steps: [{ count: 0 }] }]);
@@ -213,11 +212,9 @@ export default function SuperadminClient({ companies, activities: initActivities
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const contentTypeColor = (contentType: string) => ({
-    chat:     { bg: "rgba(98,60,234,.08)",  color: "#5030C0" },
-    build:    { bg: "rgba(35,206,104,.08)", color: "#17A855" },
-    automate: { bg: "rgba(246,138,41,.08)", color: "#B05000" },
-  }[contentType] ?? { bg: "#F0EEE8", color: "#6B6B6B" });
+  const contentTypeColor = (contentType: string) =>
+    ACTIVITY_CONTENT_TYPE_COLORS[contentType as keyof typeof ACTIVITY_CONTENT_TYPE_COLORS]
+    ?? { bg: "#F0EEE8", color: "#6B6B6B" };
 
   return (
     <div>

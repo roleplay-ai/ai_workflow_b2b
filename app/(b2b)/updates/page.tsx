@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { userNeedsOnboarding } from "@/lib/auth/onboardingGate";
+import { TOTAL_MODULES } from "@/lib/ai-mastery-course";
 import UpdatesClient from "./UpdatesClient";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,6 @@ export default async function UpdatesPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  if (await userNeedsOnboarding(supabase, user.id)) redirect("/ask-ai");
 
   const [
     { data: briefs },
@@ -19,6 +18,10 @@ export default async function UpdatesPage() {
     { data: toolLogoRows },
     { data: featuredActivities },
     { data: deepDives },
+    { data: fluencyModules },
+    { data: fluencyProgress },
+    { data: masteryProgress },
+    { data: masteryProfile },
   ] = await Promise.all([
     supabase
       .from("fluency_briefs")
@@ -56,6 +59,24 @@ export default async function UpdatesPage() {
       .select("id, title, description, tool, url, html_path, link_type")
       .eq("published", true)
       .order("position"),
+    supabase
+      .from("fluency_modules")
+      .select("id, title, description, emoji, concepts, sort_order, is_locked, next_module_hint, html_path")
+      .eq("published", true)
+      .order("sort_order"),
+    supabase
+      .from("user_fluency_progress")
+      .select("module_id")
+      .eq("user_id", user.id),
+    supabase
+      .from("ai_mastery_progress")
+      .select("module_id")
+      .eq("user_id", user.id),
+    supabase
+      .from("profiles")
+      .select("role, aimastery_approved, aimastery_requested")
+      .eq("id", user.id)
+      .single(),
   ]);
 
   const toolLogos: Record<string, string> = {};
@@ -72,6 +93,13 @@ export default async function UpdatesPage() {
       toolLogos={toolLogos}
       deepDives={(deepDives ?? []) as any}
       newActivities={(featuredActivities ?? []) as any}
+      fluencyModules={(fluencyModules ?? []) as any}
+      completedFluencyModuleIds={(fluencyProgress ?? []).map((r: any) => r.module_id as string)}
+      masteryCompletedCount={(masteryProgress ?? []).length}
+      masteryCompletedModuleIds={(masteryProgress ?? []).map((r: any) => r.module_id as string)}
+      masteryTotalModules={TOTAL_MODULES}
+      masteryApproved={masteryProfile?.role === "superadmin" || Boolean(masteryProfile?.aimastery_approved)}
+      masteryRequested={Boolean(masteryProfile?.aimastery_requested)}
     />
   );
 }

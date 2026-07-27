@@ -1,0 +1,825 @@
+.workflowPage {
+  width: min(1180px, 100%);
+  min-height: calc(100dvh - var(--topbar-h));
+  margin: 0 auto;
+  padding: 30px 34px 70px;
+  background: #fff;
+  color: #282723;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.pageHeader h1 {
+  margin: 0 0 6px;
+  color: #262520;
+  font-size: 28px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -.03em;
+}
+
+.pageHeader p {
+  margin: 0;
+  color: #77736d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.updatedPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid #e2e2dd;
+  border-radius: 999px;
+  background: #f8f8f5;
+  color: #6f6c65;
+  font-size: 10.5px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.savedTrigger {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid #deded9;
+  border-radius: 12px;
+  background: #fff;
+  color: #292824;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.savedTrigger:hover {
+  border-color: #cfcfc9;
+  background: #f7f7f4;
+}
+
+.saveError {
+  margin: -10px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #f0c8c5;
+  border-radius: 10px;
+  background: #fff7f6;
+  color: #a8342d;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.savedTrigger > span {
+  min-width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 10px;
+}
+
+.searchBox {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid #deded9;
+  border-radius: 12px;
+  background: #fff;
+  color: #8b8881;
+}
+
+.searchBox input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #302f2a;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.searchBox input::placeholder {
+  color: #a29f98;
+}
+
+.section {
+  margin-top: 30px;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  color: #2b2a26;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -.02em;
+}
+
+.continueCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #deded9;
+  border-radius: 16px;
+  background: #fafaf8;
+}
+
+.continueIcon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 13px;
+  background: #fff5c7;
+  color: #332f1e;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.continueCopy {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 4px;
+}
+
+.continueCopy strong {
+  overflow: hidden;
+  color: #2d2c27;
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.continueCopy > span:not(.progressTrack) {
+  color: #7c7972;
+  font-size: 11.5px;
+}
+
+.progressTrack {
+  width: min(390px, 100%);
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e4e4df;
+}
+
+.progressTrack > span {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: #e4c52e;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primaryButton {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+}
+
+.secondaryButton {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid #deded9;
+  background: #fff;
+  color: #484640;
+  font-family: inherit;
+}
+
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.categoryCard {
+  position: relative;
+  min-height: 188px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid #e5e5e1;
+  border-radius: 15px;
+  background: #fff;
+  color: #2c2b27;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(34, 29, 35, .02);
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background-color .16s ease;
+}
+
+.categoryCard:hover {
+  transform: translateY(-2px);
+  border-color: #d8d8d3;
+  background: #fffef9;
+  box-shadow: 0 8px 24px rgba(34, 29, 35, .07);
+}
+
+.categoryCardIcon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  background: #fff6cf;
+  color: #28261f;
+  font-size: 17px;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(34, 29, 35, .06);
+}
+
+.categoryCard:nth-child(6n+2) .categoryCardIcon {
+  background: #eaf5ff;
+  color: #246fae;
+}
+
+.categoryCard:nth-child(6n+3) .categoryCardIcon {
+  background: #fde4cc;
+  color: #a75213;
+}
+
+.categoryCard:nth-child(6n+4) .categoryCardIcon {
+  background: #e9fff2;
+  color: #187944;
+}
+
+.categoryCard:nth-child(6n+5) .categoryCardIcon {
+  background: #f1ecff;
+  color: #623cea;
+}
+
+.categoryCard:nth-child(6n+6) .categoryCardIcon {
+  background: #ffecef;
+  color: #b52d42;
+}
+
+.categoryCardMain {
+  min-width: 0;
+  min-height: 154px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.categoryCardMain > strong {
+  min-height: 42px;
+  color: #292824;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.32;
+  letter-spacing: -.01em;
+}
+
+.categoryCardMain > small {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 7px;
+  color: #55524d;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.48;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.categoryCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 11px;
+  border-top: 1px solid #ededE9;
+  color: #68655f;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.categoryCardFooter > span:last-child {
+  color: #111;
+  font-weight: 700;
+}
+
+.resultsHeader {
+  align-items: flex-start;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: #8c8982;
+  font-size: 9.5px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.categorySummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin: 14px 0;
+  color: #8b8881;
+  font-size: 11.5px;
+}
+
+.categorySummary > span:first-child {
+  color: #4f4c46;
+  font-weight: 700;
+}
+
+.workflowGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.workflowCard {
+  --accent: #ffce00;
+  position: relative;
+  min-width: 0;
+  min-height: 190px;
+  overflow: hidden;
+  border: 1px solid #e5e5e1;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: inset 0 3px 0 var(--accent);
+}
+
+.workflowCard:nth-child(6n+2) {
+  --accent: #3699fc;
+}
+
+.workflowCard:nth-child(6n+3) {
+  --accent: #f68a29;
+}
+
+.workflowCard:nth-child(6n+4) {
+  --accent: #23ce6b;
+}
+
+.workflowCard:nth-child(6n+5) {
+  --accent: #8b65ee;
+}
+
+.workflowCard:nth-child(6n+6) {
+  --accent: #ed4551;
+}
+
+.workflowCard > a {
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  padding: 17px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.workflowCard:hover {
+  transform: translateY(-1px);
+  border-color: #d5d5d0;
+  box-shadow: inset 0 3px 0 var(--accent), 0 5px 16px rgba(0, 0, 0, .05);
+}
+
+.workflowCardTop {
+  min-height: 46px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-right: 32px;
+}
+
+.workflowNatureIcon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, #ddd);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 11%, #fff);
+  color: #222;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.toolLabel {
+  min-height: 27px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 0 9px 0 5px;
+  border: 1px solid #dfdfda;
+  border-radius: 999px;
+  background: #f8f8f5;
+  color: #46433e;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.workflowCard h3 {
+  margin: 12px 0 0;
+  color: #2c2b27;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.38;
+}
+
+.workflowCard p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 8px 0 15px;
+  color: #55514c;
+  font-size: 12px;
+  line-height: 1.48;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.workflowCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #ededE9;
+  color: #77736d;
+  font-size: 11px;
+}
+
+.workflowCardFooter > span:last-child {
+  color: #111;
+  font-weight: 700;
+}
+
+.workflowCardFooter > .doneStatus {
+  color: #167b43;
+}
+
+.workflowCardFooter > .progressStatus {
+  color: #896f00;
+}
+
+.saveCardButton {
+  position: absolute;
+  z-index: 3;
+  top: 13px;
+  right: 13px;
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #dfdfda;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .94);
+  color: #77736d;
+  cursor: pointer;
+}
+
+.saveCardButton:hover,
+.saveCardButtonActive {
+  border-color: #e1c843;
+  background: #fff7c5;
+  color: #6b5900;
+}
+
+.saveCardButton:disabled {
+  cursor: wait;
+  opacity: .58;
+}
+
+.workflowCardNavigating {
+  pointer-events: none;
+  opacity: .72;
+}
+
+.cardSpinner {
+  position: absolute;
+  z-index: 4;
+  top: 50%;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  margin: -13px;
+  border: 3px solid rgba(17, 17, 17, .16);
+  border-top-color: #111;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+.emptyState {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  border: 1px dashed #dcdcd6;
+  border-radius: 15px;
+  color: #88847d;
+  font-size: 12.5px;
+  text-align: center;
+}
+
+.drawerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 640;
+  border: 0;
+  background: rgba(25, 24, 21, .32);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+
+.drawerBackdropOpen {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.savedDrawer {
+  position: fixed;
+  z-index: 650;
+  inset: 0 0 0 auto;
+  width: min(430px, 92vw);
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #deded9;
+  background: #fff;
+  box-shadow: -18px 0 44px rgba(0, 0, 0, .12);
+  transform: translateX(104%);
+  transition: transform .22s ease;
+}
+
+.savedDrawerOpen {
+  transform: translateX(0);
+}
+
+.savedDrawer > header {
+  min-height: 82px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 18px 16px;
+  border-bottom: 1px solid #deded9;
+}
+
+.savedDrawer h2 {
+  margin: 0 0 4px;
+  color: #292824;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.savedDrawer header p {
+  margin: 0;
+  color: #85817b;
+  font-size: 12px;
+}
+
+.savedDrawer header > button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 10px;
+  background: #f1f1ed;
+  color: #4d4a44;
+  font-family: inherit;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.savedDrawerBody {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.savedList {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.savedList .workflowCard {
+  min-height: 0;
+}
+
+.savedList .workflowCard > a {
+  min-height: 180px;
+  padding: 14px;
+}
+
+.savedEmpty {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  padding: 34px 22px;
+  border: 1px dashed #deded9;
+  border-radius: 16px;
+  color: #8b8881;
+  text-align: center;
+}
+
+.savedEmptyIcon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 6px;
+  border: 1px solid #ead77d;
+  border-radius: 14px;
+  background: #fff6cf;
+  color: #665600;
+}
+
+.savedEmptyIcon > svg {
+  width: 23px;
+  height: 23px;
+}
+
+.savedEmpty strong {
+  color: #45423d;
+  font-size: 14px;
+}
+
+.savedEmpty span {
+  max-width: 260px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.savedEmpty > button {
+  min-height: 38px;
+  margin-top: 8px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #111;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.savedTrigger:focus-visible,
+.searchBox:focus-within,
+.categoryCard:focus-visible,
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.saveCardButton:focus-visible,
+.savedDrawer button:focus-visible {
+  outline: 3px solid rgba(255, 206, 0, .42);
+  outline-offset: 2px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1080px) {
+  .categoryGrid,
+  .workflowGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .workflowPage {
+    padding: 24px 20px 60px;
+  }
+
+  .pageHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .headerActions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .continueCard {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .continueCopy {
+    width: calc(100% - 60px);
+  }
+
+  .continueCard .primaryButton {
+    width: 100%;
+  }
+
+  .savedDrawer {
+    width: 100vw;
+  }
+}
+
+@media (max-width: 760px) {
+  .categoryGrid,
+  .workflowGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .categoryCard {
+    min-height: auto;
+  }
+
+  .categoryCardMain {
+    min-height: 140px;
+  }
+}
+
+@media (max-width: 460px) {
+  .workflowPage {
+    padding: 20px 14px 50px;
+  }
+
+  .pageHeader h1 {
+    font-size: 25px;
+  }
+
+  .categorySummary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .categoryCard,
+  .drawerBackdrop,
+  .savedDrawer {
+    transition: none;
+  }
+
+  .cardSpinner {
+    animation: none;
+  }
+}

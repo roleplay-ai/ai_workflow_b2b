@@ -40,14 +40,18 @@ export function PageLoadingIndicator({ label = "Loading your page" }: { label?: 
 }
 
 function getSidebarOffset(pathname: string): number {
+  if (typeof window !== "undefined" && window.innerWidth <= 900) return 0;
   if (pathname.startsWith("/admin") || pathname.startsWith("/superadmin")) return 256;
   if (
     pathname.startsWith("/apply") ||
     pathname.startsWith("/workflows") ||
     pathname.startsWith("/updates") ||
-    pathname.startsWith("/ask-ai")
+    pathname.startsWith("/ask-ai") ||
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/team") ||
+    pathname.startsWith("/analytics")
   ) {
-    return 224;
+    return 270;
   }
   return 0;
 }

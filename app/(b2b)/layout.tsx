@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import B2BSidebar from "@/components/B2BSidebar";
+import { rowsToToolLogoMap } from "@/lib/toolLogos";
+import styles from "@/components/b2b-shell.module.css";
 
 function initials(name: string | null, email: string | null): string {
   if (name) {
@@ -12,56 +14,32 @@ function initials(name: string | null, email: string | null): string {
   return "??";
 }
 
-function companyInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
-
 export default async function B2BLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("full_name, email, company_id, onboarding_completed_at")
-    .eq("id", user.id)
-    .single();
-
-  let companyName: string | null = null;
-  if (profile?.company_id) {
-    const { data: company } = await supabase
-      .from("companies")
-      .select("name")
-      .eq("id", profile.company_id)
-      .single();
-    companyName = company?.name ?? null;
-  }
+  const [{ data: profile }, { data: toolLogoRows }] = await Promise.all([
+    supabase.from("profiles").select("full_name, email").eq("id", user.id).single(),
+    supabase.from("tool_logos").select("tool, logo_url"),
+  ]);
 
   const userName = profile?.full_name ?? null;
   const userEmail = profile?.email ?? user.email ?? null;
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div className={styles.participantShell}>
       <B2BSidebar
-        companyName={companyName}
-        companyInitials={companyName ? companyInitials(companyName) : "??"}
+        userId={user.id}
         userName={userName}
         userEmail={userEmail}
         userInitials={initials(userName, userEmail)}
+        toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
       />
-      <div style={{
-        marginLeft: "var(--sidebar-w)",
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        minHeight: "100vh",
-        minWidth: 0,
-      }}>
-        {children}
-      </div>
+      <div className={styles.mainColumn}>{children}</div>
     </div>
   );
 }

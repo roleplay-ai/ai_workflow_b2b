@@ -1,898 +1,447 @@
 "use client";
-import { useState, useMemo, useRef, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Activity } from "@/lib/supabase/types";
-import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
-import { formatTopPercentile } from "@/lib/points";
+import { formatToolLabel, normalizeActivityTools, normalizeToolSlug } from "@/lib/tools";
 import type { ToolLogoMap } from "@/lib/toolLogos";
 import B2BTopbar from "@/components/B2BTopbar";
-import ActivityCard, { getTheme, Scene } from "@/components/ActivityCard";
-import ModuleHtmlModal from "@/components/ModuleHtmlModal";
-import ToolIcon from "@/components/ToolIcon";
-import "@/app/card-styles.css";
+import {
+  HeartIcon,
+  WorkflowCard,
+  categoryIcon,
+  type WorkflowCategoryMetadata,
+} from "@/components/WorkflowCard";
+import { useSavedWorkflows } from "@/hooks/useSavedWorkflows";
+import styles from "./workflows.module.css";
 
-// ── Foundation module type ─────────────────────────────────────────────────
+export type { WorkflowCategoryMetadata };
 
-type FoundationModule = {
-  id: string;
-  title: string;
-  emoji: string;
-  description?: string | null;
-  concepts: string[];
-  sort_order: number;
-  is_locked: boolean;
-  html_path: string | null;
+export type ContinueWorkflowProgress = {
+  activityId: string;
+  completedSteps: number;
+  totalSteps: number;
+  updatedAt: string;
 };
-
-// ── Stat card ─────────────────────────────────────────────────────────────
-
-function FireIcon({ size, color }: { size: number; color: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="none">
-      <path fillRule="evenodd" clipRule="evenodd" d="M12.963 2.286a.75.75 0 0 0-1.071-.136 9.742 9.742 0 0 0-3.539 6.176 7.547 7.547 0 0 1-1.705-1.715.75.75 0 0 0-1.152-.082A9 9 0 1 0 15.68 4.534a7.46 7.46 0 0 1-2.717-2.248ZM15.75 14.25a3.75 3.75 0 1 1-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 0 1 1.925-3.545 3.75 3.75 0 0 1 3.255 3.717Z"/>
-    </svg>
-  );
-}
-
-function StatCard({ label, value, delta, deltaColor, labelColor, dark = false, valueIcon }: { label: string; value: string; delta?: string; deltaColor?: string; labelColor?: string; dark?: boolean; valueIcon?: React.ReactNode }) {
-  const resolvedDeltaColor = deltaColor ?? (dark ? "rgba(255,255,255,.55)" : "#23CE68");
-  const resolvedLabelColor = labelColor ?? (dark ? "rgba(255,255,255,.45)" : "#746F78");
-  return (
-    <div style={{ background: dark ? "#1C1820" : "#fff", border: `1px solid ${dark ? "#2E2930" : "#E9E4DC"}`, borderRadius: 12, padding: "16px 18px" }}>
-      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: resolvedLabelColor, marginBottom: 6 }}>
-        {label}
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: dark ? 32 : 28, fontWeight: 900, letterSpacing: "-.04em", color: dark ? "#FFCE00" : "#1C1820", lineHeight: 1 }}>
-        {value}
-        {valueIcon}
-      </div>
-      {delta && <div style={{ fontSize: 11.5, fontWeight: 700, marginTop: 5, color: resolvedDeltaColor }}>{delta}</div>}
-    </div>
-  );
-}
-
-// ── Filter tab chip ───────────────────────────────────────────────────────
-
-type MainTab = "my" | "all";
-
-function MainTabSwitch({ active, onChange }: {
-  active: MainTab;
-  onChange: (tab: MainTab) => void;
-}) {
-  return (
-    <div className="workflows-main-tab-switch" role="tablist" aria-label="Workflow views">
-      <button
-        type="button"
-        role="tab"
-        aria-selected={active === "my"}
-        className={`workflows-main-tab${active === "my" ? " active" : ""}`}
-        onClick={() => onChange("my")}
-      >
-        <span className="workflows-main-tab-icon" aria-hidden="true">⭐</span>
-        My Workflows
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={active === "all"}
-        className={`workflows-main-tab${active === "all" ? " active" : ""}`}
-        onClick={() => onChange("all")}
-      >
-        <span className="workflows-main-tab-icon" aria-hidden="true">🗂</span>
-        All Workflows
-      </button>
-    </div>
-  );
-}
-
-// ── Tool chip ─────────────────────────────────────────────────────────────
-
-function ToolChip({ tool, selected, toolLogos, onClick }: { tool: string; selected: boolean; toolLogos: ToolLogoMap; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      className={`workflows-tool-chip${selected ? " is-active" : ""}`}
-      onClick={onClick}
-      aria-pressed={selected}
-      title={formatToolLabel(tool)}
-    >
-      <span className="workflows-tool-chip-icon">
-        <ToolIcon tool={tool} size={28} logos={toolLogos} insetScale={0.88} />
-      </span>
-      <span className="workflows-tool-chip-label">{formatToolLabel(tool)}</span>
-    </button>
-  );
-}
-
-// ── Category dropdown ─────────────────────────────────────────────────────
-
-function CategoryDropdown({ categories, selected, onChange }: {
-  categories: [string, number][];
-  selected: string | null;
-  onChange: (cat: string | null) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setOpen(false); }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
-
-  const label = selected ?? "Categories";
-
-  return (
-    <div ref={ref} style={{ position: "relative", flexShrink: 0 }}>
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 7,
-          height: 40, padding: "0 14px",
-          borderRadius: 999,
-          border: `1.5px solid ${selected ? "#1C1820" : "#E9E4DC"}`,
-          background: selected ? "#1C1820" : "#fff",
-          color: selected ? "#FFCE00" : "#1C1820",
-          fontSize: 12.5, fontWeight: 800,
-          cursor: "pointer", fontFamily: "inherit",
-          boxShadow: "0 3px 10px rgba(34,29,35,.05)",
-          transition: "all .15s",
-          whiteSpace: "nowrap",
-        }}
-      >
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.65 }}>
-          <rect x="1" y="3" width="14" height="2.5" rx="1.2" />
-          <rect x="3" y="7.5" width="10" height="2.5" rx="1.2" />
-          <rect x="5.5" y="12" width="5" height="2.5" rx="1.2" />
-        </svg>
-        {label}
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8"
-          style={{ transition: "transform .2s", transform: open ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.6 }}>
-          <path d="M2 4l4 4 4-4" />
-        </svg>
-      </button>
-
-      {open && (
-        <div style={{
-          position: "absolute", top: "calc(100% + 8px)", right: 0,
-          minWidth: 220, maxHeight: 320,
-          background: "#fff", borderRadius: 14,
-          border: "1px solid #E9E4DC",
-          boxShadow: "0 16px 48px rgba(28,24,32,.14)",
-          zIndex: 99, overflowY: "auto",
-          padding: "6px",
-        }}>
-          {/* All option */}
-          <button
-            type="button"
-            onClick={() => { onChange(null); setOpen(false); }}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              width: "100%", padding: "9px 12px", borderRadius: 8,
-              border: "none", background: selected === null ? "rgba(98,60,234,.08)" : "transparent",
-              color: selected === null ? "#623CEA" : "#1C1820",
-              fontSize: 13, fontWeight: selected === null ? 800 : 600,
-              cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-              transition: "background .1s",
-            }}
-            onMouseEnter={e => { if (selected !== null) (e.currentTarget as HTMLElement).style.background = "var(--bg)"; }}
-            onMouseLeave={e => { if (selected !== null) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-          >
-            <span>All Categories</span>
-            {selected === null && <span style={{ fontSize: 12, color: "#623CEA" }}>✓</span>}
-          </button>
-
-          {/* Divider */}
-          <div style={{ height: 1, background: "#F0EBE3", margin: "4px 6px" }} />
-
-          {categories.map(([cat, count]) => {
-            const active = selected === cat;
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => { onChange(cat); setOpen(false); }}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  width: "100%", padding: "9px 12px", borderRadius: 8,
-                  border: "none", background: active ? "rgba(98,60,234,.08)" : "transparent",
-                  color: active ? "#623CEA" : "#1C1820",
-                  fontSize: 13, fontWeight: active ? 800 : 600,
-                  cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-                  transition: "background .1s",
-                }}
-                onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "var(--bg)"; }}
-                onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-              >
-                <span style={{ flex: 1, marginRight: 8 }}>{cat}</span>
-                <span style={{
-                  fontSize: 10.5, fontWeight: 700,
-                  color: active ? "#623CEA" : "#A09AA6",
-                  background: active ? "rgba(98,60,234,.1)" : "var(--bg)",
-                  borderRadius: 999, padding: "2px 7px", flexShrink: 0,
-                }}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Category card (exact replica of main app) ────────────────────────────
-
-function CategoryCard({ name, count, description, thumbnail, onClick }: { name: string; count: number; description?: string | null; thumbnail?: string | null; onClick: () => void }) {
-  const theme = getTheme(name);
-  const countLabel = `${count} workflow${count !== 1 ? "s" : ""}`;
-
-  return (
-    <div
-      className="workflow-card"
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
-      style={{ cursor: "pointer" }}
-    >
-      <div className={`card-poster category-card-poster ${theme.posterColor}${thumbnail ? " has-thumbnail" : ""}`}>
-        {thumbnail ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="card-thumbnail" src={thumbnail} alt="" />
-        ) : (
-          <Scene theme={theme} />
-        )}
-      </div>
-      <div className="card-body category-card-body">
-        <div className="meta-line">
-          <span className="category-card-count">{countLabel}</span>
-        </div>
-        <h3 className="card-title">{name}</h3>
-        {description && <p className="card-desc">{description}</p>}
-        <div className="category-card-footer">
-          <span className="category-card-cta">Try it →</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Categories grid ───────────────────────────────────────────────────────
-
-function CategoriesGrid({ activities, selectedTool, onSelect, categoryThumbnails, categoryDescriptions }: {
-  activities: Activity[];
-  selectedTool: string | null;
-  onSelect: (cat: string) => void;
-  categoryThumbnails: Record<string, string>;
-  categoryDescriptions: Record<string, string>;
-}) {
-  const categories = useMemo(() => {
-    const src = selectedTool
-      ? activities.filter(a => normalizeActivityTools(a.tools).some(t => t.toLowerCase() === selectedTool.toLowerCase()))
-      : activities;
-    const map = new Map<string, number>();
-    src.forEach(a => (a.categories ?? []).forEach(cat => { const k = cat.trim(); if (k) map.set(k, (map.get(k) ?? 0) + 1); }));
-    return [...map.entries()].sort((a, b) => b[1] - a[1]);
-  }, [activities, selectedTool]);
-
-  if (categories.length === 0) return (
-    <div className="static-grid-empty">No workflow types found{selectedTool ? ` for ${formatToolLabel(selectedTool)}` : ""}.</div>
-  );
-
-  return (
-    <div className="static-grid">
-      {categories.map(([cat, count]) => {
-        const key = cat.toLowerCase();
-        return (
-          <div key={cat} className="static-grid-slot">
-            <CategoryCard
-              name={cat}
-              count={count}
-              thumbnail={categoryThumbnails[key] ?? null}
-              description={categoryDescriptions[key] ?? null}
-              onClick={() => onSelect(cat)}
-            />
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── AI Foundations carousel ───────────────────────────────────────────────
-
-const FOUNDATION_THEMES = [
-  { soft: "#FFF6CF", accent: "#F68A29" },
-  { soft: "#EAF5FF", accent: "#3699FC" },
-  { soft: "#F1ECFF", accent: "#623CEA" },
-  { soft: "#E9FFF2", accent: "#23CE6B" },
-  { soft: "#FDE4CC", accent: "#F68A29" },
-  { soft: "#FFECEF", accent: "#ED4551" },
-  { soft: "#F1ECFF", accent: "#623CEA" },
-  { soft: "#EAF5FF", accent: "#3699FC" },
-];
-
-function AIFoundationsSection({ modules }: { modules: FoundationModule[] }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [activeModule, setActiveModule] = useState<FoundationModule | null>(null);
-
-  if (modules.length === 0) return null;
-
-  const scroll = (dir: "left" | "right") =>
-    scrollRef.current?.scrollBy({ left: dir === "left" ? -442 : 442, behavior: "smooth" });
-
-  return (
-    <>
-      {activeModule && (
-        <ModuleHtmlModal
-          moduleId={activeModule.id}
-          moduleTitle={activeModule.title}
-          moduleEmoji={activeModule.emoji || "📘"}
-          onClose={() => setActiveModule(null)}
-        />
-      )}
-
-      <section style={{ padding: "32px 28px 40px", borderTop: "1px solid #E9E4DC", background: "var(--bg)" }}>
-        <div style={{ marginBottom: 22 }}>
-          <div style={{ position: "relative", paddingLeft: 22 }}>
-            <div style={{ position: "absolute", left: 0, top: 4, width: 7, height: 58, borderRadius: 999, background: "#FFCE00", border: "1px solid rgba(28,24,32,.18)" }} />
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".09em", textTransform: "uppercase", color: "#746F78", marginBottom: 4 }}>Learn</div>
-            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-.04em", color: "#1C1820" }}>AI Foundations</h2>
-            <p style={{ margin: "6px 0 0", color: "#6B6670", fontSize: 13.5, fontWeight: 600, lineHeight: 1.45 }}>Short explainers that build practical AI fluency.</p>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={() => scroll("left")} style={{ flexShrink: 0, width: 42, height: 52, borderRadius: 999, background: "#fff", border: "1px solid #E9E4DC", boxShadow: "0 16px 35px rgba(28,24,32,.13)", display: "grid", placeItems: "center", fontSize: 26, fontWeight: 950, cursor: "pointer", fontFamily: "inherit" }}>‹</button>
-
-          <div ref={scrollRef} style={{ flex: 1, minWidth: 0, overflowX: "auto", overflowY: "visible", padding: "12px 0 20px", margin: "-12px 0 -20px", scrollbarWidth: "none" }}>
-            <div style={{ display: "flex", gap: 16, width: "max-content", alignItems: "flex-start" }}>
-              {modules.map((mod, i) => {
-                const { soft, accent } = FOUNDATION_THEMES[i % FOUNDATION_THEMES.length];
-                const sub = mod.description?.trim() || mod.concepts?.[0] || "";
-                return (
-                  <div key={mod.id} style={{ flexShrink: 0, width: 205, paddingTop: 4, paddingBottom: 8 }}>
-                    <div
-                      onClick={() => { if (!mod.is_locked) setActiveModule(mod); }}
-                      style={{ width: "100%", minHeight: 188, borderRadius: 16, border: "1px solid #E8E0D1", background: "#fff", boxShadow: "0 10px 24px rgba(28,24,32,.06)", cursor: mod.is_locked ? "not-allowed" : "pointer", display: "flex", flexDirection: "column", padding: 18, boxSizing: "border-box", opacity: mod.is_locked ? 0.55 : 1, transition: "transform .15s, box-shadow .15s" }}
-                      onMouseEnter={e => { if (!mod.is_locked) { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 14px 28px rgba(28,24,32,.09)"; } }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 10px 24px rgba(28,24,32,.06)"; }}
-                    >
-                      <div style={{ width: 54, height: 54, borderRadius: 16, display: "grid", placeItems: "center", background: soft, marginBottom: 16, flexShrink: 0, fontSize: 26 }}>
-                        {mod.is_locked ? "🔒" : (mod.emoji || "📘")}
-                      </div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: "#1C1820", margin: "0 0 7px", lineHeight: 1.18 }}>{mod.title}</div>
-                      <div style={{ fontSize: 13, fontWeight: 400, color: "#6B6B6B", lineHeight: 1.42, margin: "0 0 14px", flex: 1 }}>{sub || " "}</div>
-                      <span style={{ display: "inline-flex", width: "fit-content", alignItems: "center", fontSize: 10, fontWeight: 900, color: accent, letterSpacing: 1, textTransform: "uppercase" }}>
-                        {mod.is_locked ? "Locked" : "Learn →"}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <button onClick={() => scroll("right")} style={{ flexShrink: 0, width: 42, height: 52, borderRadius: 999, background: "#fff", border: "1px solid #E9E4DC", boxShadow: "0 16px 35px rgba(28,24,32,.13)", display: "grid", placeItems: "center", fontSize: 26, fontWeight: 950, cursor: "pointer", fontFamily: "inherit" }}>›</button>
-        </div>
-      </section>
-    </>
-  );
-}
-
-// ── Main client component ─────────────────────────────────────────────────
-
-function activityHasTag(activity: Activity, tagName: string): boolean {
-  return (activity.tags ?? []).some(t => t.toLowerCase() === tagName.toLowerCase());
-}
 
 type Props = {
   activities: Activity[];
   toolLogos: ToolLogoMap;
-  tagLogos: Record<string, string>;
-  userId: string | null;
+  userId: string;
   viewCounts: Record<string, number>;
-  completedIds: Set<string>;
-  inProgressIds: Set<string>;
-  savedWorkflowIds: Set<string>;
-  totalAvailable: number;
-  completedCount: number;
-  inProgressCount: number;
-  userTotalPoints: number;
-  leaderboardRank: number | null;
-  companyPercentile: number | null;
-  companySize: number;
-  companyAvgPoints: number;
-  streakCount: number;
-  modules: FoundationModule[];
-  categoryThumbnails: Record<string, string>;
-  categoryDescriptions: Record<string, string>;
-  workflowsConfirmed: boolean;
-  preferredToolSlug: string | null;
+  completedIds: string[];
+  inProgressIds: string[];
+  savedWorkflowIds: string[];
+  categoryMetadata: WorkflowCategoryMetadata[];
+  continueProgress: ContinueWorkflowProgress | null;
 };
 
-export default function WorkflowsClient({ activities, toolLogos, tagLogos, userId, viewCounts, completedIds, inProgressIds, savedWorkflowIds, totalAvailable, completedCount, inProgressCount, userTotalPoints, leaderboardRank, companyPercentile, companySize, companyAvgPoints, streakCount, modules, categoryThumbnails, categoryDescriptions, workflowsConfirmed: workflowsConfirmedInitial, preferredToolSlug }: Props) {
+type CategorySummary = WorkflowCategoryMetadata & {
+  count: number;
+};
+
+const CATEGORY_ORDER_FALLBACKS: Record<string, number> = {
+  "get set up": 10,
+  "automate email & tasks": 20,
+  "make presentations": 30,
+  "organize knowledge in one place": 40,
+  "analyze data": 50,
+  "delegate multi-step work to an agent": 60,
+  "generate videos": 70,
+  "make your chatbot remember you": 80,
+  "build a voice chatbot": 90,
+  "build a web app": 100,
+  "teach ai your way of working": 110,
+  "build a text chatbot": 120,
+  "research the market": 130,
+  "generate images": 140,
+  "build a website": 150,
+  "data security": 160,
+};
+
+const REDUNDANT_LEGACY_CATEGORIES = new Set(["automate", "build", "chat", "setup"]);
+
+function SearchIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+      <circle cx="8" cy="8" r="5" />
+      <path d="m12 12 3.5 3.5" />
+    </svg>
+  );
+}
+
+export default function WorkflowsClient({
+  activities,
+  toolLogos,
+  userId,
+  viewCounts,
+  completedIds: completedIdList,
+  inProgressIds: inProgressIdList,
+  savedWorkflowIds,
+  categoryMetadata,
+  continueProgress,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const categoryParam = searchParams.get("category");
+  const queryParam = searchParams.get("q") ?? "";
   const selectedTag = searchParams.get("tag");
-  const qParam = searchParams.get("q") ?? "";
-  const [activeMainTab, setActiveMainTab] = useState<"my" | "all">(qParam.trim() ? "all" : "my");
-  const [preferencesConfirmed, setPreferencesConfirmed] = useState(workflowsConfirmedInitial);
-  const [confirmingPreferences, setConfirmingPreferences] = useState(false);
-  const [navigatingToPreferences, setNavigatingToPreferences] = useState(false);
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-  const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set(savedWorkflowIds));
-  const [selectedTool, setSelectedTool] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState(qParam);
-  const [extraRows, setExtraRows] = useState(0);
-
-  // Apply top-bar search navigations that land on /workflows?q=…
-  // Always open the All Workflows tab and show only matching results.
-  useEffect(() => {
-    setSearchQuery(qParam);
-    if (qParam.trim()) {
-      setActiveMainTab("all");
-      setSelectedCategory(null);
-      setSelectedTool(null);
-    }
-  }, [qParam]);
+  const contentTypeParam = searchParams.get("content_type");
+  const toolParam = searchParams.get("tool");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
+  const [categorySearch, setCategorySearch] = useState("");
+  const [workflowSearch, setWorkflowSearch] = useState(queryParam);
+  const { savedIds, savePendingIds, saveError, toggleSaveWorkflow } = useSavedWorkflows(userId, savedWorkflowIds);
+  const [savedDrawerOpen, setSavedDrawerOpen] = useState(false);
+  const completedIds = useMemo(() => new Set(completedIdList), [completedIdList]);
+  const inProgressIds = useMemo(() => new Set(inProgressIdList), [inProgressIdList]);
 
   useEffect(() => {
-    setSavedIds(new Set(savedWorkflowIds));
-  }, [savedWorkflowIds]);
+    setSelectedCategory(categoryParam);
+    setWorkflowSearch(queryParam);
+  }, [categoryParam, queryParam]);
 
-  const COLS = 4;
+  useEffect(() => {
+    if (!savedDrawerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSavedDrawerOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [savedDrawerOpen]);
 
-  const myWorkflows = useMemo(
-    () => activities.filter(a => savedIds.has(a.id) && !dismissedIds.has(a.id)),
-    [activities, savedIds, dismissedIds]
+  const metadataByName = useMemo(
+    () => new Map(categoryMetadata.map((category) => [category.name.toLowerCase(), category])),
+    [categoryMetadata],
   );
 
-  function dismissSavedWorkflow(activityId: string) {
-    if (preferencesConfirmed) return;
-    setDismissedIds(prev => new Set(prev).add(activityId));
-    setSavedIds(prev => {
-      const next = new Set(prev);
-      next.delete(activityId);
-      return next;
-    });
-    if (!userId) return;
-    // keepalive so the request survives a fast click-then-refresh — a plain
-    // fetch (or the supabase-js client, which doesn't expose keepalive) can
-    // get cancelled mid-flight by page navigation before it reaches the server.
-    void fetch("/api/workflows/dismiss", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activityId }),
-      keepalive: true,
-    }).catch(() => {});
-  }
+  const categorySummaries = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const activity of activities) {
+      for (const rawCategory of activity.categories ?? []) {
+        const name = rawCategory.trim();
+        if (name) counts.set(name.toLowerCase(), (counts.get(name.toLowerCase()) ?? 0) + 1);
+      }
+    }
 
-  function toggleSaveWorkflow(activityId: string) {
-    if (!userId) return;
-
-    const wasSaved = savedIds.has(activityId);
-    setSavedIds(prev => {
-      const next = new Set(prev);
-      if (wasSaved) next.delete(activityId);
-      else next.add(activityId);
-      return next;
-    });
-    // If it was previously dismissed in review mode, clear that so a re-like shows again.
-    setDismissedIds(prev => {
-      if (!prev.has(activityId)) return prev;
-      const next = new Set(prev);
-      next.delete(activityId);
-      return next;
-    });
-
-    void fetch("/api/workflows/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activityId }),
-      keepalive: true,
-    })
-      .then(async res => {
-        if (!res.ok) throw new Error("save failed");
-        const data = await res.json() as { saved?: boolean };
-        setSavedIds(prev => {
-          const next = new Set(prev);
-          if (data.saved) next.add(activityId);
-          else next.delete(activityId);
-          return next;
-        });
-      })
-      .catch(() => {
-        // Revert optimistic update on failure.
-        setSavedIds(prev => {
-          const next = new Set(prev);
-          if (wasSaved) next.add(activityId);
-          else next.delete(activityId);
-          return next;
-        });
+    const summaries: CategorySummary[] = categoryMetadata
+      .filter((category) =>
+        category.is_visible !== false &&
+        !REDUNDANT_LEGACY_CATEGORIES.has(category.name.toLowerCase()),
+      )
+      .map((category) => ({
+        ...category,
+        count: counts.get(category.name.toLowerCase()) ?? 0,
+      }))
+      .filter((category) => category.count > 0)
+      .sort((a, b) => {
+        const aOrder = a.display_order > 0
+          ? a.display_order
+          : CATEGORY_ORDER_FALLBACKS[a.name.toLowerCase()] ?? 1000;
+        const bOrder = b.display_order > 0
+          ? b.display_order
+          : CATEGORY_ORDER_FALLBACKS[b.name.toLowerCase()] ?? 1000;
+        return aOrder - bOrder || a.name.localeCompare(b.name);
       });
-  }
 
-  async function confirmPreferences() {
-    if (confirmingPreferences || preferencesConfirmed) return;
-    setConfirmingPreferences(true);
-    setPreferencesConfirmed(true);
-    try {
-      const res = await fetch("/api/workflows/confirm", { method: "POST", keepalive: true });
-      if (!res.ok) setPreferencesConfirmed(false);
-    } catch {
-      setPreferencesConfirmed(false);
-    } finally {
-      setConfirmingPreferences(false);
+    const knownNames = new Set(summaries.map((category) => category.name.toLowerCase()));
+    for (const [lowerName, count] of counts) {
+      if (knownNames.has(lowerName) || REDUNDANT_LEGACY_CATEGORIES.has(lowerName) || count === 0) continue;
+      const activityName = activities
+        .flatMap((activity) => activity.categories ?? [])
+        .find((name) => name.toLowerCase() === lowerName);
+      if (!activityName) continue;
+      summaries.push({
+        name: activityName,
+        description: null,
+        thumbnail_url: null,
+        icon: null,
+        display_order: Number.MAX_SAFE_INTEGER,
+        is_visible: true,
+        count,
+      });
     }
-  }
+    return summaries;
+  }, [activities, categoryMetadata]);
 
-  useEffect(() => {
-    setPreferencesConfirmed(workflowsConfirmedInitial);
-  }, [workflowsConfirmedInitial]);
-
-  function clearTagFilter() {
-    const q = searchQuery.trim();
-    router.replace(q ? `/workflows?q=${encodeURIComponent(q)}` : "/workflows", { scroll: false });
-  }
-
-  function handleSearch(q: string) {
-    setSelectedCategory(null);
-    setSelectedTool(null);
-    setSearchQuery(q);
-    if (q) {
-      setActiveMainTab("all");
-      router.replace(`/workflows?q=${encodeURIComponent(q)}`, { scroll: false });
-    } else {
-      router.replace("/workflows", { scroll: false });
-    }
-  }
-
-  const showActivities = !!selectedCategory || !!searchQuery.trim() || !!selectedTool || !!selectedTag;
-
-  const allTools = useMemo(() => {
-    const s = new Set<string>();
-    activities.forEach(a => normalizeActivityTools(a.tools).forEach(t => s.add(t)));
-    return [...s];
-  }, [activities]);
-
-  const allCategories = useMemo((): [string, number][] => {
-    const map = new Map<string, number>();
-    activities.forEach(a => (a.categories ?? []).forEach(c => { if (c) map.set(c, (map.get(c) ?? 0) + 1); }));
-    return [...map.entries()].sort((a, b) => b[1] - a[1]);
-  }, [activities]);
-
-  const filtered = useMemo(() => {
-    let result = activities;
-    if (selectedTool) result = result.filter(a => normalizeActivityTools(a.tools).includes(selectedTool));
-    if (selectedCategory) result = result.filter(a => (a.categories ?? []).some(c => c.toLowerCase() === selectedCategory.toLowerCase()));
-    if (selectedTag) result = result.filter(a => activityHasTag(a, selectedTag));
-    const q = searchQuery.trim().toLowerCase();
-    if (q) result = result.filter(a =>
-      a.title.toLowerCase().includes(q) ||
-      (a.description ?? "").toLowerCase().includes(q) ||
-      normalizeActivityTools(a.tools).some(t => formatToolLabel(t).toLowerCase().includes(q))
+  const visibleCategories = useMemo(() => {
+    const query = categorySearch.trim().toLowerCase();
+    if (!query) return categorySummaries;
+    return categorySummaries.filter((category) =>
+      category.name.toLowerCase().includes(query) ||
+      (category.description ?? "").toLowerCase().includes(query),
     );
+  }, [categorySearch, categorySummaries]);
+
+  const filteredActivities = useMemo(() => {
+    let result = activities;
+    if (selectedCategory) {
+      result = result.filter((activity) =>
+        (activity.categories ?? []).some((category) => category.toLowerCase() === selectedCategory.toLowerCase()),
+      );
+    }
+    if (selectedTag) {
+      result = result.filter((activity) =>
+        (activity.tags ?? []).some((tag) => tag.toLowerCase() === selectedTag.toLowerCase()),
+      );
+    }
+    if (contentTypeParam) {
+      result = result.filter(
+        (activity) => (activity.content_type ?? "").toLowerCase() === contentTypeParam.toLowerCase(),
+      );
+    }
+    if (toolParam) {
+      const normalizedTool = normalizeToolSlug(toolParam);
+      result = result.filter((activity) => normalizeActivityTools(activity.tools).includes(normalizedTool));
+    }
+    const query = workflowSearch.trim().toLowerCase();
+    if (query) {
+      result = result.filter((activity) =>
+        activity.title.toLowerCase().includes(query) ||
+        (activity.description ?? "").toLowerCase().includes(query) ||
+        (activity.categories ?? []).some((category) => category.toLowerCase().includes(query)) ||
+        (activity.tags ?? []).some((tag) => tag.toLowerCase().includes(query)) ||
+        normalizeActivityTools(activity.tools).some((tool) =>
+          formatToolLabel(tool).toLowerCase().includes(query),
+        ),
+      );
+    }
     return result;
-  }, [activities, selectedTool, selectedCategory, selectedTag, searchQuery, completedIds, inProgressIds]);
+  }, [activities, selectedCategory, selectedTag, contentTypeParam, toolParam, workflowSearch]);
 
-  const visibleCount = COLS * (2 + extraRows);
-  const visible = filtered.slice(0, visibleCount);
-  const hasMore = visibleCount < filtered.length;
+  const savedActivities = useMemo(() => {
+    const activityById = new Map(activities.map((activity) => [activity.id, activity]));
+    return [...savedIds]
+      .map((activityId) => activityById.get(activityId))
+      .filter((activity): activity is Activity => Boolean(activity));
+  }, [activities, savedIds]);
 
-  useEffect(() => { setExtraRows(0); }, [selectedTool, selectedCategory, selectedTag, searchQuery]);
+  const continueActivity = continueProgress
+    ? activities.find((activity) => activity.id === continueProgress.activityId) ?? null
+    : null;
 
-  useEffect(() => {
-    if (!selectedTag && !searchQuery.trim()) return;
-    if (activeMainTab !== "all") return;
-    const el = document.getElementById("all-workflows");
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [selectedTag, searchQuery, activeMainTab]);
+  const isResultView = Boolean(selectedCategory || selectedTag || contentTypeParam || toolParam || queryParam.trim());
+  const selectedCategoryMetadata = selectedCategory
+    ? metadataByName.get(selectedCategory.toLowerCase())
+    : undefined;
+  const recentlyAdded = activities.some(
+    (activity) => Date.now() - new Date(activity.created_at).getTime() <= 7 * 24 * 60 * 60 * 1000,
+  );
 
-  const topPercentileLabel = formatTopPercentile(companyPercentile, companySize);
-  const percentileDelta = companySize > 0
-    ? `Company avg: ${companyAvgPoints} pts`
-    : "Points rank within your company";
+  function openCategory(category: string) {
+    setSelectedCategory(category);
+    setWorkflowSearch("");
+    router.replace(`/workflows?category=${encodeURIComponent(category)}`, { scroll: false });
+  }
 
-  const sectionTitle = selectedTag
-    ? selectedTag
-    : selectedCategory
-      ? selectedCategory
-      : "All Workflows";
+  function returnToCategories() {
+    setSelectedCategory(null);
+    setWorkflowSearch("");
+    router.replace("/workflows?browse=all", { scroll: false });
+  }
 
-  const sectionDesc = selectedTag
-    ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} tagged with ${selectedTag}`
-    : selectedCategory
-      ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} in ${selectedCategory}`
-      : "Browse every guided workflow in the library. Filter by tool or category to find what fits your work.";
+  function renderWorkflowCard(activity: Activity) {
+    const primaryCategory = (activity.categories ?? [])[0]?.toLowerCase();
+    return (
+      <WorkflowCard
+        key={activity.id}
+        activity={activity}
+        category={primaryCategory ? metadataByName.get(primaryCategory) : undefined}
+        toolLogos={toolLogos}
+        viewCount={viewCounts[activity.id] ?? 0}
+        isCompleted={completedIds.has(activity.id)}
+        isInProgress={inProgressIds.has(activity.id)}
+        isSaved={savedIds.has(activity.id)}
+        isSavePending={savePendingIds.has(activity.id)}
+        onToggleSave={toggleSaveWorkflow}
+      />
+    );
+  }
+
+  const resultTitle = selectedCategory
+    ? selectedCategory
+    : contentTypeParam
+      ? toolParam
+        ? `${contentTypeParam} · ${formatToolLabel(toolParam)}`
+        : contentTypeParam
+      : toolParam
+        ? formatToolLabel(toolParam)
+        : selectedTag
+          ? selectedTag
+          : queryParam.trim()
+            ? `Results for “${queryParam.trim()}”`
+            : "All workflows";
 
   return (
     <>
-      <B2BTopbar
-        searchQuery={searchQuery}
-        onSearch={handleSearch}
-        points={userTotalPoints}
-        newActivities={activities.filter(a => a.is_featured).slice(0, 8).map(a => ({ id: a.id, title: a.title, tools: a.tools, description: (a as any).description ?? null }))}
-        activeTag={selectedTag}
-      />
-
-      <div style={{ flex: 1, background: "var(--bg)" }}>
-        {/* Page header */}
-        <div style={{ background: "var(--bg)", padding: "22px 28px 0" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 18 }}>
-            <div>
-              <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-.03em", color: "#1C1820", lineHeight: 1.1 }}>Workflows</h1>
-              <p style={{ fontSize: 13.5, color: "#746F78", fontWeight: 600, marginTop: 4 }}>Guided AI automations tailored to your tool stack and job category.</p>
-            </div>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", borderRadius: 999, padding: "5px 12px", background: "rgba(98,60,234,.08)", color: "#623CEA", border: "1px solid rgba(98,60,234,.18)", whiteSpace: "nowrap" }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#623CEA", display: "inline-block" }} />
-              Updated this week
-            </span>
-          </div>
-
-          {/* Stats */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 12, paddingBottom: 18, borderBottom: "1px solid #E9E4DC" }}>
-            <StatCard
-              label="🎖️ Rank"
-              value={leaderboardRank != null ? String(leaderboardRank) : "—"}
-              delta={companySize > 0 ? `Among ${companySize} teammates` : "Unranked"}
-              deltaColor="#623CEA"
-            />
-            <StatCard label="✅ Completed" value={String(completedCount)} delta={`${inProgressCount} in progress`} deltaColor={inProgressCount > 0 ? "#F68A29" : undefined} />
-            <StatCard label="⭐ My Workflows" value={String(myWorkflows.length)} delta={myWorkflows.length > 0 ? "Tailored to your stack" : "Update preferences to get started"} deltaColor={myWorkflows.length > 0 ? "#3699FC" : undefined} />
-            <StatCard
-              label="Weekly Streak"
-              value={String(streakCount)}
-              valueIcon={<FireIcon size={28} color="#F68A29" />}
-              delta={
-                streakCount === 0
-                  ? "Complete a workflow to start"
-                  : streakCount === 1
-                    ? "Streak started"
-                    : `${streakCount} weeks in a row`
-              }
-              deltaColor="#623CEA"
-            />
-            <StatCard label="Company Rank" value={topPercentileLabel} delta={percentileDelta} dark />
-          </div>
-        </div>
-
-        {/* Main tab switcher */}
-        <div className="ndb-root workflows-main-tab-bar">
-          <MainTabSwitch active={activeMainTab} onChange={setActiveMainTab} />
-          <div className="workflows-main-tab-bar-end">
-            {activeMainTab === "my" && (
-              <Link
-                href="/ask-ai?onboarding=update"
-                className="workflows-main-tab-action"
-                onClick={() => setNavigatingToPreferences(true)}
-                style={navigatingToPreferences ? { opacity: 0.75, pointerEvents: "none" } : undefined}
-                aria-disabled={navigatingToPreferences}
-              >
-                {navigatingToPreferences ? (
-                  <>
-                    <span style={{
-                      width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
-                      border: "2px solid rgba(255,255,255,.4)", borderTopColor: "#fff",
-                      animation: "cardNavSpin .65s linear infinite",
-                    }} />
-                    Loading…
-                  </>
-                ) : (
-                  <>⚙️ Update My Preferences</>
-                )}
-              </Link>
-            )}
-          </div>
-        </div>
-
-        {activeMainTab === "all" && (
+      <B2BTopbar />
+      <main className={styles.workflowPage}>
+        {!isResultView ? (
           <>
-            {/* Filter bar */}
-            <div style={{ background: "var(--bg)", padding: "18px 28px 20px" }}>
-              <div className="ndb-root" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                {/* Chips — scrollable row */}
-                <div className="workflows-filter-bar" style={{ flex: 1, minWidth: 0 }}>
-                  {allTools.map(tool => (
-                    <ToolChip
-                      key={tool}
-                      tool={tool}
-                      selected={selectedTool === tool}
-                      toolLogos={toolLogos}
-                      onClick={() => { clearTagFilter(); setSelectedTool(selectedTool === tool ? null : tool); setSelectedCategory(null); }}
-                    />
+            <header className={styles.pageHeader}>
+              <div>
+                <h1>Workflows</h1>
+                <p>Browse practical AI workflows by category.</p>
+              </div>
+              <div className={styles.headerActions}>
+                {recentlyAdded ? <span className={styles.updatedPill}>Updated this week</span> : null}
+                <button
+                  type="button"
+                  className={styles.savedTrigger}
+                  aria-expanded={savedDrawerOpen}
+                  aria-controls="saved-workflows-drawer"
+                  onClick={() => setSavedDrawerOpen(true)}
+                >
+                  <HeartIcon filled={false} />
+                  Saved workflows
+                  {savedIds.size > 0 ? <span>{savedIds.size}</span> : null}
+                </button>
+              </div>
+            </header>
+            {saveError ? <p className={styles.saveError} role="status">{saveError}</p> : null}
+
+            <div className={styles.searchBox}>
+              <SearchIcon />
+              <input
+                value={categorySearch}
+                onChange={(event) => setCategorySearch(event.target.value)}
+                placeholder="Search categories"
+                aria-label="Search workflow categories"
+              />
+            </div>
+
+            {continueActivity && continueProgress ? (
+              <section className={styles.section}>
+                <div className={styles.sectionHeading}>
+                  <h2>Continue practising</h2>
+                </div>
+                <div className={styles.continueCard}>
+                  <span className={styles.continueIcon}>
+                    {categoryIcon(metadataByName.get((continueActivity.categories?.[0] ?? "").toLowerCase()))}
+                  </span>
+                  <div className={styles.continueCopy}>
+                    <strong>{continueActivity.title}</strong>
+                    <span>
+                      {continueProgress.totalSteps > 0
+                        ? `Step ${Math.min(continueProgress.completedSteps + 1, continueProgress.totalSteps)} of ${continueProgress.totalSteps}`
+                        : "In progress"}
+                      {continueActivity.time_estimate_minutes
+                        ? ` · ${Math.max(1, Math.round(continueActivity.time_estimate_minutes * (1 - Math.min(continueProgress.completedSteps / Math.max(continueProgress.totalSteps, 1), 0.9))))} minutes remaining`
+                        : ""}
+                    </span>
+                    {continueProgress.totalSteps > 0 ? (
+                      <span className={styles.progressTrack}>
+                        <span style={{ width: `${Math.min(100, (continueProgress.completedSteps / continueProgress.totalSteps) * 100)}%` }} />
+                      </span>
+                    ) : null}
+                  </div>
+                  <Link href={`/activity/${continueActivity.id}`} className={styles.primaryButton}>Continue</Link>
+                </div>
+              </section>
+            ) : null}
+
+            <section className={styles.section}>
+              <div className={styles.sectionHeading}>
+                <h2>All categories</h2>
+              </div>
+              {visibleCategories.length > 0 ? (
+                <div className={styles.categoryGrid}>
+                  {visibleCategories.map((category) => (
+                    <button type="button" key={category.name} className={styles.categoryCard} onClick={() => openCategory(category.name)}>
+                      <span className={styles.categoryCardIcon}>{categoryIcon(category)}</span>
+                      <span className={styles.categoryCardMain}>
+                        <strong>{category.name}</strong>
+                        {category.description ? <small>{category.description}</small> : null}
+                        <span className={styles.categoryCardFooter}>
+                          <span>{category.count} workflow{category.count === 1 ? "" : "s"}</span>
+                          <span>Explore →</span>
+                        </span>
+                      </span>
+                    </button>
                   ))}
                 </div>
-                {/* Categories dropdown — always visible on the right, outside the scroll container */}
-                <div style={{ flexShrink: 0, position: "relative", zIndex: 200 }}>
-                  <CategoryDropdown
-                    categories={allCategories}
-                    selected={selectedCategory}
-                    onChange={cat => { clearTagFilter(); setSelectedCategory(cat); }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Main content */}
-            <div className="ndb-root" style={{ padding: "0 28px" }}>
-
-              {/* Categories grid — shown when no active filter */}
-              {!showActivities && (
-                <section className="rail">
-                  <div className="rail-header">
-                    <div className="rail-title">
-                      <span className="section-label">Workflow types</span>
-                      <h2>Browse Workflows by Outcome</h2>
-                      <p>Pick a workflow type to see all guided activities for that category.</p>
-                    </div>
-                  </div>
-                  <CategoriesGrid
-                    activities={activities}
-                    selectedTool={selectedTool}
-                    onSelect={cat => { clearTagFilter(); setSelectedCategory(cat); }}
-                    categoryThumbnails={categoryThumbnails}
-                    categoryDescriptions={categoryDescriptions}
-                  />
-                </section>
-              )}
-
-              {/* Activity grid — shown when any filter active */}
-              {showActivities && (
-                <section className="rail" id="all-workflows">
-                  <div className="rail-header" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                    <div className="rail-title">
-                      <span className="section-label">Full library</span>
-                      <h2>{sectionTitle}</h2>
-                      <p>{sectionDesc}</p>
-                    </div>
-                    {selectedTag && (
-                      <button
-                        onClick={clearTagFilter}
-                        style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 700, color: "#7A5F00", background: "rgba(255,206,0,.12)", border: "1px solid rgba(255,206,0,.35)", borderRadius: 7, cursor: "pointer", padding: "7px 13px", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0, marginTop: 4 }}
-                      >
-                        ← Clear tag
-                      </button>
-                    )}
-                    {selectedCategory && !selectedTag && (
-                      <button
-                        onClick={() => setSelectedCategory(null)}
-                        style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 700, color: "#623CEA", background: "rgba(98,60,234,.07)", border: "1px solid rgba(98,60,234,.18)", borderRadius: 7, cursor: "pointer", padding: "7px 13px", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0, marginTop: 4 }}
-                      >
-                        ← All Categories
-                      </button>
-                    )}
-                  </div>
-
-                  {visible.length === 0 ? (
-                    <div className="static-grid-empty">No workflows match your filters. Try adjusting them.</div>
-                  ) : (
-                    <>
-                      <div className="static-grid">
-                        {visible.map(a => (
-                          <div key={a.id} className="static-grid-slot">
-                            <ActivityCard
-                              activity={a}
-                              toolLogos={toolLogos}
-                              tagLogos={tagLogos}
-                              viewCount={viewCounts[a.id] ?? 0}
-                              isCompleted={completedIds.has(a.id)}
-                              onlyTool={selectedTool}
-                              isSaved={savedIds.has(a.id)}
-                              onToggleSave={userId ? toggleSaveWorkflow : undefined}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      {hasMore && (
-                        <div className="static-grid-more">
-                          <button className="view-more-link" onClick={() => setExtraRows(r => r + 2)}>
-                            View more workflows
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </section>
-              )}
-            </div>
-          </>
-        )}
-
-        {activeMainTab === "my" && (
-          <div className="ndb-root" style={{ padding: "18px 28px 0" }}>
-            <section className="rail">
-              <div className="rail-header">
-                <div className="rail-title">
-                  <span className="section-label">Built for you</span>
-                  <h2>My Workflows</h2>
-                  <p>Based on your preferences and workflows you&apos;ve liked.</p>
-                </div>
-              </div>
-
-              {myWorkflows.length === 0 ? (
-                <div className="static-grid-empty">
-                  No saved workflows yet. Browse All Workflows and tap the heart to add some.
-                </div>
               ) : (
-                <>
-                  {!preferencesConfirmed && (
-                    <div style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
-                      background: "#FFF6CF", borderRadius: 12, padding: "14px 20px", marginBottom: 20,
-                    }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "#1C1820" }}>
-                        These workflows are AI-suggested based on your answers. Remove any that don&apos;t fit, then confirm.
-                      </div>
-                      <button
-                        onClick={confirmPreferences}
-                        disabled={confirmingPreferences}
-                        style={{
-                          background: "#23CE68", color: "white", border: "none", borderRadius: 999,
-                          padding: "9px 20px", fontSize: 13, fontWeight: 700, cursor: confirmingPreferences ? "wait" : "pointer", flexShrink: 0,
-                          opacity: confirmingPreferences ? 0.7 : 1,
-                        }}
-                      >
-                        ✓ Accept as Final
-                      </button>
-                    </div>
-                  )}
-                  <div className="static-grid">
-                    {myWorkflows.map(a => (
-                      <div key={a.id} className="static-grid-slot" style={{ position: "relative" }}>
-                        {!preferencesConfirmed && (
-                          <button
-                            type="button"
-                            onClick={e => { e.preventDefault(); e.stopPropagation(); dismissSavedWorkflow(a.id); }}
-                            title="Remove from My Workflows"
-                            style={{
-                              position: "absolute", top: 10, left: 10, zIndex: 20,
-                              width: 26, height: 26, borderRadius: "50%",
-                              background: "rgba(255,255,255,.92)", border: "1px solid #E8E6DC",
-                              color: "#221D23", fontSize: 13, cursor: "pointer",
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                            }}
-                          >
-                            ✕
-                          </button>
-                        )}
-                        <ActivityCard
-                          activity={a}
-                          toolLogos={toolLogos}
-                          tagLogos={tagLogos}
-                          viewCount={viewCounts[a.id] ?? 0}
-                          isCompleted={completedIds.has(a.id)}
-                          onlyTool={preferredToolSlug}
-                          isSaved={savedIds.has(a.id)}
-                          onToggleSave={userId ? toggleSaveWorkflow : undefined}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </>
+                <div className={styles.emptyState}>No categories match your search.</div>
               )}
             </section>
-          </div>
-        )}
+          </>
+        ) : (
+          <>
+            <header className={`${styles.pageHeader} ${styles.resultsHeader}`}>
+              <div>
+                <span className={styles.eyebrow}>{selectedCategory ? "Workflow category" : "Workflow library"}</span>
+                <h1>{resultTitle}</h1>
+                {selectedCategoryMetadata?.description ? <p>{selectedCategoryMetadata.description}</p> : null}
+              </div>
+              <button type="button" className={styles.secondaryButton} onClick={returnToCategories}>← All categories</button>
+            </header>
 
-        {/* AI Foundations */}
-        <AIFoundationsSection modules={modules} />
-      </div>
+            <div className={styles.searchBox}>
+              <SearchIcon />
+              <input
+                value={workflowSearch}
+                onChange={(event) => setWorkflowSearch(event.target.value)}
+                placeholder={selectedCategory ? "Search workflows in this category" : "Search workflows"}
+                aria-label="Search workflows"
+              />
+            </div>
+
+            <div className={styles.categorySummary}>
+              <span>{filteredActivities.length} workflow{filteredActivities.length === 1 ? "" : "s"}</span>
+              <span>Choose a workflow to open the guided activity.</span>
+            </div>
+
+            {filteredActivities.length > 0 ? (
+              <div className={styles.workflowGrid}>{filteredActivities.map(renderWorkflowCard)}</div>
+            ) : (
+              <div className={styles.emptyState}>No workflows match this search.</div>
+            )}
+          </>
+        )}
+      </main>
+
+      <button
+        type="button"
+        className={`${styles.drawerBackdrop} ${savedDrawerOpen ? styles.drawerBackdropOpen : ""}`}
+        aria-label="Close saved workflows"
+        tabIndex={savedDrawerOpen ? 0 : -1}
+        onClick={() => setSavedDrawerOpen(false)}
+      />
+      <aside
+        id="saved-workflows-drawer"
+        className={`${styles.savedDrawer} ${savedDrawerOpen ? styles.savedDrawerOpen : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-hidden={!savedDrawerOpen}
+        aria-labelledby="saved-workflows-title"
+        inert={!savedDrawerOpen}
+      >
+        <header>
+          <div>
+            <h2 id="saved-workflows-title">Saved workflows</h2>
+            <p>Workflows you saved for quick access.</p>
+          </div>
+          <button type="button" onClick={() => setSavedDrawerOpen(false)} aria-label="Close saved workflows">×</button>
+        </header>
+        <div className={styles.savedDrawerBody}>
+          {savedActivities.length > 0 ? (
+            <div className={styles.savedList}>{savedActivities.map(renderWorkflowCard)}</div>
+          ) : (
+            <div className={styles.savedEmpty}>
+              <span className={styles.savedEmptyIcon}><HeartIcon filled={false} /></span>
+              <strong>No saved workflows yet</strong>
+              <span>Select the heart on any workflow to keep it here for quick access.</span>
+              <button type="button" onClick={() => setSavedDrawerOpen(false)}>Browse workflows</button>
+            </div>
+          )}
+        </div>
+      </aside>
     </>
   );
 }

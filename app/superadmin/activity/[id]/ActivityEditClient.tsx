@@ -175,11 +175,6 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
     setInfoFunctionsArr(prev => [...prev, name]);
   }
 
-  async function handleAddContentType(name: string, _imageFile: File | null) {
-    setContentTypeOpts(prev => [...prev, { name }]);
-    setInfoContentTypeArr([name]);
-  }
-
   async function handleUpdateToolImage(name: string, imageFile: File) {
     const slug = normalizeToolSlug(name);
     if (!slug) return;
@@ -1035,8 +1030,7 @@ export default function ActivityEditClient({ activity, activitySteps: initSteps,
                   selected={infoContentTypeArr}
                   options={contentTypeOpts}
                   onChange={setInfoContentTypeArr}
-                  onAddNew={handleAddContentType}
-                  placeholder="Select or add a content type…"
+                  placeholder="Select a content type…"
                 />
                 <div>
                   <label style={lbl}>Position</label>
