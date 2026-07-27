@@ -112,8 +112,9 @@ export type SupportRequestValidationResult =
   | { ok: true; question: string; context?: string }
   | { ok: false; status: number; error: string };
 
-/** Note: no reply-to email here — the route handler fills that in from the
- *  authenticated user's account email, never from client input. */
+/** Note: no reply-to email here — the route handler sources it from the authenticated
+ *  user's account email, never client input, except for anonymous (no-account) visitors
+ *  who have no account email and so type one in (validated separately in the route). */
 export function validateSupportRequest(body: unknown): SupportRequestValidationResult {
   if (body == null || typeof body !== "object") {
     return { ok: false, status: 400, error: "Invalid request body" };

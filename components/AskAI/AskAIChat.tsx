@@ -108,7 +108,7 @@ export default function AskAIChat({ categories, userId, isAnonymous = false }: P
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
   const [zoomOpenKey, setZoomOpenKey] = useState<string | null>(null);
-  const [teamDialogFor, setTeamDialogFor] = useState<string | null>(null);
+  const [teamDialog, setTeamDialog] = useState<{ question: string; purpose: "unanswered" | "access-request" } | null>(null);
   const [feedback, setFeedback] = useState<Record<number, "up" | "down">>({});
   const [remainingFreeChats, setRemainingFreeChats] = useState<number | null>(null);
   const [chatBlocked, setChatBlocked] = useState(false);
@@ -128,7 +128,7 @@ export default function AskAIChat({ categories, userId, isAnonymous = false }: P
     setLoadingConversation(false);
     setLoadError(null);
     setFeedback({});
-    setTeamDialogFor(null);
+    setTeamDialog(null);
   }
 
   useEffect(() => {
@@ -426,11 +426,24 @@ export default function AskAIChat({ categories, userId, isAnonymous = false }: P
               {message.role === "user" ? (
                 <div className={styles.userBubble}>{message.content}</div>
               ) : message.loginRequired ? (
-                <div className={styles.assistantBody}>
-                  <AnswerSections content={message.content} />
-                  <Link href={`/login?redirect=${encodeURIComponent("/ask-ai")}`} className={styles.askTeamButton}>
-                    Log in →
-                  </Link>
+                <div className={styles.freeLimitCard}>
+                  <span className={styles.freeLimitIcon} aria-hidden="true">🔒</span>
+                  <div className={styles.freeLimitBody}>
+                    <h3>Free limit reached</h3>
+                    <p>Contact us to get full access, or log in if you already have an account.</p>
+                  </div>
+                  <div className={styles.freeLimitActions}>
+                    <button
+                      type="button"
+                      className={styles.freeLimitSecondaryButton}
+                      onClick={() => setTeamDialog({ question: "", purpose: "access-request" })}
+                    >
+                      Contact us
+                    </button>
+                    <Link href={`/login?redirect=${encodeURIComponent("/ask-ai")}`} className={styles.freeLimitButton}>
+                      Log in →
+                    </Link>
+                  </div>
                 </div>
               ) : (
                 <div className={styles.assistantBody}>
@@ -501,15 +514,13 @@ export default function AskAIChat({ categories, userId, isAnonymous = false }: P
                     >
                       No
                     </button>
-                    {!isAnonymous ? (
-                      <button
-                        type="button"
-                        className={styles.askTeamButton}
-                        onClick={() => setTeamDialogFor(previousUserQuestion(messages, index))}
-                      >
-                        Ask our team
-                      </button>
-                    ) : null}
+                    <button
+                      type="button"
+                      className={styles.askTeamButton}
+                      onClick={() => setTeamDialog({ question: previousUserQuestion(messages, index), purpose: "unanswered" })}
+                    >
+                      Ask our team
+                    </button>
                   </div>
                 </div>
               )}
@@ -527,10 +538,12 @@ export default function AskAIChat({ categories, userId, isAnonymous = false }: P
       </div>
 
       <AskTeamDialog
-        open={teamDialogFor !== null}
-        question={teamDialogFor ?? ""}
+        open={teamDialog !== null}
+        question={teamDialog?.question ?? ""}
+        purpose={teamDialog?.purpose ?? "unanswered"}
         sessionId={sessionId}
-        onClose={() => setTeamDialogFor(null)}
+        isAnonymous={isAnonymous}
+        onClose={() => setTeamDialog(null)}
       />
     </main>
   );

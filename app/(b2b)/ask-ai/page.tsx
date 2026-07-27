@@ -1,9 +1,12 @@
 import { Suspense } from "react";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import B2BTopbar from "@/components/B2BTopbar";
 import AskAIChat from "@/components/AskAI/AskAIChat";
 import { ASK_LIMITS } from "@/lib/ask/guardrails";
+import { getClientIp } from "@/lib/ip";
+import { countAnonymousMessagesToday } from "@/lib/ask/anonymousUsage";
 
 export const dynamic = "force-dynamic";
 
@@ -151,13 +154,9 @@ export default async function AskAIPage() {
   let freeChatsLeft: number | null = null;
   if (isAnonymous) {
     const anonDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { count: anonUserMessageCount } = await supabase
-      .from("kb_chat_messages")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("role", "user")
-      .gte("created_at", anonDayAgo);
-    freeChatsLeft = Math.max(0, ASK_LIMITS.anonymousFreeMessagesPerDay - (anonUserMessageCount ?? 0));
+    const ipAddress = getClientIp(await headers());
+    const anonMessageCount = await countAnonymousMessagesToday(supabase, user.id, ipAddress, anonDayAgo);
+    freeChatsLeft = Math.max(0, ASK_LIMITS.anonymousFreeMessagesPerDay - anonMessageCount);
   }
 
   return (

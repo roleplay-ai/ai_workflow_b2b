@@ -12,7 +12,7 @@ type Props = {
   typeFilterApplied: boolean;
 };
 
-export default function SupportRequestsClient({ requests: initRequests, typeFilterApplied }: Props) {
+export default function AccessRequestsClient({ requests: initRequests, typeFilterApplied }: Props) {
   const supabase = createClient();
   const [requests, setRequests] = useState<RequestRow[]>(initRequests);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
@@ -47,14 +47,14 @@ export default function SupportRequestsClient({ requests: initRequests, typeFilt
         <Link href="/superadmin" style={{ display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 10, fontSize: 13, fontWeight: 600, color: "#746F78", textDecoration: "none" }}>
           ← Back to Activities
         </Link>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: "-.04em" }}>Support Requests</h1>
+        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: "-.04em" }}>Access Requests</h1>
         <p style={{ margin: "3px 0 0", color: "#746F78", fontSize: 13 }}>
-          Questions users sent to your team from Ask AI&rsquo;s &ldquo;Ask our team&rdquo; dialog —
+          Full-access requests from anonymous visitors who hit the free-chat limit and chose &ldquo;Contact us&rdquo; —
           {" "}{openCount} open, the last {requests.length} requests, most recent first.
         </p>
         {!typeFilterApplied && (
-          <p style={{ margin: "8px 0 0", padding: "8px 12px", borderRadius: 8, background: "#FFFBE9", border: "1px solid #F0DFA0", color: "#6B5A12", fontSize: 12.5, fontWeight: 600 }}>
-            This list can&rsquo;t separate access requests yet — apply the 20260727b_support_request_type.sql migration.
+          <p style={{ margin: "8px 0 0", padding: "8px 12px", borderRadius: 8, background: "#F1ECFF", border: "1px solid #D9CDFA", color: "#4B3EA6", fontSize: 12.5, fontWeight: 600 }}>
+            This list can&rsquo;t separate out support questions yet — apply the 20260727b_support_request_type.sql migration.
           </p>
         )}
       </div>
@@ -64,13 +64,13 @@ export default function SupportRequestsClient({ requests: initRequests, typeFilt
           <div key={r.id} style={{ background: "white", border: "1.5px solid #E8E6DC", borderRadius: 14, padding: "14px 16px", boxShadow: "0 2px 12px rgba(34,29,35,.06)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
               <div style={{ fontSize: 12, color: "#A09AA6", fontWeight: 600 }}>
-                {r.profiles?.full_name ?? r.profiles?.email ?? "Unknown user"} · {new Date(r.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                Anonymous visitor · {new Date(r.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
               </div>
               <span style={{
                 fontSize: 10.5, fontWeight: 800, padding: "3px 10px", borderRadius: 999,
                 textTransform: "uppercase", letterSpacing: ".04em",
-                background: r.status === "resolved" ? "#EDFBF3" : "#FFF8E1",
-                color: r.status === "resolved" ? "#065F46" : "#92650A",
+                background: r.status === "resolved" ? "#EDFBF3" : "#F1ECFF",
+                color: r.status === "resolved" ? "#065F46" : "#4B3EA6",
               }}>
                 {r.status === "resolved" ? "Resolved" : "Open"}
               </span>
@@ -108,9 +108,9 @@ export default function SupportRequestsClient({ requests: initRequests, typeFilt
 
         {requests.length === 0 && (
           <div style={{ textAlign: "center", padding: "60px 0", color: "#A09AA6" }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>📬</div>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>No requests yet</div>
-            <div style={{ fontSize: 13, marginTop: 4 }}>When users send Ask AI a question it couldn&rsquo;t answer, it&rsquo;ll show up here.</div>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🔑</div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>No access requests yet</div>
+            <div style={{ fontSize: 13, marginTop: 4 }}>When an anonymous visitor hits the free-chat limit and asks for access, it&rsquo;ll show up here.</div>
           </div>
         )}
       </div>

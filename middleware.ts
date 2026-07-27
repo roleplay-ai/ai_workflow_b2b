@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getClientIp } from "@/lib/ip";
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -40,12 +41,25 @@ export async function middleware(request: NextRequest) {
     // (is_anonymous) Supabase session so every existing auth.uid()-scoped RLS
     // policy and page-level `if (!user) redirect("/login")` check keeps working
     // unmodified. Ask AI then caps *these* sessions at a handful of free questions.
-    const { error: anonSignInError } = await supabase.auth.signInAnonymously();
+    const { data: anonSignIn, error: anonSignInError } = await supabase.auth.signInAnonymously();
     if (anonSignInError) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", path);
       return NextResponse.redirect(loginUrl);
     }
+
+    // Rough footfall tracking: one row per brand-new anonymous visitor. Best-effort —
+    // if the anonymous_visits migration hasn't been applied yet, this just no-ops.
+    if (anonSignIn.user) {
+      const ipAddress = getClientIp(request.headers);
+      await supabase.from("anonymous_visits").insert({
+        user_id: anonSignIn.user.id,
+        ip_address: ipAddress,
+        user_agent: request.headers.get("user-agent"),
+        path,
+      });
+    }
+
     return supabaseResponse;
   }
 

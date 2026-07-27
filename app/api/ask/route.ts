@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import { createRouteHandlerClient, jsonWithSessionCookies } from "@/lib/supabase/route-handler";
+import { getClientIp } from "@/lib/ip";
+import { countAnonymousMessagesToday, isMissingIpColumn } from "@/lib/ask/anonymousUsage";
 import { embedText } from "@/lib/embeddings";
 import { anthropic } from "@/lib/anthropic";
 import {
@@ -44,28 +46,26 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return jsonWithSessionCookies(sessionResponse, { error: "Unauthorized" }, { status: 401 });
 
+  const ipAddress = getClientIp(req.headers);
+
   // Anonymous (no-account) visitors get a handful of free questions per rolling
-  // 24h day before they're required to log in — checked before any other work
-  // so a visitor who's already hit the wall doesn't pay for an embedding/model
-  // call. Resets daily rather than being a lifetime cap.
+  // 24h day, per IP, before they're required to log in — checked before any other
+  // work so a visitor who's already hit the wall doesn't pay for an embedding/model
+  // call. Keying by IP (rather than the anonymous session alone) means clearing
+  // cookies for a fresh session doesn't reset the counter.
   let remainingFreeChats: number | undefined;
   if (user.is_anonymous) {
     const anonDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { count: anonUserMessageCount } = await supabase
-      .from("kb_chat_messages")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("role", "user")
-      .gte("created_at", anonDayAgo);
+    const anonMessageCount = await countAnonymousMessagesToday(supabase, user.id, ipAddress, anonDayAgo);
 
-    if ((anonUserMessageCount ?? 0) >= ASK_LIMITS.anonymousFreeMessagesPerDay) {
+    if (anonMessageCount >= ASK_LIMITS.anonymousFreeMessagesPerDay) {
       return jsonWithSessionCookies(
         sessionResponse,
         { error: "You've used your free questions — log in to keep chatting.", code: "FREE_LIMIT_REACHED" },
         { status: 403 },
       );
     }
-    remainingFreeChats = ASK_LIMITS.anonymousFreeMessagesPerDay - (anonUserMessageCount ?? 0) - 1;
+    remainingFreeChats = ASK_LIMITS.anonymousFreeMessagesPerDay - anonMessageCount - 1;
   }
 
   const body = (await req.json().catch(() => ({}))) as {
@@ -202,10 +202,17 @@ export async function POST(req: NextRequest) {
     .reverse()
     .map((h) => ({ role: h.role as "user" | "assistant", content: h.content as string }));
 
-  const { error: userMessageInsertError } = await supabase.from("kb_chat_messages").insert({
-    user_id: user.id, session_id: sessionId, role: "user", content: question,
-  });
-  if (userMessageInsertError) {
+  const userMessageRow = { user_id: user.id, session_id: sessionId, role: "user", content: question };
+  const { error: userMessageInsertError } = user.is_anonymous && ipAddress
+    ? await supabase.from("kb_chat_messages").insert({ ...userMessageRow, ip_address: ipAddress })
+    : await supabase.from("kb_chat_messages").insert(userMessageRow);
+
+  if (userMessageInsertError && isMissingIpColumn(userMessageInsertError)) {
+    const { error: fallbackErr } = await supabase.from("kb_chat_messages").insert(userMessageRow);
+    if (fallbackErr) {
+      return jsonWithSessionCookies(sessionResponse, { error: "Could not save your question." }, { status: 500 });
+    }
+  } else if (userMessageInsertError) {
     return jsonWithSessionCookies(sessionResponse, { error: "Could not save your question." }, { status: 500 });
   }
 
