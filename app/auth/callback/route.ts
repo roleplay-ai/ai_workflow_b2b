@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       const role = (profile?.role ?? "user") as Role;
       const destination = user
         ? getPostLoginPath(role, requestedPath)
-        : "/workflows";
+        : "/ask-ai";
       return NextResponse.redirect(`${origin}${destination}`);
     }
   }

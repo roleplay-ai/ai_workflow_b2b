@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getClientIp } from "@/lib/ip";
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -30,13 +31,40 @@ export async function middleware(request: NextRequest) {
   if (path.startsWith("/api/") || path.startsWith("/auth/")) return supabaseResponse;
   if (path.startsWith("/login") || path.startsWith("/signup")) return supabaseResponse;
 
+  const isAdminPath = path.startsWith("/admin") || path.startsWith("/superadmin");
+
   if (!user) {
-    if (path.startsWith("/admin") || path.startsWith("/superadmin")) {
+    if (isAdminPath) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", path);
-    return NextResponse.redirect(loginUrl);
+    // No account required to browse the app — give anonymous visitors a real
+    // (is_anonymous) Supabase session so every existing auth.uid()-scoped RLS
+    // policy and page-level `if (!user) redirect("/login")` check keeps working
+    // unmodified. Ask AI then caps *these* sessions at a handful of free questions.
+    const { data: anonSignIn, error: anonSignInError } = await supabase.auth.signInAnonymously();
+    if (anonSignInError) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", path);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Rough footfall tracking: one row per brand-new anonymous visitor. Best-effort —
+    // if the anonymous_visits migration hasn't been applied yet, this just no-ops.
+    if (anonSignIn.user) {
+      const ipAddress = getClientIp(request.headers);
+      await supabase.from("anonymous_visits").insert({
+        user_id: anonSignIn.user.id,
+        ip_address: ipAddress,
+        user_agent: request.headers.get("user-agent"),
+        path,
+      });
+    }
+
+    return supabaseResponse;
+  }
+
+  if (isAdminPath && user.is_anonymous) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   return supabaseResponse;

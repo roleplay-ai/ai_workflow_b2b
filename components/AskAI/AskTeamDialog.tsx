@@ -4,31 +4,42 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ASK_LIMITS } from "@/lib/ask/guardrails";
 
+type Purpose = "unanswered" | "access-request";
+
 type Props = {
   open: boolean;
   question: string;
   sessionId: string;
+  isAnonymous?: boolean;
+  purpose?: Purpose;
   onClose: () => void;
 };
 
-/** Modal for sending an unanswered question to a human — the real fulfillment of
- *  Ask AI's "would you like to email us this question?" fallback sentence. Reply-to
- *  is always the requester's account email (set server-side), never a form field —
- *  staff see it in the superadmin support inbox. */
-export default function AskTeamDialog({ open, question, sessionId, onClose }: Props) {
+const DEFAULT_ACCESS_REQUEST_MESSAGE = "I'd like full access to Ask AI.";
+
+/** Modal for sending a message to a human — the real fulfillment of Ask AI's "would
+ *  you like to email us this question?" fallback sentence, and (in "access-request"
+ *  mode) of the free-limit wall's "contact us" option. Reply-to is always the
+ *  requester's account email (set server-side), never a form field — staff see it in
+ *  the superadmin support inbox. The one exception is anonymous (no-account) visitors,
+ *  who have no account email at all, so they type one in. */
+export default function AskTeamDialog({ open, question, sessionId, isAnonymous = false, purpose = "unanswered", onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [questionDraft, setQuestionDraft] = useState(question);
   const [context, setContext] = useState("");
   const [accountEmail, setAccountEmail] = useState("");
+  const [anonEmail, setAnonEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isAccessRequest = purpose === "access-request";
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (open) {
-      setQuestionDraft(question);
+      setQuestionDraft(question || (isAccessRequest ? DEFAULT_ACCESS_REQUEST_MESSAGE : ""));
       setContext("");
       setSubmitted(false);
       setError(null);
@@ -40,24 +51,31 @@ export default function AskTeamDialog({ open, question, sessionId, onClose }: Pr
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isAnonymous) return;
     let cancelled = false;
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
       if (!cancelled && data.user?.email) setAccountEmail(data.user.email);
     });
     return () => { cancelled = true; };
-  }, [open]);
+  }, [open, isAnonymous]);
 
   async function handleSend() {
     if (!questionDraft.trim() || submitting) return;
+    if (isAnonymous && !anonEmail.trim()) return;
     setSubmitting(true);
     setError(null);
     try {
       const res = await fetch("/api/ask/support", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: questionDraft.trim(), context: context.trim() || undefined, sessionId }),
+        body: JSON.stringify({
+          question: questionDraft.trim(),
+          context: context.trim() || undefined,
+          sessionId,
+          requestType: isAccessRequest ? "access_request" : "unanswered_question",
+          ...(isAnonymous ? { email: anonEmail.trim() } : {}),
+        }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -88,9 +106,13 @@ export default function AskTeamDialog({ open, question, sessionId, onClose }: Pr
           <>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 16 }}>
               <div>
-                <h2 style={{ margin: "0 0 5px", fontSize: 18, fontWeight: 900, letterSpacing: "-.02em" }}>Ask our team</h2>
+                <h2 style={{ margin: "0 0 5px", fontSize: 18, fontWeight: 900, letterSpacing: "-.02em" }}>
+                  {isAccessRequest ? "Contact us for full access" : "Ask our team"}
+                </h2>
                 <p style={{ margin: 0, color: "#746F78", fontSize: 13, lineHeight: 1.5 }}>
-                  Send us the question Ask AI couldn&rsquo;t answer. A person from our team will follow up by email.
+                  {isAccessRequest
+                    ? "Tell us a bit about what you need and we'll set you up with full access."
+                    : "Send us the question Ask AI couldn’t answer. A person from our team will follow up by email."}
                 </p>
               </div>
               <button
@@ -105,7 +127,9 @@ export default function AskTeamDialog({ open, question, sessionId, onClose }: Pr
 
             <div style={{ display: "grid", gap: 14 }}>
               <label style={{ display: "block" }}>
-                <div style={{ marginBottom: 6, fontSize: 13, fontWeight: 700 }}>Your question</div>
+                <div style={{ marginBottom: 6, fontSize: 13, fontWeight: 700 }}>
+                  {isAccessRequest ? "What do you need access for?" : "Your question"}
+                </div>
                 <textarea
                   value={questionDraft}
                   onChange={(e) => setQuestionDraft(e.target.value)}
@@ -114,6 +138,19 @@ export default function AskTeamDialog({ open, question, sessionId, onClose }: Pr
                   style={textareaStyle}
                 />
               </label>
+              {isAnonymous && (
+                <label style={{ display: "block" }}>
+                  <div style={{ marginBottom: 6, fontSize: 13, fontWeight: 700 }}>Your email</div>
+                  <input
+                    type="email"
+                    value={anonEmail}
+                    onChange={(e) => setAnonEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    required
+                    style={textareaStyle}
+                  />
+                </label>
+              )}
               <label style={{ display: "block" }}>
                 <div style={{ marginBottom: 6, fontSize: 13, fontWeight: 700 }}>
                   Add more detail <span style={{ color: "#A09AA6", fontWeight: 600 }}>(optional)</span>
@@ -135,10 +172,10 @@ export default function AskTeamDialog({ open, question, sessionId, onClose }: Pr
                 <button
                   type="button"
                   onClick={() => void handleSend()}
-                  disabled={submitting || !questionDraft.trim()}
-                  style={{ ...primaryBtnStyle, opacity: submitting || !questionDraft.trim() ? 0.5 : 1 }}
+                  disabled={submitting || !questionDraft.trim() || (isAnonymous && !anonEmail.trim())}
+                  style={{ ...primaryBtnStyle, opacity: submitting || !questionDraft.trim() || (isAnonymous && !anonEmail.trim()) ? 0.5 : 1 }}
                 >
-                  {submitting ? "Sending…" : "Send to team"}
+                  {submitting ? "Sending…" : isAccessRequest ? "Request access" : "Send to team"}
                 </button>
               </div>
             </div>
@@ -151,9 +188,12 @@ export default function AskTeamDialog({ open, question, sessionId, onClose }: Pr
             }}>
               ✓
             </div>
-            <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 900 }}>Request sent</h2>
+            <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 900 }}>
+              {isAccessRequest ? "Request received" : "Request sent"}
+            </h2>
             <p style={{ margin: "0 0 16px", color: "#746F78", fontSize: 13 }}>
-              We&rsquo;ll respond{accountEmail ? ` to ${accountEmail}` : ""} within 24 hours.
+              {isAccessRequest ? "We’ll set up your access and reply" : "We’ll respond"}
+              {(accountEmail || anonEmail) ? ` to ${accountEmail || anonEmail}` : ""} within 24 hours.
             </p>
             <button type="button" onClick={onClose} style={primaryBtnStyle}>Done</button>
           </div>

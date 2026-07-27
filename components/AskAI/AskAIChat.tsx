@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import SuggestedWorkflowCard from "./SuggestedWorkflowCard";
@@ -33,6 +34,7 @@ type ChatMessage = {
   content: string;
   citations?: Citation[];
   suggestedWorkflows?: SuggestedWorkflow[];
+  loginRequired?: boolean;
 };
 
 type AskCategory = {
@@ -45,6 +47,7 @@ type AskCategory = {
 type Props = {
   categories: AskCategory[];
   userId: string;
+  isAnonymous?: boolean;
 };
 
 const POPULAR_QUESTIONS = [
@@ -92,7 +95,7 @@ function previousUserQuestion(messages: ChatMessage[], index: number): string {
 
 /** Full-page Ask AI client. Existing RAG behavior stays in /api/ask; this
  * component owns only conversation presentation and lifecycle. */
-export default function AskAIChat({ categories, userId }: Props) {
+export default function AskAIChat({ categories, userId, isAnonymous = false }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { startNavigating } = useNavigationLoading();
@@ -105,8 +108,10 @@ export default function AskAIChat({ categories, userId }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
   const [zoomOpenKey, setZoomOpenKey] = useState<string | null>(null);
-  const [teamDialogFor, setTeamDialogFor] = useState<string | null>(null);
+  const [teamDialog, setTeamDialog] = useState<{ question: string; purpose: "unanswered" | "access-request" } | null>(null);
   const [feedback, setFeedback] = useState<Record<number, "up" | "down">>({});
+  const [remainingFreeChats, setRemainingFreeChats] = useState<number | null>(null);
+  const [chatBlocked, setChatBlocked] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const activeSessionRef = useRef(sessionId);
@@ -123,7 +128,7 @@ export default function AskAIChat({ categories, userId }: Props) {
     setLoadingConversation(false);
     setLoadError(null);
     setFeedback({});
-    setTeamDialogFor(null);
+    setTeamDialog(null);
   }
 
   useEffect(() => {
@@ -237,7 +242,7 @@ export default function AskAIChat({ categories, userId }: Props) {
 
   async function sendMessage(text?: string) {
     const question = (text ?? input).trim();
-    if (!question || loading) return;
+    if (!question || loading || chatBlocked) return;
 
     const requestSessionId = activeSessionRef.current;
     setMessages((previous) => [...previous, { role: "user", content: question }]);
@@ -256,6 +261,15 @@ export default function AskAIChat({ categories, userId }: Props) {
       if (activeSessionRef.current !== requestSessionId) return;
 
       if (!response.ok) {
+        if (body.code === "FREE_LIMIT_REACHED") {
+          setChatBlocked(true);
+          setRemainingFreeChats(0);
+          setMessages((previous) => [
+            ...previous,
+            { role: "assistant", content: body.error ?? "You've used your free questions.", loginRequired: true },
+          ]);
+          return;
+        }
         setMessages((previous) => [
           ...previous,
           { role: "assistant", content: body.error ?? "Something went wrong." },
@@ -270,6 +284,7 @@ export default function AskAIChat({ categories, userId }: Props) {
             suggestedWorkflows: body.suggestedWorkflows ?? [],
           },
         ]);
+        if (typeof body.remainingFreeChats === "number") setRemainingFreeChats(body.remainingFreeChats);
       }
 
       locationKeyRef.current = `conversation:${requestSessionId}`;
@@ -308,15 +323,16 @@ export default function AskAIChat({ categories, userId }: Props) {
             void sendMessage();
           }
         }}
-        placeholder={landing ? "How is Claude different from ChatGPT?" : "Ask a follow-up…"}
+        placeholder={chatBlocked ? "Log in to keep chatting…" : landing ? "How is Claude different from ChatGPT?" : "Ask a follow-up…"}
         rows={1}
         maxLength={ASK_LIMITS.maxQuestionChars}
         aria-label="Ask AI"
+        disabled={chatBlocked}
       />
       <button
         type="button"
         onClick={() => void sendMessage()}
-        disabled={loading || !input.trim()}
+        disabled={loading || !input.trim() || chatBlocked}
         aria-label="Send question"
       >
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -325,6 +341,11 @@ export default function AskAIChat({ categories, userId }: Props) {
       </button>
     </div>
   );
+
+  useEffect(() => {
+    if (!isAnonymous || remainingFreeChats === null) return;
+    window.dispatchEvent(new CustomEvent("ask:free-chats-changed", { detail: { remaining: remainingFreeChats } }));
+  }, [isAnonymous, remainingFreeChats]);
 
   const newChatButton = (
     <button type="button" className={styles.newChatButton} onClick={newChat}>
@@ -404,6 +425,26 @@ export default function AskAIChat({ categories, userId }: Props) {
             >
               {message.role === "user" ? (
                 <div className={styles.userBubble}>{message.content}</div>
+              ) : message.loginRequired ? (
+                <div className={styles.freeLimitCard}>
+                  <span className={styles.freeLimitIcon} aria-hidden="true">🔒</span>
+                  <div className={styles.freeLimitBody}>
+                    <h3>Free limit reached</h3>
+                    <p>Contact us to get full access, or log in if you already have an account.</p>
+                  </div>
+                  <div className={styles.freeLimitActions}>
+                    <button
+                      type="button"
+                      className={styles.freeLimitSecondaryButton}
+                      onClick={() => setTeamDialog({ question: "", purpose: "access-request" })}
+                    >
+                      Contact us
+                    </button>
+                    <Link href={`/login?redirect=${encodeURIComponent("/ask-ai")}`} className={styles.freeLimitButton}>
+                      Log in →
+                    </Link>
+                  </div>
+                </div>
               ) : (
                 <div className={styles.assistantBody}>
                   <AnswerSections content={message.content} />
@@ -476,7 +517,7 @@ export default function AskAIChat({ categories, userId }: Props) {
                     <button
                       type="button"
                       className={styles.askTeamButton}
-                      onClick={() => setTeamDialogFor(previousUserQuestion(messages, index))}
+                      onClick={() => setTeamDialog({ question: previousUserQuestion(messages, index), purpose: "unanswered" })}
                     >
                       Ask our team
                     </button>
@@ -497,10 +538,12 @@ export default function AskAIChat({ categories, userId }: Props) {
       </div>
 
       <AskTeamDialog
-        open={teamDialogFor !== null}
-        question={teamDialogFor ?? ""}
+        open={teamDialog !== null}
+        question={teamDialog?.question ?? ""}
+        purpose={teamDialog?.purpose ?? "unanswered"}
         sessionId={sessionId}
-        onClose={() => setTeamDialogFor(null)}
+        isAnonymous={isAnonymous}
+        onClose={() => setTeamDialog(null)}
       />
     </main>
   );

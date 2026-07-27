@@ -1,13 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { fetchSupportRequests } from "@/lib/supportRequests";
-import SupportRequestsClient from "./SupportRequestsClient";
+import AccessRequestsClient from "./AccessRequestsClient";
 
 export const dynamic = "force-dynamic";
 
 const HISTORY_LIMIT = 300;
 
-export default async function SupportRequestsPage() {
+export default async function AccessRequestsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -20,7 +20,7 @@ export default async function SupportRequestsPage() {
   if (profileError || !profile) redirect("/login");
   if (profile.role !== "superadmin") redirect("/apply");
 
-  const { rows, typeFilterApplied } = await fetchSupportRequests(supabase, "unanswered_question", HISTORY_LIMIT);
+  const { rows, typeFilterApplied } = await fetchSupportRequests(supabase, "access_request", HISTORY_LIMIT);
 
-  return <SupportRequestsClient requests={rows} typeFilterApplied={typeFilterApplied} />;
+  return <AccessRequestsClient requests={rows} typeFilterApplied={typeFilterApplied} />;
 }

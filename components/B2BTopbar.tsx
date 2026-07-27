@@ -20,6 +20,8 @@ type Props = {
   newActivities?: NewActivity[];
   activeTag?: string | null;
   points?: number | null;
+  isAnonymous?: boolean;
+  freeChatsLeft?: number | null;
 };
 
 const PAGE_LABELS: Record<string, string> = {
@@ -71,10 +73,13 @@ export default function B2BTopbar({
   newActivities: _newActivities = [],
   activeTag: _activeTag = null,
   points: pointsProp,
+  isAnonymous = false,
+  freeChatsLeft: freeChatsLeftProp = null,
 }: Props) {
   const pathname = usePathname();
   const [fetchedPoints, setFetchedPoints] = useState<number | null>(null);
   const points = pointsProp !== undefined ? pointsProp : fetchedPoints;
+  const [freeChatsLeft, setFreeChatsLeft] = useState<number | null>(freeChatsLeftProp);
   const modeSwitchVisible = pathname === "/ask-ai" || pathname.startsWith("/ask-ai/") || pathname === "/workflows" || pathname.startsWith("/workflows/");
   const pageLabel = Object.entries(PAGE_LABELS).find(([route]) => pathname === route || pathname.startsWith(`${route}/`))?.[1] ?? "AI Practice Lab";
 
@@ -84,7 +89,7 @@ export default function B2BTopbar({
   void _activeTag;
 
   useEffect(() => {
-    if (pointsProp !== undefined) return;
+    if (pointsProp !== undefined || isAnonymous) return;
     const supabase = createClient();
     void (async () => {
       const { data } = await supabase.rpc("get_my_points_stats");
@@ -92,7 +97,17 @@ export default function B2BTopbar({
         setFetchedPoints(Number((data as { user_points?: number }).user_points ?? 0));
       }
     })();
-  }, [pointsProp]);
+  }, [pointsProp, isAnonymous]);
+
+  useEffect(() => {
+    if (!isAnonymous) return;
+    function handleFreeChatsChanged(event: Event) {
+      const detail = (event as CustomEvent<{ remaining?: number }>).detail;
+      if (detail && typeof detail.remaining === "number") setFreeChatsLeft(detail.remaining);
+    }
+    window.addEventListener("ask:free-chats-changed", handleFreeChatsChanged);
+    return () => window.removeEventListener("ask:free-chats-changed", handleFreeChatsChanged);
+  }, [isAnonymous]);
 
   return (
     <header className={styles.topbar}>
@@ -131,16 +146,29 @@ export default function B2BTopbar({
       </div>
 
       <div className={styles.topbarActions}>
-        <RouteLink href="/profile" className={styles.progressLink} ariaCurrent={pathname.startsWith("/profile") ? "page" : undefined}>
-          <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
-            <path d="M3 14V9M7 14V6M11 14V3M15 14V8" />
-          </svg>
-          <span className={styles.progressText}>My Progress</span>
-        </RouteLink>
-        <span className={styles.pointsPill} title="Your points">
-          <span aria-hidden="true">✦</span>
-          {points === null ? "—" : points.toLocaleString()}
-        </span>
+        {isAnonymous ? (
+          <>
+            <span className={styles.freeChatsPill} title="Free questions remaining">
+              {freeChatsLeft === null ? "—" : freeChatsLeft} free chat{freeChatsLeft === 1 ? "" : "s"} left
+            </span>
+            <Link href="/login" className={styles.progressLink}>
+              Log in
+            </Link>
+          </>
+        ) : (
+          <>
+            <RouteLink href="/profile" className={styles.progressLink} ariaCurrent={pathname.startsWith("/profile") ? "page" : undefined}>
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+                <path d="M3 14V9M7 14V6M11 14V3M15 14V8" />
+              </svg>
+              <span className={styles.progressText}>My Progress</span>
+            </RouteLink>
+            <span className={styles.pointsPill} title="Your points">
+              <span aria-hidden="true">✦</span>
+              {points === null ? "—" : points.toLocaleString()}
+            </span>
+          </>
+        )}
       </div>
     </header>
   );

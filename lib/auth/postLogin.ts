@@ -17,5 +17,5 @@ export function getPostLoginPath(role: Role, requestedPath?: string | null): str
     return path;
   }
 
-  return "/workflows";
+  return "/ask-ai";
 }

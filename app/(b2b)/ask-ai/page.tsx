@@ -1,8 +1,12 @@
 import { Suspense } from "react";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import B2BTopbar from "@/components/B2BTopbar";
 import AskAIChat from "@/components/AskAI/AskAIChat";
+import { ASK_LIMITS } from "@/lib/ask/guardrails";
+import { getClientIp } from "@/lib/ip";
+import { countAnonymousMessagesToday } from "@/lib/ask/anonymousUsage";
 
 export const dynamic = "force-dynamic";
 
@@ -146,11 +150,20 @@ export default async function AskAIPage() {
 
   const categories = matchReferenceCategories(categoryRows);
 
+  const isAnonymous = user.is_anonymous === true;
+  let freeChatsLeft: number | null = null;
+  if (isAnonymous) {
+    const anonDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const ipAddress = getClientIp(await headers());
+    const anonMessageCount = await countAnonymousMessagesToday(supabase, user.id, ipAddress, anonDayAgo);
+    freeChatsLeft = Math.max(0, ASK_LIMITS.anonymousFreeMessagesPerDay - anonMessageCount);
+  }
+
   return (
     <>
-      <B2BTopbar />
+      <B2BTopbar isAnonymous={isAnonymous} freeChatsLeft={freeChatsLeft} />
       <Suspense fallback={null}>
-        <AskAIChat categories={categories} userId={user.id} />
+        <AskAIChat categories={categories} userId={user.id} isAnonymous={isAnonymous} />
       </Suspense>
     </>
   );
