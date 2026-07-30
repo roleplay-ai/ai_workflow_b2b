@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CAPABILITIES, getToolPageDef, type CapabilitySlug, type ProviderTool } from "@/lib/capabilities";
 import B2BTopbar from "@/components/B2BTopbar";
+import ClaudeCapabilityGuide from "./ClaudeCapabilityGuide";
 import styles from "../../capabilities.module.css";
 
 type Props = {
@@ -15,6 +16,15 @@ export default function ToolCapabilityClient({ slug, tool, count }: Props) {
   const def = CAPABILITIES[slug];
   const page = getToolPageDef(slug, tool);
   const workflowsHref = `/workflows?content_type=${encodeURIComponent(def.contentType)}&tool=${tool}`;
+
+  if (tool === "claude" && (slug === "skills" || slug === "projects")) {
+    return (
+      <>
+        <B2BTopbar />
+        <ClaudeCapabilityGuide slug={slug} count={count} workflowsHref={workflowsHref} />
+      </>
+    );
+  }
 
   return (
     <>
