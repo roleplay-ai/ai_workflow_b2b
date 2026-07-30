@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import styles from "../../capabilities.module.css";
 
-type ClaudeGuideSlug = "skills" | "projects";
+type ClaudeGuideSlug = "skills" | "projects" | "vibe-coding" | "scheduled-actions";
 
 type Props = {
   slug: ClaudeGuideSlug;
@@ -112,6 +112,73 @@ const PROJECT_STEPS: GuideStep[] = [
   },
 ];
 
+const ARTIFACT_STEPS: GuideStep[] = [
+  {
+    title: "Find your Artifacts",
+    helper: "Artifacts tab in the left sidebar",
+    description: "Open the Artifacts tab in the left sidebar to see everything you have made.",
+    caption: "Open Artifacts from the left sidebar, or go to claude.ai/artifacts, to see everything you have made.",
+    src: "/claude-guides/artifacts-step-1.png",
+    alt: "Claude Artifacts page showing the Artifacts tab in the left sidebar and saved Artifacts",
+    width: 2048,
+    height: 917,
+  },
+  {
+    title: "Create an Artifact",
+    helper: "Artifact window next to a chat",
+    description: "Ask Claude to build something substantial and it appears beside the chat.",
+    caption: "When Claude builds something substantial, it renders in an Artifact window beside the conversation.",
+    src: "/claude-guides/artifacts-step-2.png",
+    alt: "Claude chat with an Artifact rendered in a window on the right",
+    width: 2048,
+    height: 882,
+  },
+  {
+    title: "Publish an Artifact",
+    helper: "Publish → Copy link",
+    description: "Use Publish to create a shareable link.",
+    caption: "Click Publish to create a link that other people can open and use.",
+    src: "/claude-guides/artifacts-step-3.png",
+    alt: "Claude Artifact published dialog showing a public link and Copy link option",
+    width: 1072,
+    height: 864,
+  },
+];
+
+const SCHEDULED_STEPS: GuideStep[] = [
+  {
+    title: "Find Scheduled",
+    helper: "Claude desktop → Sidebar → Scheduled",
+    description: "Open the Claude desktop app and select Scheduled in the left sidebar.",
+    caption: "Select Scheduled in the Claude desktop app sidebar to open the Scheduled tasks page.",
+    src: "/claude-guides/scheduled-step-1.png",
+    alt: "Claude desktop app with Scheduled selected in the left sidebar",
+    width: 1378,
+    height: 525,
+  },
+  {
+    title: "Create a new task",
+    helper: "Scheduled → New task",
+    description: "Open New task and choose to create it with Claude or set it up manually.",
+    caption: "Select New task, then choose Create with Claude or Set up manually.",
+    src: "/claude-guides/scheduled-step-2.png",
+    alt: "Claude Scheduled tasks page with a Morning brief task and the New task button",
+    width: 881,
+    height: 461,
+  },
+  {
+    title: "Fill in the task details",
+    tabTitle: "Fill in the details",
+    helper: "New task → Set up manually",
+    description: "Add the prompt, context, approval setting, model and frequency.",
+    caption: "Add a name, description and prompt, then choose the project or folder, approval setting, model and frequency.",
+    src: "/claude-guides/scheduled-step-3.png",
+    alt: "Claude Create scheduled task form with fields for the task details and frequency",
+    width: 749,
+    height: 584,
+  },
+];
+
 const PROJECT_PROMPT = `You are a meeting follow-up assistant.
 
 This project will contain meeting transcripts and two instruction files:
@@ -129,6 +196,15 @@ For meeting participants. Focus on participant-wise action items, owners, timeli
 Do not invent missing details. If something is unclear, write “To be confirmed.” Ensure that the emails are very brief.
 
 Output only the two emails. Keep them clear, professional, and easy to scan.`;
+
+const ARTIFACT_PROMPT = `Build me a simple expense tracker as a clean, single-page interactive app.
+Let me add an expense with a name, amount, category, and date.
+Show every expense in a table and let me edit or delete entries.
+Display a running total above the list and category-wise totals.
+Add filters for category and date, plus a button to clear all entries.
+Use a clean, professional design with clear labels and sensible colors.`;
+
+const SCHEDULED_PROMPT = "Check my email and calendar for anything pending that needs my attention today, and summarize it for me.";
 
 function SectionHeading({
   number,
@@ -234,20 +310,34 @@ function StepGuide({ steps, label }: { steps: GuideStep[]; label: string }) {
 
 function ClaudeHeader({ slug }: { slug: ClaudeGuideSlug }) {
   const isSkills = slug === "skills";
+  const isProjects = slug === "projects";
+  const isArtifacts = slug === "vibe-coding";
+  const eyebrow = isSkills
+    ? "SKILLS · CLAUDE"
+    : isProjects
+      ? "PRODUCTS · CLAUDE"
+      : isArtifacts
+        ? "ARTIFACTS · CLAUDE"
+        : "AUTOMATION · CLAUDE";
+  const title = isSkills ? "Claude Skills" : isProjects ? "Claude Projects" : isArtifacts ? "Claude Artifacts" : "Scheduled";
+  const subtitle = isSkills
+    ? "Saved instructions Claude can reuse whenever a matching task appears."
+    : isProjects
+      ? "A practical guide to understanding, creating, and using Projects inside Claude."
+      : isArtifacts
+        ? "Documents, code, webpages, diagrams and working apps rendered beside your conversation."
+        : "Set a prompt to run automatically at the time and frequency you choose.";
+
   return (
     <>
       <Link href="/ask-ai?tool=claude" className={styles.claudeBack}>← Back</Link>
       <header className={styles.claudeTitleRow}>
         <div>
-          <p className={styles.claudeEyebrow}>{isSkills ? "SKILLS · CLAUDE" : "PRODUCTS · CLAUDE"}</p>
-          <h1>Claude {isSkills ? "Skills" : "Projects"}</h1>
-          <p className={styles.claudeSubtitle}>
-            {isSkills
-              ? "Saved instructions Claude can reuse whenever a matching task appears."
-              : "A practical guide to understanding, creating, and using Projects inside Claude."}
-          </p>
+          <p className={styles.claudeEyebrow}>{eyebrow}</p>
+          <h1>{title}</h1>
+          <p className={styles.claudeSubtitle}>{subtitle}</p>
         </div>
-        <span className={styles.claudeToolChip}>Claude</span>
+        <span className={styles.claudeToolChip}>{slug === "scheduled-actions" ? "Claude desktop" : "Claude"}</span>
       </header>
     </>
   );
@@ -306,6 +396,237 @@ function ClaudeSkillsGuide({ count, workflowsHref }: Pick<Props, "count" | "work
         workflowsHref={workflowsHref}
         heading="Practice creating your first Claude Skill"
         description="Use guided workflows for writing, analysis and branded outputs."
+      />
+    </>
+  );
+}
+
+function ClaudeArtifactsGuide({ count, workflowsHref }: Pick<Props, "count" | "workflowsHref">) {
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(ARTIFACT_PROMPT);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+    window.setTimeout(() => setCopyStatus("idle"), 1600);
+  }
+
+  return (
+    <>
+      <section className={styles.claudeIntro}>
+        <div className={styles.claudeIntroCopy}>
+          <span className={styles.claudeIntroIcon}>◫</span>
+          <div>
+            <span className={styles.claudeKicker}>1 · WHAT IT IS</span>
+            <h2>A dedicated window for substantial content</h2>
+            <p>A dedicated window where Claude renders substantial content it creates — a document, code, a webpage, a diagram, or a small working app — instead of leaving it as plain chat text.</p>
+          </div>
+        </div>
+        <aside className={styles.claudeComparisonNote}>
+          <span>Where it appears</span>
+          <strong>Right next to the conversation, ready to use or iterate on.</strong>
+        </aside>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="2" kicker="WHAT IT SOLVES" title="See and use what Claude creates" />
+        <div className={styles.claudeCompare}>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWithout}`}>
+            <strong>WITHOUT ARTIFACTS</strong>
+            <div><i>×</i><p>Everything Claude makes is buried in the chat as text.</p></div>
+            <div><i>↗</i><p>You copy-paste it elsewhere to actually see or use it.</p></div>
+          </article>
+          <span className={styles.claudeCompareArrow}>→</span>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWith}`}>
+            <strong>WITH ARTIFACTS</strong>
+            <div><i>✓</i><p>It renders live, right next to the conversation.</p></div>
+            <div><i>✓</i><p>It is ready to use or iterate on.</p></div>
+          </article>
+        </div>
+      </section>
+
+      <section className={`${styles.claudeSection} ${styles.claudeGuideSection}`}>
+        <SectionHeading number="3" tone="blue" kicker="WHERE TO FIND AND CREATE ONE" title="Artifacts inside Claude" />
+        <p className={styles.claudeSectionCopy}>Appears automatically on the right whenever Claude builds something substantial — just ask for what you want. See everything you&apos;ve made in the &quot;Artifacts&quot; tab in the left sidebar, or claude.ai/artifacts.</p>
+        <StepGuide steps={ARTIFACT_STEPS} label="Claude Artifacts screenshots" />
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="4" tone="green" kicker="STRENGTHS AND LIMITATIONS" title="What Artifacts do well and what to know" />
+        <div className={styles.claudeComparisonTableWrap}>
+          <table className={styles.claudeComparisonTable}>
+            <thead>
+              <tr>
+                <th scope="col">What Artifacts do well</th>
+                <th scope="col">What to know before using one</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div className={styles.claudeTableGood}><span>✓</span><div>Builds something real and usable in minutes with no separate dev tool.</div></div></td>
+                <td><div className={styles.claudeTableLimit}><span>!</span><div>Only runs while someone has it open, nothing happens in the background.</div></div></td>
+              </tr>
+              <tr>
+                <td><div className={styles.claudeTableGood}><span>✓</span><div>Can connect to live tools like Calendar or Slack.</div></div></td>
+                <td><div className={styles.claudeTableLimit}><span>!</span><div>Needs &quot;Code execution and file creation&quot; on in Settings.</div></div></td>
+              </tr>
+              <tr>
+                <td><div className={styles.claudeTableGood}><span>✓</span><div>Can remember data between visits once published.</div></div></td>
+                <td><div className={styles.claudeTableLimit}><span>!</span><div>No free internet access, only Claude&apos;s API and approved connectors.</div></div></td>
+              </tr>
+              <tr>
+                <td><div className={styles.claudeTableGood}><span>✓</span><div>Easy to iterate by just asking for changes.</div></div></td>
+                <td><div className={styles.claudeTableLimit}><span>!</span><div>Saved data only works once published, not while testing.</div></div></td>
+              </tr>
+              <tr>
+                <td className={styles.claudeTableEmpty} />
+                <td><div className={styles.claudeTableLimit}><span>!</span><div>Each user must connect their own tools separately.</div></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className={styles.claudeTryCard}>
+        <span className={styles.claudeTryIcon}>→</span>
+        <div>
+          <span className={styles.claudeKicker}>5 · TRY IT YOURSELF</span>
+          <h2>Build a simple expense tracker</h2>
+          <pre>{ARTIFACT_PROMPT}</pre>
+          <p>Then ask it to add a chart or change the colors.</p>
+        </div>
+        <button type="button" onClick={copyPrompt}>
+          {copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Select prompt" : "Copy prompt"}
+        </button>
+      </section>
+
+      <ClaudeCta
+        count={count}
+        workflowsHref={workflowsHref}
+        heading="Explore Claude Artifacts workflows"
+        description="Build, test and publish guided interactive-app workflows with Artifacts."
+      />
+    </>
+  );
+}
+
+function ClaudeScheduledGuide({ count, workflowsHref }: Pick<Props, "count" | "workflowsHref">) {
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(SCHEDULED_PROMPT);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+    window.setTimeout(() => setCopyStatus("idle"), 1600);
+  }
+
+  return (
+    <>
+      <section className={styles.claudeIntro}>
+        <div className={styles.claudeIntroCopy}>
+          <span className={styles.claudeIntroIcon}>⏱</span>
+          <div>
+            <span className={styles.claudeKicker}>1 · WHAT IT IS</span>
+            <h2>A prompt Claude runs automatically for you</h2>
+            <p>Set it to run daily, weekly, or anywhere from hourly to weekly, instead of typing it in every time.</p>
+          </div>
+        </div>
+        <aside className={styles.claudeComparisonNote}>
+          <span>The simple version</span>
+          <strong>Set the prompt, choose the schedule, and Claude runs it at the time you selected.</strong>
+        </aside>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="2" kicker="WHAT IT SOLVES" title="Stop repeating the same prompt manually" />
+        <div className={styles.claudeCompare}>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWithout}`}>
+            <strong>WITHOUT SCHEDULED TASKS</strong>
+            <div><i>↻</i><p>You have to remember to open Claude.</p></div>
+            <div><i>⌨</i><p>You ask the same question every morning, every week, every time.</p></div>
+          </article>
+          <span className={styles.claudeCompareArrow}>→</span>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWith}`}>
+            <strong>WITH SCHEDULED TASKS</strong>
+            <div><i>✓</i><p>You set it up once.</p></div>
+            <div><i>✓</i><p>Claude runs it at the time you chose, waiting for you when you check back.</p></div>
+          </article>
+        </div>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="3" tone="purple" kicker="WHAT GOES INSIDE" title="The task, context and schedule" />
+        <p className={styles.claudeSectionCopy}>Add a name, a short description, and the actual instruction. You also choose which project or folder it runs in, whether you want to approve it before each run, which Claude model it uses, and how often it repeats, from hourly up to weekly.</p>
+        <div className={styles.claudeFieldCard}>
+          <div className={styles.claudeFieldTop}><span>⏱</span><strong>Scheduled task</strong><em>Example</em></div>
+          <div className={styles.claudeFieldLines}>
+            <p><span>Name</span><strong>Daily briefing</strong></p>
+            <p><span>Frequency</span><strong>Daily</strong></p>
+            <p className={styles.claudeFieldWide}><span>Instruction</span><strong>Check my Google Calendar for today&apos;s meetings and summarize my unread emails. Highlight anything urgent.</strong></p>
+            <p><span>Context</span><strong>Project or folder</strong></p>
+            <p><span>Settings</span><strong>Approval and model</strong></p>
+          </div>
+        </div>
+      </section>
+
+      <section className={`${styles.claudeSection} ${styles.claudeGuideSection}`}>
+        <SectionHeading number="4" tone="blue" kicker="WHERE TO FIND AND CREATE ONE" title="Three steps inside the Claude desktop app" />
+        <p className={styles.claudeSectionCopy}>In the sidebar, open <strong>Scheduled</strong> and select <strong>New task</strong>. You can choose <strong>Create with Claude</strong> to describe it in chat, or <strong>Set up manually</strong> to fill in the fields yourself.</p>
+        <StepGuide steps={SCHEDULED_STEPS} label="Claude Scheduled Task steps" />
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="5" tone="green" kicker="IMPORTANT LIMITATIONS" title="Claude desktop must be available" />
+        <div className={styles.claudeLimitList}>
+          <article><span>⌘</span><div><strong>Desktop app only</strong><p>Scheduled tasks currently only exist in the Claude desktop app. The feature is not available on Claude web.</p></div></article>
+          <article><span>!</span><div><strong>Computer awake and online</strong><p>Your computer needs to be awake and online at the scheduled time. If it is asleep or off, the task will not fire.</p></div></article>
+          <article><span>☀</span><div><strong>Keep awake</strong><p>Use the “Keep awake” toggle to help Claude run the task at the scheduled time.</p></div></article>
+        </div>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="6" tone="green" kicker="STRENGTHS" title="Why scheduled tasks are useful" />
+        <div className={styles.claudeStrengthList}>
+          <article><span>✓</span><div><strong>Set it up once and forget it</strong><p>No need to remember to ask Claude each time.</p></div></article>
+          <article><span>✦</span><div><strong>Create it by chatting</strong><p>Describe what you want in plain language instead of filling out a form.</p></div></article>
+          <article><span>↻</span><div><strong>Flexible frequency</strong><p>Run it from a few hours apart up to weekly.</p></div></article>
+          <article><span>⌂</span><div><strong>Use the right context</strong><p>Run it inside a specific project or folder so it has the right context every time.</p></div></article>
+        </div>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="7" tone="purple" kicker="HOW TO CREATE ONE" title="Choose chat or manual setup" />
+        <p className={styles.claudeSectionCopy}>You can either describe what you want in plain language and let Claude build the task for you, or set it up manually: give it a name, a description, the actual prompt, pick a project or folder, choose whether it needs your approval before each run, pick the model, and set the frequency.</p>
+        <div className={styles.claudeCreateOptions}>
+          <article><span>✦</span><div><h3>Create with Claude</h3><p>Describe the task in chat and let Claude set it up for you.</p></div></article>
+          <article><span>☷</span><div><h3>Set up manually</h3><p>Fill in the task details, settings and frequency yourself.</p></div></article>
+        </div>
+      </section>
+
+      <section className={styles.claudeScheduledTryCard}>
+        <span className={styles.claudeTryIcon}>→</span>
+        <div>
+          <span className={styles.claudeKicker}>8 · TRY IT YOURSELF</span>
+          <h2>Create a “6pm check-in”</h2>
+          <p>Set the frequency to daily at 6:00 PM and let Claude have it waiting for you every evening.</p>
+        </div>
+        <button type="button" onClick={copyPrompt}>
+          {copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Select prompt" : "Copy prompt"}
+        </button>
+        <p className={styles.claudeScheduledPrompt}>“{SCHEDULED_PROMPT}”</p>
+      </section>
+
+      <ClaudeCta
+        count={count}
+        workflowsHref={workflowsHref}
+        heading="Explore Claude Scheduled Task workflows"
+        description="Open guided workflows for recurring briefs, check-ins and scheduled follow-up."
       />
     </>
   );
@@ -416,9 +737,15 @@ export default function ClaudeCapabilityGuide({ slug, count, workflowsHref }: Pr
   return (
     <main className={`${styles.page} ${styles.claudePage}`}>
       <ClaudeHeader slug={slug} />
-      {slug === "skills"
-        ? <ClaudeSkillsGuide count={count} workflowsHref={workflowsHref} />
-        : <ClaudeProjectsGuide count={count} workflowsHref={workflowsHref} />}
+      {slug === "skills" ? (
+        <ClaudeSkillsGuide count={count} workflowsHref={workflowsHref} />
+      ) : slug === "projects" ? (
+        <ClaudeProjectsGuide count={count} workflowsHref={workflowsHref} />
+      ) : slug === "vibe-coding" ? (
+        <ClaudeArtifactsGuide count={count} workflowsHref={workflowsHref} />
+      ) : (
+        <ClaudeScheduledGuide count={count} workflowsHref={workflowsHref} />
+      )}
     </main>
   );
 }

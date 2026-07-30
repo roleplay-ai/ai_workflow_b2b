@@ -17,7 +17,10 @@ export default function ToolCapabilityClient({ slug, tool, count }: Props) {
   const page = getToolPageDef(slug, tool);
   const workflowsHref = `/workflows?content_type=${encodeURIComponent(def.contentType)}&tool=${tool}`;
 
-  if (tool === "claude" && (slug === "skills" || slug === "projects")) {
+  if (
+    tool === "claude"
+    && (slug === "skills" || slug === "projects" || slug === "vibe-coding" || slug === "scheduled-actions")
+  ) {
     return (
       <>
         <B2BTopbar />
