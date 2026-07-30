@@ -208,7 +208,8 @@ function CapabilityMenuTrigger({
   );
 }
 
-/** Sidebar trigger for a Provider (tool): opens a menu of that tool's own distinct features, mirroring the reference design's "Unique to each" panel exactly (Insider Guide + that tool's specific features — not the shared capabilities). */
+/** Sidebar trigger for a Provider (tool): opens that tool's distinct features,
+ * with Insider Guide consistently placed after the feature list. */
 function ProviderMenuTrigger({
   tool,
   open,
@@ -234,10 +235,6 @@ function ProviderMenuTrigger({
       onToggle={onToggle}
       onClose={onToggle}
     >
-      <Link href={`/capabilities/tool/${tool}/insider-guide`} onClick={onNavigate}>
-        <span className={styles.capabilityMenuIcon}>{INSIDER_GUIDE_ITEM.mark}</span>
-        <span>{INSIDER_GUIDE_ITEM.label}</span>
-      </Link>
       {features.map((feature) => (
         <Link key={feature.slug} href={`/capabilities/tool/${tool}/${feature.slug}`} onClick={onNavigate}>
           <span className={styles.capabilityMenuIcon}>{feature.mark}</span>
@@ -245,6 +242,10 @@ function ProviderMenuTrigger({
           {feature.isNew ? <span className={styles.capabilityMenuNewBadge}>New</span> : null}
         </Link>
       ))}
+      <Link href={`/capabilities/tool/${tool}/insider-guide`} onClick={onNavigate}>
+        <span className={styles.capabilityMenuIcon}>{INSIDER_GUIDE_ITEM.mark}</span>
+        <span>{INSIDER_GUIDE_ITEM.label}</span>
+      </Link>
     </SidebarFlyout>
   );
 }
@@ -509,19 +510,44 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
             <h2 id="providers-label" className={styles.sectionLabel}>
               {selectedTool ? `Unique to ${PROVIDERS[selectedTool].label}` : "Unique to each"}
             </h2>
-            {(selectedTool ? [selectedTool] : PROVIDER_TOOLS).map((tool) => (
-              <ProviderMenuTrigger
-                key={tool}
-                tool={tool}
-                open={providerMenuKey === tool}
-                onToggle={() => setProviderMenuKey((current) => (current === tool ? null : tool))}
-                onNavigate={() => {
-                  setProviderMenuKey(null);
-                  closeDrawer();
-                }}
-                toolLogos={toolLogos}
-              />
-            ))}
+            {selectedTool ? (
+              <>
+                {PROVIDER_FEATURES[selectedTool].map((feature) => (
+                  <Link
+                    key={feature.slug}
+                    href={`/capabilities/tool/${selectedTool}/${feature.slug}`}
+                    className={styles.filterLink}
+                    onClick={closeDrawer}
+                  >
+                    <span className={styles.filterMark}>{feature.mark}</span>
+                    <span>{feature.label}</span>
+                    {feature.isNew ? <span className={styles.capabilityMenuNewBadge}>New</span> : null}
+                  </Link>
+                ))}
+                <Link
+                  href={`/capabilities/tool/${selectedTool}/insider-guide`}
+                  className={`${styles.filterLink} ${styles.insiderGuideLink}`}
+                  onClick={closeDrawer}
+                >
+                  <span className={styles.filterMark}>{INSIDER_GUIDE_ITEM.mark}</span>
+                  <span>{INSIDER_GUIDE_ITEM.label}</span>
+                </Link>
+              </>
+            ) : (
+              PROVIDER_TOOLS.map((tool) => (
+                <ProviderMenuTrigger
+                  key={tool}
+                  tool={tool}
+                  open={providerMenuKey === tool}
+                  onToggle={() => setProviderMenuKey((current) => (current === tool ? null : tool))}
+                  onNavigate={() => {
+                    setProviderMenuKey(null);
+                    closeDrawer();
+                  }}
+                  toolLogos={toolLogos}
+                />
+              ))
+            )}
           </section>
 
           {historyAvailable && conversations.length > 0 ? (
