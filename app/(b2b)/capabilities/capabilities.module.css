@@ -1605,6 +1605,418 @@
   line-height: 1.45;
 }
 
+.claudeCapabilityGrid,
+.claudeAccessGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.claudeCapabilityGrid article,
+.claudeAccessGrid article {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid #e7e1dd;
+  border-radius: 12px;
+  background: #faf9f7;
+}
+
+.claudeCapabilityGrid article > span,
+.claudeAccessGrid article > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #eee8f8;
+  color: #6a4d86;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.claudeAccessGrid article > span {
+  background: #e8f4eb;
+  color: #356747;
+}
+
+.claudeCapabilityGrid strong,
+.claudeAccessGrid strong {
+  color: #393235;
+  font-size: 12px;
+}
+
+.claudeCapabilityGrid p,
+.claudeAccessGrid p {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.claudeBalancedGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.claudeStrengthCard,
+.claudeLimitationCard {
+  padding: 16px;
+  border: 1px solid #cfe4d5;
+  border-radius: 14px;
+  background: #f5fcf7;
+}
+
+.claudeLimitationCard {
+  border-color: #efd7cb;
+  background: #fff8f5;
+}
+
+.claudeStrengthCard > strong,
+.claudeLimitationCard > strong {
+  display: block;
+  margin-bottom: 10px;
+  color: #277343;
+  font-size: 10px;
+  letter-spacing: .1em;
+}
+
+.claudeLimitationCard > strong {
+  color: #ad5439;
+}
+
+.claudeStrengthCard p,
+.claudeLimitationCard p {
+  position: relative;
+  padding-left: 18px;
+  color: #4e474a;
+  font-size: 12.5px;
+}
+
+.claudeStrengthCard p + p,
+.claudeLimitationCard p + p {
+  margin-top: 8px;
+}
+
+.claudeStrengthCard p::before,
+.claudeLimitationCard p::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: #168249;
+  content: "✓";
+  font-weight: 850;
+}
+
+.claudeLimitationCard p::before {
+  color: #bd5c3d;
+  content: "!";
+}
+
+.claudeProductCompare {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.claudeProductCode,
+.claudeProductCowork {
+  padding: 17px;
+  border: 1px solid #d7c9e7;
+  border-radius: 14px;
+  background: #faf7fd;
+}
+
+.claudeProductCowork {
+  border-color: #c8dfcf;
+  background: #f5fbf6;
+}
+
+.claudeProductCode > span,
+.claudeProductCowork > span {
+  color: #765493;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .1em;
+}
+
+.claudeProductCowork > span {
+  color: #37704a;
+}
+
+.claudeProductCode h3,
+.claudeProductCowork h3 {
+  margin: 6px 0 5px;
+  color: #373033;
+  font-size: 15px;
+}
+
+.claudeProductCode p,
+.claudeProductCowork p {
+  font-size: 12px;
+}
+
+.claudePromptActivity {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 15px;
+  margin-top: 14px;
+  padding: 17px;
+  border: 1px solid #e7c643;
+  border-radius: 16px;
+  background: #fffaf0;
+}
+
+.claudePromptActivity h3 {
+  margin: 4px 0;
+  color: #38302d;
+  font-size: 17px;
+}
+
+.claudePromptActivity > div > p {
+  margin: 0;
+  color: var(--claude-muted);
+  font-size: 13px;
+}
+
+.claudePromptBox {
+  margin-top: 9px !important;
+  padding: 12px 13px;
+  border: 1px solid #eadca8;
+  border-radius: 10px;
+  background: #fff;
+  color: #403b3d !important;
+  font-style: italic;
+}
+
+.claudePromptActivity > button,
+.claudeGoalCard button {
+  height: 40px;
+  padding: 0 15px;
+  border: 1px solid var(--claude-ink);
+  border-radius: 10px;
+  background: var(--claude-ink);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.claudePromptExample {
+  overflow: hidden;
+  border: 1px solid #e1d7ea;
+  border-radius: 13px;
+}
+
+.claudePromptExample > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 14px;
+  padding: 13px 14px;
+  background: #fbf9fd;
+}
+
+.claudePromptExample > div + div {
+  border-top: 1px solid #ddd2e8;
+  background: #f4edfb;
+}
+
+.claudePromptExample span {
+  color: #847a83;
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.claudePromptExample strong {
+  color: #423a44;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.claudeRequirements {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.claudeRequirements article {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid #d9e7dd;
+  border-radius: 13px;
+  background: #f7fcf8;
+}
+
+.claudeRequirements article > span {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #dcf1e2;
+  color: #2e6e43;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.claudeRequirements strong {
+  color: #373234;
+  font-size: 12.5px;
+}
+
+.claudeRequirements p {
+  margin-top: 3px;
+  font-size: 11.5px;
+}
+
+.claudeCoworkShareGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.claudeCoworkShareGrid article {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  gap: 13px;
+  padding: 17px;
+  border: 1px solid #efd5c7;
+  border-radius: 15px;
+  background: #fff8f4;
+}
+
+.claudeCoworkShareGrid article:nth-child(2) {
+  border-color: #cce1d2;
+  background: #f5fbf6;
+}
+
+.claudeCoworkShareGrid article > span {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #ffeadf;
+  color: #bd5c3d;
+  font-weight: 850;
+}
+
+.claudeCoworkShareGrid article:nth-child(2) > span {
+  background: #e4f4e8;
+  color: #337047;
+}
+
+.claudeCoworkShareGrid small,
+.claudeGoalCard > span {
+  color: #956247;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .1em;
+}
+
+.claudeCoworkShareGrid article:nth-child(2) small {
+  color: #39734d;
+}
+
+.claudeCoworkShareGrid h3 {
+  margin: 4px 0 5px;
+  color: #383134;
+  font-size: 15px;
+}
+
+.claudeCoworkShareGrid p {
+  margin: 0;
+  color: var(--claude-muted);
+  font-size: 12px;
+  line-height: 1.52;
+}
+
+.claudeCoworkActivity {
+  margin-top: 14px;
+  padding: 21px;
+  border: 1px solid #ead77d;
+  border-radius: 18px;
+  background: #fffbeb;
+}
+
+.claudeCoworkActivityGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr);
+  align-items: stretch;
+  gap: 14px;
+}
+
+.claudeChecklist {
+  display: grid;
+  gap: 8px;
+}
+
+.claudeChecklist article {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid #e8dfba;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.claudeChecklist article > span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #fff1af;
+  color: #6b560b;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.claudeChecklist strong {
+  color: #3b3432;
+  font-size: 12px;
+}
+
+.claudeChecklist p {
+  margin-top: 2px;
+  font-size: 11px;
+}
+
+.claudeGoalCard {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  padding: 18px;
+  border: 1px solid #d6c378;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.claudeGoalCard p {
+  margin: 9px 0 14px;
+  color: #403a36;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.claudeGoalCard button {
+  align-self: flex-start;
+}
+
 .claudePromptCard {
   margin-top: 10px;
   overflow: hidden;
@@ -2074,6 +2486,15 @@
     grid-template-columns: 1fr;
   }
 
+  .claudeCapabilityGrid,
+  .claudeAccessGrid,
+  .claudeBalancedGrid,
+  .claudeCoworkShareGrid,
+  .claudeRequirements,
+  .claudeCoworkActivityGrid {
+    grid-template-columns: 1fr;
+  }
+
   .claudeFieldWide {
     grid-column: auto;
   }
@@ -2089,6 +2510,29 @@
 
   .claudeScheduledPrompt {
     grid-column: 1 / -1;
+  }
+
+  .claudeProductCompare {
+    grid-template-columns: 1fr;
+  }
+
+  .claudeProductCompare > .claudeCompareArrow {
+    margin: -4px auto;
+    transform: rotate(90deg);
+  }
+
+  .claudePromptActivity {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .claudePromptActivity > button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .claudePromptExample > div {
+    grid-template-columns: 1fr;
+    gap: 5px;
   }
 
   .claudeComparisonTable th,

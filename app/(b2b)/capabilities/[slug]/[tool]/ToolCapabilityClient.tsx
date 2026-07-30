@@ -19,7 +19,14 @@ export default function ToolCapabilityClient({ slug, tool, count }: Props) {
 
   if (
     tool === "claude"
-    && (slug === "skills" || slug === "projects" || slug === "vibe-coding" || slug === "scheduled-actions")
+    && (
+      slug === "skills"
+      || slug === "projects"
+      || slug === "vibe-coding"
+      || slug === "scheduled-actions"
+      || slug === "ai-agents"
+      || slug === "coding-agents"
+    )
   ) {
     return (
       <>

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import ToolIcon from "@/components/ToolIcon";
+import { PageLoadingIndicator } from "@/components/NavigationLoading";
 import {
   CHATBOT_FILTERS,
   CHATBOT_FILTER_LABELS,
@@ -75,11 +76,33 @@ export default function AskAIToolControls({
   const [newsOpen, setNewsOpen] = useState(false);
   const [newsFilter, setNewsFilter] = useState<ToolChoice>(selectedTool);
   const [portalReady, setPortalReady] = useState(false);
+  const [filterNavigating, setFilterNavigating] = useState(false);
   const selectorRef = useRef<HTMLDivElement>(null);
+  const filterTargetRef = useRef<ToolChoice | null>(null);
+  const filterShownAtRef = useRef(0);
 
   useEffect(() => {
     setPendingTool(selectedTool);
   }, [selectedTool]);
+
+  useEffect(() => {
+    if (!filterNavigating || filterTargetRef.current !== selectedTool) return;
+    const elapsed = Date.now() - filterShownAtRef.current;
+    const timer = window.setTimeout(() => {
+      filterTargetRef.current = null;
+      setFilterNavigating(false);
+    }, Math.max(0, 280 - elapsed));
+    return () => window.clearTimeout(timer);
+  }, [filterNavigating, selectedTool]);
+
+  useEffect(() => {
+    if (!filterNavigating) return;
+    const timer = window.setTimeout(() => {
+      filterTargetRef.current = null;
+      setFilterNavigating(false);
+    }, 12000);
+    return () => window.clearTimeout(timer);
+  }, [filterNavigating]);
 
   useEffect(() => setPortalReady(true), []);
 
@@ -132,7 +155,13 @@ export default function AskAIToolControls({
     if (pendingTool === "all") params.delete("tool");
     else params.set("tool", pendingTool);
 
-    router.replace(`/ask-ai${params.size > 0 ? `?${params.toString()}` : ""}`, { scroll: false });
+    const href = `/ask-ai${params.size > 0 ? `?${params.toString()}` : ""}`;
+    if (pendingTool !== selectedTool) {
+      filterTargetRef.current = pendingTool;
+      filterShownAtRef.current = Date.now();
+      flushSync(() => setFilterNavigating(true));
+    }
+    router.replace(href, { scroll: false });
     if (preferenceError) {
       setPreferenceError("The filter changed, but your default couldn’t be saved. Apply the preference migration and try again.");
       return;
@@ -305,6 +334,12 @@ export default function AskAIToolControls({
       </div>
 
       {portalReady ? createPortal(newsDrawer, document.body) : null}
+      {portalReady && filterNavigating ? createPortal(
+        <div className="page-nav-loading" role="status" aria-live="polite" aria-label={`Loading ${toolLabel(pendingTool)}`}>
+          <PageLoadingIndicator label={`Loading ${toolLabel(pendingTool)}`} />
+        </div>,
+        document.body,
+      ) : null}
     </>
   );
 }

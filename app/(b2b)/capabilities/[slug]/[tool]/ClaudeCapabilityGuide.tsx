@@ -5,7 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import styles from "../../capabilities.module.css";
 
-type ClaudeGuideSlug = "skills" | "projects" | "vibe-coding" | "scheduled-actions";
+type ClaudeGuideSlug =
+  | "skills"
+  | "projects"
+  | "vibe-coding"
+  | "scheduled-actions"
+  | "ai-agents"
+  | "coding-agents";
 
 type Props = {
   slug: ClaudeGuideSlug;
@@ -179,6 +185,84 @@ const SCHEDULED_STEPS: GuideStep[] = [
   },
 ];
 
+const CODE_STEPS: GuideStep[] = [
+  {
+    title: "Open the Code tab",
+    helper: "Claude desktop app → Code",
+    description: "Select Code at the top of the Claude desktop app to enter Claude Code.",
+    caption: "Select Code at the top of the Claude desktop app. From here, you can describe a task and let Claude Code work through the project.",
+    src: "/claude-guides/code-step-1.png",
+    alt: "Claude desktop app with the Code tab selected",
+    width: 1227,
+    height: 721,
+  },
+  {
+    title: "Choose a local project",
+    helper: "Local → select your project folder",
+    description: "Select Local and point Claude Code to the folder it is allowed to work inside.",
+    caption: "Select Local, then choose the project folder Claude Code is allowed to read, edit, and run commands inside. Check the folder before starting because this is real local access.",
+    src: "/claude-guides/code-step-2.png",
+    alt: "Claude Code local environment menu used to choose a project folder",
+    width: 803,
+    height: 420,
+  },
+  {
+    title: "Create a Routine",
+    helper: "More → Routines",
+    description: "Open Routines to schedule recurring workflows such as PR or issue reviews.",
+    caption: "Open Routines to set up recurring coding workflows. The available templates include PR digests, issue triage, system health checks, and dependency update checks.",
+    src: "/claude-guides/code-step-3.png",
+    alt: "Claude Code Routines page showing recurring workflow templates",
+    width: 1236,
+    height: 727,
+  },
+];
+
+const COWORK_STEPS: GuideStep[] = [
+  {
+    title: "Find the Cowork tab",
+    helper: "Claude web → Cowork → Open in desktop app",
+    description: "Open Cowork from the left sidebar.",
+    caption: "Select Cowork in the left sidebar. On the web, choose Open in desktop app to continue.",
+    src: "/claude-guides/cowork-step-1.png",
+    alt: "Claude interface showing Cowork in the left sidebar and the option to open it in the desktop app",
+    width: 1057,
+    height: 711,
+  },
+  {
+    title: "Give Cowork a goal",
+    tabTitle: "Give it a goal",
+    helper: "Cowork → Choose a folder → Describe the outcome",
+    description: "Describe the outcome you want.",
+    caption: "Give Cowork access to a folder and describe the result you want. It breaks the goal into steps and starts working through the files.",
+    src: "/claude-guides/cowork-step-2.png",
+    alt: "Claude Cowork processing a goal to rename travel receipt files while showing task progress and folder contents",
+    width: 989,
+    height: 786,
+  },
+  {
+    title: "Review the completed work",
+    helper: "Cowork → Progress and final report",
+    description: "Check what Cowork changed.",
+    caption: "Review the completed steps and Cowork’s report. Check what it changed before treating the task as complete.",
+    src: "/claude-guides/cowork-step-3.png",
+    alt: "Claude Cowork reporting that it reviewed and renamed travel receipt files and showing the completed folder contents",
+    width: 1008,
+    height: 767,
+  },
+  {
+    title: "Check the folder on your laptop",
+    tabTitle: "Check the folder",
+    helper: "Finder → The folder Cowork worked on",
+    description: "Confirm the files on your laptop.",
+    caption: "Open the folder on your laptop and confirm the filenames and folder structure match the goal you gave Cowork.",
+    src: "/claude-guides/cowork-step-4.png",
+    alt: "Mac Finder window showing travel receipt files renamed by date and mode of transport",
+    width: 807,
+    height: 411,
+  },
+];
+
 const PROJECT_PROMPT = `You are a meeting follow-up assistant.
 
 This project will contain meeting transcripts and two instruction files:
@@ -205,6 +289,8 @@ Add filters for category and date, plus a button to clear all entries.
 Use a clean, professional design with clear labels and sensible colors.`;
 
 const SCHEDULED_PROMPT = "Check my email and calendar for anything pending that needs my attention today, and summarize it for me.";
+const CODE_PROMPT = "Find and fix any obvious bugs in this codebase, then explain what you changed.";
+const COWORK_GOAL = "Rename these files based on their date and category, and organize them into subfolders.";
 
 function SectionHeading({
   number,
@@ -309,35 +395,56 @@ function StepGuide({ steps, label }: { steps: GuideStep[]; label: string }) {
 }
 
 function ClaudeHeader({ slug }: { slug: ClaudeGuideSlug }) {
-  const isSkills = slug === "skills";
-  const isProjects = slug === "projects";
-  const isArtifacts = slug === "vibe-coding";
-  const eyebrow = isSkills
-    ? "SKILLS · CLAUDE"
-    : isProjects
-      ? "PRODUCTS · CLAUDE"
-      : isArtifacts
-        ? "ARTIFACTS · CLAUDE"
-        : "AUTOMATION · CLAUDE";
-  const title = isSkills ? "Claude Skills" : isProjects ? "Claude Projects" : isArtifacts ? "Claude Artifacts" : "Scheduled";
-  const subtitle = isSkills
-    ? "Saved instructions Claude can reuse whenever a matching task appears."
-    : isProjects
-      ? "A practical guide to understanding, creating, and using Projects inside Claude."
-      : isArtifacts
-        ? "Documents, code, webpages, diagrams and working apps rendered beside your conversation."
-        : "Set a prompt to run automatically at the time and frequency you choose.";
+  const header: Record<ClaudeGuideSlug, { eyebrow: string; title: string; subtitle: string; chip: string }> = {
+    skills: {
+      eyebrow: "SKILLS · CLAUDE",
+      title: "Claude Skills",
+      subtitle: "Saved instructions Claude can reuse whenever a matching task appears.",
+      chip: "Claude",
+    },
+    projects: {
+      eyebrow: "PRODUCTS · CLAUDE",
+      title: "Claude Projects",
+      subtitle: "A practical guide to understanding, creating, and using Projects inside Claude.",
+      chip: "Claude",
+    },
+    "vibe-coding": {
+      eyebrow: "ARTIFACTS · CLAUDE",
+      title: "Claude Artifacts",
+      subtitle: "Documents, code, webpages, diagrams and working apps rendered beside your conversation.",
+      chip: "Claude",
+    },
+    "scheduled-actions": {
+      eyebrow: "AUTOMATION · CLAUDE",
+      title: "Scheduled",
+      subtitle: "Set a prompt to run automatically at the time and frequency you choose.",
+      chip: "Claude desktop",
+    },
+    "ai-agents": {
+      eyebrow: "AI AGENTS · CLAUDE",
+      title: "Claude Cowork",
+      subtitle: "Give Claude a goal and let it work through files and connected tools on your laptop.",
+      chip: "Claude",
+    },
+    "coding-agents": {
+      eyebrow: "AGENTIC CODING · CLAUDE",
+      title: "Claude Code",
+      subtitle: "An agent that can work across an entire code project, run commands, test changes, and deliver working code.",
+      chip: "Claude",
+    },
+  };
+  const pageHeader = header[slug];
 
   return (
     <>
       <Link href="/ask-ai?tool=claude" className={styles.claudeBack}>← Back</Link>
       <header className={styles.claudeTitleRow}>
         <div>
-          <p className={styles.claudeEyebrow}>{eyebrow}</p>
-          <h1>{title}</h1>
-          <p className={styles.claudeSubtitle}>{subtitle}</p>
+          <p className={styles.claudeEyebrow}>{pageHeader.eyebrow}</p>
+          <h1>{pageHeader.title}</h1>
+          <p className={styles.claudeSubtitle}>{pageHeader.subtitle}</p>
         </div>
-        <span className={styles.claudeToolChip}>{slug === "scheduled-actions" ? "Claude desktop" : "Claude"}</span>
+        <span className={styles.claudeToolChip}>{pageHeader.chip}</span>
       </header>
     </>
   );
@@ -632,6 +739,256 @@ function ClaudeScheduledGuide({ count, workflowsHref }: Pick<Props, "count" | "w
   );
 }
 
+function ClaudeCodeGuide({ count, workflowsHref }: Pick<Props, "count" | "workflowsHref">) {
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(CODE_PROMPT);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+    window.setTimeout(() => setCopyStatus("idle"), 1800);
+  }
+
+  return (
+    <>
+      <section className={styles.claudeIntro}>
+        <div className={styles.claudeIntroCopy}>
+          <span className={styles.claudeIntroIcon}>⌘</span>
+          <div>
+            <span className={styles.claudeKicker}>WHAT IT IS</span>
+            <h2>Anthropic&apos;s agentic coding system</h2>
+            <p>It reads your codebase, makes changes across multiple files, runs tests, and delivers working code, operating at the project level instead of just suggesting the next line.</p>
+          </div>
+        </div>
+        <aside className={styles.claudeComparisonNote}>
+          <span>Simple way to think about it</span>
+          <strong>You describe the outcome. Claude Code works through the files and commands needed to produce it.</strong>
+        </aside>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="1" kicker="WHAT IT SOLVES" title="You review the work instead of writing every change yourself" />
+        <div className={styles.claudeCompare}>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWithout}`}>
+            <strong>WITHOUT CLAUDE CODE</strong>
+            <div><i>1</i><p>Write code file by file</p></div>
+            <div><i>2</i><p>Run commands and tests manually</p></div>
+            <div><i>3</i><p>Trace changes across the project yourself</p></div>
+          </article>
+          <span className={styles.claudeCompareArrow}>→</span>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWith}`}>
+            <strong>WITH CLAUDE CODE</strong>
+            <div><i>✓</i><p>Describe the change you need</p></div>
+            <div><i>✓</i><p>It edits across files and runs tests</p></div>
+            <div><i>✓</i><p>Review the diff before committing</p></div>
+          </article>
+        </div>
+      </section>
+
+      <div className={styles.claudeDetailGrid}>
+        <section className={styles.claudeSection}>
+          <SectionHeading number="2" tone="purple" kicker="WHAT IT CAN DO" title="Work across a complete coding task" />
+          <div className={styles.claudeCapabilityGrid}>
+            <article><span>↔</span><div><strong>Multi-file editing</strong><p>Change related code across the project.</p></div></article>
+            <article><span>⚙</span><div><strong>Bug fixing and refactoring</strong><p>Find issues and improve existing code.</p></div></article>
+            <article><span>✓</span><div><strong>Code review</strong><p>Inspect code and explain risks or improvements.</p></div></article>
+            <article><span>⑂</span><div><strong>Git work</strong><p>Create commits and pull requests.</p></div></article>
+            <article><span>›_</span><div><strong>Terminal commands</strong><p>Run builds, tests, and deployments.</p></div></article>
+            <article><span>M</span><div><strong>MCP connections</strong><p>Connect to tools such as databases or Slack.</p></div></article>
+          </div>
+        </section>
+
+        <section className={styles.claudeSection}>
+          <SectionHeading number="3" tone="green" kicker="WHERE TO USE IT" title="Choose the entry point that suits you" />
+          <div className={styles.claudeAccessGrid}>
+            <article><span>▣</span><div><strong>Desktop app</strong><p>The easiest entry point if you are not comfortable with a terminal.</p></div></article>
+            <article><span>›_</span><div><strong>Terminal</strong><p>Use Claude Code through its command-line interface.</p></div></article>
+            <article><span>⌨</span><div><strong>IDEs</strong><p>Available in VS Code, Cursor, and JetBrains.</p></div></article>
+            <article><span>◎</span><div><strong>Web</strong><p>Use Claude Code from the browser when available to your plan.</p></div></article>
+          </div>
+        </section>
+      </div>
+
+      <section className={`${styles.claudeSection} ${styles.claudeGuideSection}`}>
+        <SectionHeading number="4" tone="blue" kicker="USE IT IN THE DESKTOP APP" title="Access it, give it project control, and automate recurring work" />
+        <StepGuide steps={CODE_STEPS} label="Claude Code steps" />
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="5" tone="purple" kicker="STRENGTHS AND LIMITATIONS" title="It has deep access, so use it with clear boundaries" />
+        <div className={styles.claudeBalancedGrid}>
+          <article className={styles.claudeStrengthCard}>
+            <strong>STRENGTHS</strong>
+            <p>Full control over files and commands.</p>
+            <p>Shows every step, so you can stop and redirect it mid-task.</p>
+            <p>Handles complex multi-step work such as refactors and migrations.</p>
+            <p>More token-efficient than Cowork for coding tasks.</p>
+          </article>
+          <article className={styles.claudeLimitationCard}>
+            <strong>LIMITATIONS</strong>
+            <p>Reads and writes real files and runs real commands. It is not a sandbox.</p>
+            <p>Some comfort with a terminal or project structure helps, even if you do not write code yourself.</p>
+            <p>Available on paid plans only, with no free tier.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="6" tone="green" kicker="CLAUDE CODE VS COWORK" title="Choose based on what the task needs to produce" />
+        <div className={styles.claudeProductCompare}>
+          <article className={styles.claudeProductCode}>
+            <span>CLAUDE CODE</span>
+            <h3>For tasks that produce code</h3>
+            <p>Use it for building, fixing, reviewing, testing, or changing software projects.</p>
+          </article>
+          <span className={styles.claudeCompareArrow}>→</span>
+          <article className={styles.claudeProductCowork}>
+            <span>CLAUDE COWORK</span>
+            <h3>For tasks that produce files</h3>
+            <p>Use it for documents, spreadsheets, presentations, or file organization.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className={styles.claudePromptActivity}>
+        <span className={styles.claudeTryIcon}>→</span>
+        <div>
+          <span className={styles.claudeKicker}>TRY IT YOURSELF</span>
+          <h3>Test Claude Code on a small project</h3>
+          <p>Point it at a small project folder. Review the diff before allowing it to commit.</p>
+          <p className={styles.claudePromptBox}>{CODE_PROMPT}</p>
+        </div>
+        <button type="button" onClick={copyPrompt}>
+          {copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Select and copy" : "Copy prompt"}
+        </button>
+      </section>
+
+      <ClaudeCta
+        count={count}
+        workflowsHref={workflowsHref}
+        heading="Explore Claude Code workflows"
+        description="Open guided workflows for building, fixing, reviewing and testing software projects with Claude Code."
+      />
+    </>
+  );
+}
+
+function ClaudeCoworkGuide({ count, workflowsHref }: Pick<Props, "count" | "workflowsHref">) {
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+
+  async function copyGoal() {
+    try {
+      await navigator.clipboard.writeText(COWORK_GOAL);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+    window.setTimeout(() => setCopyStatus("idle"), 1800);
+  }
+
+  return (
+    <>
+      <section className={styles.claudeIntro}>
+        <div className={styles.claudeIntroCopy}>
+          <span className={styles.claudeIntroIcon}>✦</span>
+          <div>
+            <span className={styles.claudeKicker}>WHAT IT IS</span>
+            <h2>An AI agent mode inside the Claude desktop app</h2>
+            <p>Instead of chatting back and forth, you give Cowork a goal, and it works through your local files and connected tools on its own, reading, editing, creating, or deleting files as needed, until the task is done.</p>
+          </div>
+        </div>
+        <aside className={styles.claudeComparisonNote}>
+          <span>The simple version</span>
+          <strong>Give it a folder and a goal. Cowork works through the task on your laptop.</strong>
+        </aside>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="2" kicker="HOW IT IS DIFFERENT" title="Regular Claude chat vs Cowork" />
+        <div className={styles.claudeCompare}>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWithout}`}>
+            <strong>REGULAR CHAT</strong>
+            <div><i>1</i><p>You paste content in</p></div>
+            <div><i>2</i><p>Claude gives content back</p></div>
+            <div><i>3</i><p>It cannot touch your laptop</p></div>
+          </article>
+          <span className={styles.claudeCompareArrow}>→</span>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWith}`}>
+            <strong>COWORK</strong>
+            <div><i>✓</i><p>Direct access to the folder you allow</p></div>
+            <div><i>✓</i><p>Can open, edit, create, and delete files</p></div>
+            <div><i>✓</i><p>No chat attachment limit, but it uses more tokens</p></div>
+          </article>
+        </div>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="3" tone="purple" kicker="PROMPT IT DIFFERENTLY" title="Give it a goal, not a question" />
+        <p className={styles.claudeSectionCopy}>Cowork figures out the steps, runs commands, and checks its own work rather than waiting for you to walk it through each step.</p>
+        <div className={styles.claudePromptExample}>
+          <div><span>Regular chat</span><strong>“Summarize this file.”</strong></div>
+          <div><span>Cowork goal</span><strong>“Rename all the files in this folder based on their travel date and mode of transport.”</strong></div>
+        </div>
+      </section>
+
+      <section className={`${styles.claudeSection} ${styles.claudeGuideSection}`}>
+        <SectionHeading number="4" tone="blue" kicker="WHERE TO FIND AND SET IT UP" title="Find Cowork and see it work" />
+        <p className={styles.claudeSectionCopy}>Cowork is available on paid plans. On the web you can preview it, but you need to select <strong>Open in desktop app</strong> to use it because it needs access to your computer.</p>
+        <StepGuide steps={COWORK_STEPS} label="Claude Cowork screenshots" />
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="5" tone="green" kicker="REQUIREMENTS AND LIMITS" title="It runs on your laptop" />
+        <div className={styles.claudeRequirements}>
+          <article><span>1</span><div><strong>Keep your laptop on and awake</strong><p>Cowork is not running in the cloud.</p></div></article>
+          <article><span>2</span><div><strong>Choose the folder or project</strong><p>It works on whatever you give it access to.</p></div></article>
+          <article><span>3</span><div><strong>Add connected tools when needed</strong><p>It can also work with tools such as Chrome.</p></div></article>
+        </div>
+      </section>
+
+      <div className={styles.claudeCoworkShareGrid}>
+        <article>
+          <span>!</span>
+          <div><small>6 · BE CAREFUL</small><h3>It can delete your files</h3><p>A mistake in a prompt or a wrong assumption can delete something permanently. Create a new folder, copy the files you want Cowork to work on into it, and give Cowork access to that copy rather than your original folder or Desktop.</p></div>
+        </article>
+        <article>
+          <span>↗</span>
+          <div><small>7 · CONNECTED TOOLS</small><h3>It can browse and act on the web</h3><p>If you have connected Claude for Chrome, Cowork can open websites and take actions on them as part of the task, alongside working with local files.</p></div>
+        </article>
+      </div>
+
+      <section className={styles.claudeCoworkActivity}>
+        <SectionHeading number="8" tone="yellow" kicker="TRY IT YOURSELF" title="Organize a folder with Cowork" />
+        <div className={styles.claudeCoworkActivityGrid}>
+          <div className={styles.claudeChecklist}>
+            <article><span>1</span><div><strong>Create a new folder on your laptop</strong><p>Use a fresh folder only for this activity.</p></div></article>
+            <article><span>2</span><div><strong>Copy a handful of files into it</strong><p>Use copies of receipts, notes, or other sample files. Keep the originals elsewhere.</p></div></article>
+            <article><span>3</span><div><strong>Give Cowork access to the folder</strong><p>Select the new folder when Cowork asks what it can work with.</p></div></article>
+            <article><span>4</span><div><strong>Give Cowork the goal</strong><p>Watch it read the files, make the changes, check its work, and report back.</p></div></article>
+          </div>
+          <aside className={styles.claudeGoalCard}>
+            <span>GOAL TO GIVE COWORK</span>
+            <p>{COWORK_GOAL}</p>
+            <button type="button" onClick={copyGoal}>
+              {copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Select and copy" : "Copy goal"}
+            </button>
+          </aside>
+        </div>
+      </section>
+
+      <ClaudeCta
+        count={count}
+        workflowsHref={workflowsHref}
+        heading="Explore Cowork Workflows"
+        description="Open guided workflows that show how to organize files, complete multi-step tasks, and use Cowork safely."
+      />
+    </>
+  );
+}
+
 function ClaudeProjectsGuide({ count, workflowsHref }: Pick<Props, "count" | "workflowsHref">) {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
 
@@ -743,8 +1100,12 @@ export default function ClaudeCapabilityGuide({ slug, count, workflowsHref }: Pr
         <ClaudeProjectsGuide count={count} workflowsHref={workflowsHref} />
       ) : slug === "vibe-coding" ? (
         <ClaudeArtifactsGuide count={count} workflowsHref={workflowsHref} />
-      ) : (
+      ) : slug === "scheduled-actions" ? (
         <ClaudeScheduledGuide count={count} workflowsHref={workflowsHref} />
+      ) : slug === "ai-agents" ? (
+        <ClaudeCoworkGuide count={count} workflowsHref={workflowsHref} />
+      ) : (
+        <ClaudeCodeGuide count={count} workflowsHref={workflowsHref} />
       )}
     </main>
   );
