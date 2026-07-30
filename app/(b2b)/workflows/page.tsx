@@ -6,6 +6,7 @@ import WorkflowsClient, {
   type ContinueWorkflowProgress,
   type WorkflowCategoryMetadata,
 } from "./WorkflowsClient";
+import type { PreferredAiTool } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function WorkflowsPage() {
     { data: viewRows },
     { data: progressRows },
     { data: savedWorkflowRows },
+    preferenceResult,
   ] = await Promise.all([
     supabase
       .from("activities")
@@ -47,7 +49,15 @@ export default async function WorkflowsPage() {
       .eq("user_id", user.id)
       .eq("source", "liked")
       .order("created_at", { ascending: false }),
+    supabase
+      .from("profiles")
+      .select("preferred_ai_tool")
+      .eq("id", user.id)
+      .maybeSingle(),
   ]);
+  const defaultTool = preferenceResult.error
+    ? null
+    : preferenceResult.data?.preferred_ai_tool as PreferredAiTool | null;
 
   let categoryMetadata: WorkflowCategoryMetadata[] = [];
   const categoryResult = await supabase
@@ -117,6 +127,7 @@ export default async function WorkflowsPage() {
         savedWorkflowIds={(savedWorkflowRows ?? []).map((row) => row.activity_id as string)}
         categoryMetadata={categoryMetadata}
         continueProgress={continueProgress}
+        defaultTool={defaultTool}
       />
     </Suspense>
   );

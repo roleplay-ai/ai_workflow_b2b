@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useNavigationLoading } from "@/components/NavigationLoading";
+import AskAIToolControls from "@/components/AskAI/AskAIToolControls";
+import { isChatbotFilter } from "@/lib/chatbotFilter";
+import type { ToolLogoMap } from "@/lib/toolLogos";
+import type { PreferredAiTool, WhatsNewUpdate } from "@/lib/supabase/types";
 import styles from "@/components/b2b-shell.module.css";
 
 type NewActivity = {
@@ -22,6 +26,9 @@ type Props = {
   points?: number | null;
   isAnonymous?: boolean;
   freeChatsLeft?: number | null;
+  askAiToolLogos?: ToolLogoMap;
+  whatsNewUpdates?: WhatsNewUpdate[];
+  defaultAiTool?: PreferredAiTool | null;
 };
 
 const PAGE_LABELS: Record<string, string> = {
@@ -53,7 +60,7 @@ function RouteLink({
       className={className}
       aria-current={ariaCurrent}
       onClick={(event) => {
-        if (pathname === href && window.location.search === "") {
+        if (`${pathname}${window.location.search}` === href) {
           event.preventDefault();
           return;
         }
@@ -75,8 +82,16 @@ export default function B2BTopbar({
   points: pointsProp,
   isAnonymous = false,
   freeChatsLeft: freeChatsLeftProp = null,
+  askAiToolLogos = {},
+  whatsNewUpdates = [],
+  defaultAiTool = null,
 }: Props) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const selectedTool = isChatbotFilter(searchParams.get("tool"))
+    ? searchParams.get("tool")
+    : null;
+  const toolQuery = selectedTool ? `?tool=${selectedTool}` : "";
   const [fetchedPoints, setFetchedPoints] = useState<number | null>(null);
   const points = pointsProp !== undefined ? pointsProp : fetchedPoints;
   const [freeChatsLeft, setFreeChatsLeft] = useState<number | null>(freeChatsLeftProp);
@@ -126,14 +141,14 @@ export default function B2BTopbar({
         {modeSwitchVisible ? (
           <nav className={styles.modeSwitch} aria-label="Practice area">
             <RouteLink
-              href="/ask-ai"
+              href={`/ask-ai${toolQuery}`}
               className={`${styles.modeLink} ${pathname.startsWith("/ask-ai") ? styles.modeLinkActive : ""}`}
               ariaCurrent={pathname.startsWith("/ask-ai") ? "page" : undefined}
             >
               Ask AI
             </RouteLink>
             <RouteLink
-              href="/workflows"
+              href={`/workflows${toolQuery}`}
               className={`${styles.modeLink} ${pathname.startsWith("/workflows") ? styles.modeLinkActive : ""}`}
               ariaCurrent={pathname.startsWith("/workflows") ? "page" : undefined}
             >
@@ -146,6 +161,14 @@ export default function B2BTopbar({
       </div>
 
       <div className={styles.topbarActions}>
+        {pathname.startsWith("/ask-ai") ? (
+          <AskAIToolControls
+            toolLogos={askAiToolLogos}
+            updates={whatsNewUpdates}
+            defaultTool={defaultAiTool}
+            canSaveDefault={!isAnonymous}
+          />
+        ) : null}
         {isAnonymous ? (
           <>
             <span className={styles.freeChatsPill} title="Free questions remaining">

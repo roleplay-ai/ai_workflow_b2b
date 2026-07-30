@@ -20,7 +20,7 @@ export default function ToolCapabilityClient({ slug, tool, count }: Props) {
     <>
       <B2BTopbar />
       <main className={styles.page}>
-        <Link href={`/capabilities/${slug}`} className={styles.backLink}>← Back to {def.contentType}</Link>
+        <Link href={`/ask-ai?tool=${tool}`} className={styles.backLink}>← Back to Ask AI</Link>
 
         <div className={styles.pageHeader}>
           <div>

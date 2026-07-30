@@ -15,7 +15,7 @@ export default function ProviderFeatureClient({ tool, def }: Props) {
     <>
       <B2BTopbar />
       <main className={styles.page}>
-        <Link href={`/capabilities/tool/${tool}`} className={styles.backLink}>← Back</Link>
+        <Link href={`/ask-ai?tool=${tool}`} className={styles.backLink}>← Back to Ask AI</Link>
 
         <div className={styles.pageHeader}>
           <div>

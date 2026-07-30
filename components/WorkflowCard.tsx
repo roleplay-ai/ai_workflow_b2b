@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Activity } from "@/lib/supabase/types";
-import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
+import { formatToolLabel, normalizeActivityTools, normalizeToolSlug } from "@/lib/tools";
+import { isAiAgentWorkflow } from "@/lib/chatbotFilter";
 import type { ToolLogoMap } from "@/lib/toolLogos";
 import ToolIcon from "@/components/ToolIcon";
 import styles from "@/app/(b2b)/workflows/workflows.module.css";
@@ -64,6 +65,7 @@ export function WorkflowCard({
   isSaved,
   isSavePending,
   onToggleSave,
+  activeToolFilter,
 }: {
   activity: Activity;
   category?: WorkflowCategoryMetadata;
@@ -74,10 +76,31 @@ export function WorkflowCard({
   isSaved: boolean;
   isSavePending: boolean;
   onToggleSave: (activityId: string) => void;
+  activeToolFilter?: string | null;
 }) {
   const tools = normalizeActivityTools(activity.tools);
-  const primaryTool = tools[0] ?? "";
+  const normalizedFilter = activeToolFilter ? normalizeToolSlug(activeToolFilter) : "";
+  const isAgentWorkflow = isAiAgentWorkflow(activity.content_type);
+  const visibleTools = normalizedFilter
+    ? (tools.includes(normalizedFilter) ? [normalizedFilter] : [])
+    : tools;
+  const toolCycleKey = visibleTools.join("|");
+  const shouldRotateTools = !normalizedFilter && !isAgentWorkflow && visibleTools.length > 1;
+  const [visibleToolIndex, setVisibleToolIndex] = useState(0);
   const [navigating, setNavigating] = useState(false);
+  const visibleTool = visibleTools[visibleToolIndex % Math.max(visibleTools.length, 1)] ?? "";
+
+  useEffect(() => {
+    setVisibleToolIndex(0);
+  }, [toolCycleKey, normalizedFilter, isAgentWorkflow]);
+
+  useEffect(() => {
+    if (!shouldRotateTools || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const intervalId = window.setInterval(() => {
+      setVisibleToolIndex((current) => (current + 1) % visibleTools.length);
+    }, 2600);
+    return () => window.clearInterval(intervalId);
+  }, [shouldRotateTools, toolCycleKey, visibleTools.length]);
 
   return (
     <article className={`${styles.workflowCard} ${navigating ? styles.workflowCardNavigating : ""}`}>
@@ -95,10 +118,36 @@ export function WorkflowCard({
       <Link href={`/activity/${activity.id}`} onClick={() => setNavigating(true)} aria-busy={navigating}>
         <div className={styles.workflowCardTop}>
           <span className={styles.workflowNatureIcon}>{categoryIcon(category)}</span>
-          {primaryTool ? (
-            <span className={styles.toolLabel}>
-              <ToolIcon tool={primaryTool} size={16} logos={toolLogos} insetScale={0.88} />
-              {formatToolLabel(primaryTool)}
+          {isAgentWorkflow ? (
+            <span className={styles.toolLabel} aria-label="Workflow type: AI Agent">
+              <span className={styles.aiAgentToolMark} aria-hidden="true">✦</span>
+              AI Agent
+            </span>
+          ) : shouldRotateTools ? (
+            <span
+              className={`${styles.toolLabel} ${styles.toolLabelRotating}`}
+              aria-label={`Assigned tools: ${visibleTools.map(formatToolLabel).join(", ")}`}
+            >
+              {visibleTools.map((tool, index) => (
+                <span
+                  className={`${styles.toolLabelItem} ${index === visibleToolIndex ? styles.toolLabelItemActive : ""}`}
+                  aria-hidden="true"
+                  key={tool}
+                >
+                  <ToolIcon tool={tool} size={16} logos={toolLogos} insetScale={0.88} />
+                  {formatToolLabel(tool)}
+                </span>
+              ))}
+            </span>
+          ) : visibleTool ? (
+            <span
+              className={styles.toolLabel}
+              aria-label={normalizedFilter
+                ? `Filtered tool: ${formatToolLabel(visibleTool)}`
+                : `Assigned tools: ${visibleTools.map(formatToolLabel).join(", ")}`}
+            >
+              <ToolIcon tool={visibleTool} size={16} logos={toolLogos} insetScale={0.88} />
+              {formatToolLabel(visibleTool)}
             </span>
           ) : null}
         </div>

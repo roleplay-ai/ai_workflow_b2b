@@ -65,6 +65,16 @@ const NAV_SECTIONS = [
         ),
       },
       {
+        label: "What’s New",
+        href: "/superadmin/whats-new",
+        icon: (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3l1.7 4.8L18.5 9.5l-4.8 1.7L12 16l-1.7-4.8-4.8-1.7 4.8-1.7L12 3z" />
+            <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" />
+          </svg>
+        ),
+      },
+      {
         label: "Support Requests",
         href: "/superadmin/support-requests",
         icon: (

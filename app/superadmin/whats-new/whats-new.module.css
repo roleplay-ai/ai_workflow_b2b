@@ -1,0 +1,374 @@
+.page {
+  min-height: 100vh;
+  padding: 32px 38px 60px;
+  background: #f7f6f1;
+  color: #221d23;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1080px;
+  margin: 0 auto 24px;
+}
+
+.pageHeader span,
+.editorHeading span {
+  color: #8a847e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .11em;
+}
+
+.pageHeader h1 {
+  margin: 5px 0 6px;
+  font-size: 31px;
+  line-height: 1.1;
+}
+
+.pageHeader p {
+  margin: 0;
+  color: #716d68;
+  font-size: 14px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.headerActions a,
+.headerActions button,
+.emptyState button {
+  min-height: 39px;
+  padding: 9px 15px;
+  border: 1px solid #dedbd1;
+  border-radius: 10px;
+  background: #fff;
+  color: #332f33;
+  font: 700 12.5px inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.headerActions button,
+.emptyState button {
+  border-color: #e2b600;
+  background: #ffce00;
+}
+
+.migrationNotice,
+.message {
+  max-width: 1080px;
+  margin: 0 auto 16px;
+  padding: 12px 15px;
+  border: 1px solid #e2b600;
+  border-radius: 10px;
+  background: #fff8d8;
+  font-size: 13px;
+}
+
+.messageSuccess {
+  border-color: #9dcab5;
+  background: #effbf5;
+}
+
+.messageError {
+  border-color: #e3aaa5;
+  background: #fff1ef;
+  color: #8b2820;
+}
+
+.editor,
+.listSection {
+  max-width: 1080px;
+  margin: 0 auto 22px;
+  border: 1px solid #e4e1d7;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(34, 29, 35, .04);
+}
+
+.editor {
+  padding: 22px;
+}
+
+.editorHeading,
+.listHeading,
+.cardTop,
+.editorActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.editorHeading h2,
+.listHeading h2 {
+  margin: 3px 0 0;
+  font-size: 19px;
+}
+
+.closeButton {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #e5e2d9;
+  border-radius: 50%;
+  background: #fff;
+  color: #68635e;
+  font-size: 21px;
+  cursor: pointer;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.formGrid label {
+  display: grid;
+  gap: 7px;
+}
+
+.formGrid label > span {
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.formGrid input,
+.formGrid select,
+.formGrid textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #dcd9d0;
+  border-radius: 9px;
+  outline: none;
+  background: #fff;
+  color: #292529;
+  font: 13px/1.45 inherit;
+}
+
+.formGrid input:focus,
+.formGrid select:focus,
+.formGrid textarea:focus {
+  border-color: #d4ad00;
+  box-shadow: 0 0 0 3px rgba(255, 206, 0, .16);
+}
+
+.formGrid textarea {
+  resize: vertical;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.publishCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 13px;
+  border-radius: 10px;
+  background: #faf9f5;
+}
+
+.publishCheck input {
+  margin-top: 3px;
+  accent-color: #221d23;
+}
+
+.publishCheck span {
+  display: grid;
+  gap: 2px;
+}
+
+.publishCheck strong {
+  font-size: 13px;
+}
+
+.publishCheck small {
+  color: #7b7670;
+  font-size: 11.5px;
+}
+
+.editorActions {
+  justify-content: flex-end;
+}
+
+.primaryButton,
+.secondaryButton,
+.updateCard footer button {
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 1px solid #dbd8ce;
+  border-radius: 9px;
+  background: #fff;
+  color: #332f33;
+  font: 700 12px inherit;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border-color: #e2b600;
+  background: #ffce00;
+}
+
+.primaryButton:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.listSection {
+  overflow: hidden;
+}
+
+.listHeading {
+  padding: 18px 20px;
+  border-bottom: 1px solid #ebe8df;
+}
+
+.listHeading span {
+  color: #807b75;
+  font-size: 12px;
+}
+
+.updateList {
+  display: grid;
+  gap: 1px;
+  background: #ebe8df;
+}
+
+.updateCard {
+  padding: 19px 20px;
+  background: #fff;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.cardMeta > span,
+.tag {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 750;
+}
+
+.toolBadge {
+  background: #f0edff;
+  color: #5b3db0;
+}
+
+.publishedBadge {
+  background: #e8f8f0;
+  color: #247252;
+}
+
+.draftBadge {
+  background: #efeeeb;
+  color: #6d6964;
+}
+
+.cardMeta time {
+  color: #8b857f;
+  font-size: 11px;
+}
+
+.tag {
+  background: #fff4bd;
+  color: #765f00;
+}
+
+.updateCard h3 {
+  margin: 14px 0 6px;
+  font-size: 16px;
+}
+
+.updateCard > p {
+  max-width: 760px;
+  margin: 0 0 9px;
+  color: #6e6964;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.updateCard > a {
+  color: #5b3db0;
+  font-size: 11.5px;
+  text-decoration: none;
+}
+
+.updateCard footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.updateCard footer .deleteButton {
+  color: #a1342b;
+}
+
+.emptyState {
+  display: grid;
+  justify-items: center;
+  padding: 52px 24px;
+  text-align: center;
+}
+
+.emptyState > span {
+  font-size: 28px;
+  color: #d2a900;
+}
+
+.emptyState h3 {
+  margin: 10px 0 5px;
+}
+
+.emptyState p {
+  margin: 0 0 17px;
+  color: #7c7771;
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 22px 16px 40px;
+  }
+
+  .pageHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions a,
+  .headerActions button {
+    flex: 1;
+    text-align: center;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fullWidth {
+    grid-column: auto;
+  }
+
+  .cardTop {
+    align-items: flex-start;
+  }
+}

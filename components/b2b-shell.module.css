@@ -863,11 +863,7 @@
   }
 
   .topbarCenter {
-    position: static;
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    transform: none;
+    display: none;
   }
 
   .modeSwitch {

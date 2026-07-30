@@ -17,6 +17,7 @@ import {
 } from "@/lib/capabilities";
 import ToolIcon from "@/components/ToolIcon";
 import type { ToolLogoMap } from "@/lib/toolLogos";
+import type { PreferredAiTool } from "@/lib/supabase/types";
 import PersonalizationModal, { type PersonalizationKey } from "@/components/PersonalizationModal";
 import styles from "@/components/b2b-shell.module.css";
 
@@ -33,6 +34,7 @@ type Props = {
   userEmail: string | null;
   userInitials: string;
   toolLogos: ToolLogoMap;
+  defaultTool?: PreferredAiTool | null;
 };
 
 type ConversationSummary = {
@@ -56,9 +58,10 @@ function NavItem({ href, label, icon, badge, activePaths, onNavigate }: NavItemP
   const pathname = usePathname();
   const router = useRouter();
   const { startNavigating } = useNavigationLoading();
+  const hrefPathname = href.split("?")[0];
   const active = activePaths
     ? activePaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
-    : pathname === href || pathname.startsWith(`${href}/`);
+    : pathname === hrefPathname || pathname.startsWith(`${hrefPathname}/`);
 
   return (
     <Link
@@ -67,7 +70,7 @@ function NavItem({ href, label, icon, badge, activePaths, onNavigate }: NavItemP
       aria-current={active ? "page" : undefined}
       onClick={(event) => {
         onNavigate?.();
-        if (pathname === href && window.location.search === "") {
+        if (pathname === hrefPathname && window.location.search === href.slice(hrefPathname.length)) {
           event.preventDefault();
           return;
         }
@@ -254,13 +257,14 @@ function Icon({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function B2BSidebar({ userId, userName, userEmail, userInitials, toolLogos }: Props) {
+export default function B2BSidebar({ userId, userName, userEmail, userInitials, toolLogos, defaultTool = null }: Props) {
   const supabase = createClient();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { startNavigating } = useNavigationLoading();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const [savedDefaultTool, setSavedDefaultTool] = React.useState<PreferredAiTool | null>(defaultTool);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [signingOut, setSigningOut] = React.useState(false);
   const [conversations, setConversations] = React.useState<ConversationSummary[]>([]);
@@ -271,7 +275,39 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
   const [capabilityMenuKey, setCapabilityMenuKey] = React.useState<CapabilitySlug | null>(null);
   const [providerMenuKey, setProviderMenuKey] = React.useState<ProviderTool | null>(null);
   const [personalizationOpen, setPersonalizationOpen] = React.useState<PersonalizationKey | null>(null);
+
+  React.useEffect(() => {
+    setSavedDefaultTool(defaultTool);
+  }, [defaultTool]);
+
+  React.useEffect(() => {
+    function handleDefaultToolChanged(event: Event) {
+      const tool = (event as CustomEvent<{ tool?: PreferredAiTool | null }>).detail?.tool;
+      if (tool === null || tool === "all" || PROVIDER_TOOLS.includes(tool as ProviderTool)) {
+        setSavedDefaultTool(tool ?? null);
+      }
+    }
+    window.addEventListener("ask:default-tool-changed", handleDefaultToolChanged);
+    return () => window.removeEventListener("ask:default-tool-changed", handleDefaultToolChanged);
+  }, []);
+
   const activeConversationId = searchParams.get("conversation");
+  const selectedTool = React.useMemo<ProviderTool | null>(() => {
+    const queryTool = searchParams.get("tool");
+    if (PROVIDER_TOOLS.includes(queryTool as ProviderTool)) return queryTool as ProviderTool;
+
+    const segments = pathname.split("/").filter(Boolean);
+    if (segments[0] === "capabilities") {
+      const pathTool = segments[2];
+      if (PROVIDER_TOOLS.includes(pathTool as ProviderTool)) return pathTool as ProviderTool;
+    }
+
+    return PROVIDER_TOOLS.includes(savedDefaultTool as ProviderTool)
+      ? savedDefaultTool as ProviderTool
+      : null;
+  }, [pathname, savedDefaultTool, searchParams]);
+  const askAiHref = selectedTool ? `/ask-ai?tool=${selectedTool}` : "/ask-ai";
+  const workflowsHref = selectedTool ? `/workflows?tool=${selectedTool}` : "/workflows";
 
   const refreshConversations = React.useCallback(async () => {
     const { data, error } = await supabase
@@ -347,7 +383,9 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
 
   function startNewConversation() {
     const nextId = crypto.randomUUID();
-    const href = `/ask-ai?new=${nextId}`;
+    const params = new URLSearchParams({ new: nextId });
+    if (selectedTool) params.set("tool", selectedTool);
+    const href = `/ask-ai?${params.toString()}`;
     setHistoryMenuId(null);
     setDrawerOpen(false);
     if (pathname !== "/ask-ai") startNavigating(href);
@@ -356,7 +394,9 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
 
   function openConversation(event: React.MouseEvent<HTMLAnchorElement>, conversationId: string) {
     event.preventDefault();
-    const href = `/ask-ai?conversation=${conversationId}`;
+    const params = new URLSearchParams({ conversation: conversationId });
+    if (selectedTool) params.set("tool", selectedTool);
+    const href = `/ask-ai?${params.toString()}`;
     setHistoryMenuId(null);
     setDrawerOpen(false);
     if (pathname !== "/ask-ai") startNavigating(href);
@@ -412,13 +452,13 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
         >
           <nav className={styles.primaryNav} aria-label="Main">
             <NavItem
-              href="/ask-ai"
+              href={askAiHref}
               label="Ask AI"
               onNavigate={closeDrawer}
               icon={<Icon><path d="M9 2l1.15 3.6L14 6.8l-3.85 1.2L9 11.6 7.85 8 4 6.8l3.85-1.2L9 2z" /></Icon>}
             />
             <NavItem
-              href="/workflows"
+              href={workflowsHref}
               label="Workflows"
               badge="New"
               onNavigate={closeDrawer}
@@ -434,26 +474,42 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
           </nav>
 
           <section className={styles.sidebarSection} aria-labelledby="capabilities-label">
-            <h2 id="capabilities-label" className={styles.sectionLabel}>Capabilities</h2>
+            <h2 id="capabilities-label" className={styles.sectionLabel}>
+              {selectedTool ? `${PROVIDERS[selectedTool].label} capabilities` : "Capabilities"}
+            </h2>
             {(["skills", "projects", "vibe-coding", "scheduled-actions", "ai-agents", "coding-agents"] as CapabilitySlug[]).map((slug) => (
-              <CapabilityMenuTrigger
-                key={slug}
-                slug={slug}
-                mark={CAPABILITIES[slug].mark}
-                open={capabilityMenuKey === slug}
-                onToggle={() => setCapabilityMenuKey((current) => (current === slug ? null : slug))}
-                onNavigate={() => {
-                  setCapabilityMenuKey(null);
-                  closeDrawer();
-                }}
-                toolLogos={toolLogos}
-              />
+              selectedTool ? (
+                <Link
+                  key={slug}
+                  href={`/capabilities/${slug}/${selectedTool}`}
+                  className={styles.filterLink}
+                  onClick={closeDrawer}
+                >
+                  <span className={styles.filterMark}>{CAPABILITIES[slug].mark}</span>
+                  <span>{capabilityLabelForTool(slug, selectedTool)}</span>
+                </Link>
+              ) : (
+                <CapabilityMenuTrigger
+                  key={slug}
+                  slug={slug}
+                  mark={CAPABILITIES[slug].mark}
+                  open={capabilityMenuKey === slug}
+                  onToggle={() => setCapabilityMenuKey((current) => (current === slug ? null : slug))}
+                  onNavigate={() => {
+                    setCapabilityMenuKey(null);
+                    closeDrawer();
+                  }}
+                  toolLogos={toolLogos}
+                />
+              )
             ))}
           </section>
 
           <section className={styles.sidebarSection} aria-labelledby="providers-label">
-            <h2 id="providers-label" className={styles.sectionLabel}>Unique to each</h2>
-            {PROVIDER_TOOLS.map((tool) => (
+            <h2 id="providers-label" className={styles.sectionLabel}>
+              {selectedTool ? `Unique to ${PROVIDERS[selectedTool].label}` : "Unique to each"}
+            </h2>
+            {(selectedTool ? [selectedTool] : PROVIDER_TOOLS).map((tool) => (
               <ProviderMenuTrigger
                 key={tool}
                 tool={tool}
@@ -503,7 +559,7 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
                       />
                     ) : (
                       <Link
-                        href={`/ask-ai?conversation=${conversation.id}`}
+                        href={`/ask-ai?conversation=${conversation.id}${selectedTool ? `&tool=${selectedTool}` : ""}`}
                         onClick={(event) => openConversation(event, conversation.id)}
                         title={conversation.title}
                       >

@@ -7,6 +7,8 @@ import AskAIChat from "@/components/AskAI/AskAIChat";
 import { ASK_LIMITS } from "@/lib/ask/guardrails";
 import { getClientIp } from "@/lib/ip";
 import { countAnonymousMessagesToday } from "@/lib/ask/anonymousUsage";
+import { rowsToToolLogoMap, type ToolLogoRow } from "@/lib/toolLogos";
+import type { PreferredAiTool, WhatsNewUpdate } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
 
@@ -123,10 +125,42 @@ function matchReferenceCategories(categoryRows: CategoryRow[]) {
   });
 }
 
-export default async function AskAIPage() {
+type AskAIPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function AskAIPage({ searchParams }: AskAIPageProps) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  const isAnonymous = user.is_anonymous === true;
+
+  const resolvedSearchParams = await searchParams;
+  const preferenceResult = isAnonymous
+    ? { data: null, error: null }
+    : await supabase
+      .from("profiles")
+      .select("preferred_ai_tool")
+      .eq("id", user.id)
+      .maybeSingle();
+  const storedPreference = preferenceResult.error
+    ? null
+    : preferenceResult.data?.preferred_ai_tool as PreferredAiTool | null;
+
+  if (
+    resolvedSearchParams.tool === undefined
+    && storedPreference
+    && storedPreference !== "all"
+  ) {
+    const nextParams = new URLSearchParams();
+    for (const [key, rawValue] of Object.entries(resolvedSearchParams)) {
+      for (const value of Array.isArray(rawValue) ? rawValue : rawValue ? [rawValue] : []) {
+        nextParams.append(key, value);
+      }
+    }
+    nextParams.set("tool", storedPreference);
+    redirect(`/ask-ai?${nextParams.toString()}`);
+  }
 
   let categoryRows: CategoryRow[] = [];
 
@@ -149,8 +183,22 @@ export default async function AskAIPage() {
   }
 
   const categories = matchReferenceCategories(categoryRows);
+  const [toolLogoResult, updatesResult] = await Promise.all([
+    supabase.from("tool_logos").select("tool, logo_url"),
+    supabase
+      .from("whats_new_updates")
+      .select("*")
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .limit(30),
+  ]);
+  const toolLogos = rowsToToolLogoMap(
+    toolLogoResult.error ? [] : toolLogoResult.data as ToolLogoRow[],
+  );
+  const whatsNewUpdates = updatesResult.error
+    ? []
+    : updatesResult.data as WhatsNewUpdate[];
 
-  const isAnonymous = user.is_anonymous === true;
   let freeChatsLeft: number | null = null;
   if (isAnonymous) {
     const anonDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -161,7 +209,13 @@ export default async function AskAIPage() {
 
   return (
     <>
-      <B2BTopbar isAnonymous={isAnonymous} freeChatsLeft={freeChatsLeft} />
+      <B2BTopbar
+        isAnonymous={isAnonymous}
+        freeChatsLeft={freeChatsLeft}
+        askAiToolLogos={toolLogos}
+        whatsNewUpdates={whatsNewUpdates}
+        defaultAiTool={storedPreference}
+      />
       <Suspense fallback={null}>
         <AskAIChat categories={categories} userId={user.id} isAnonymous={isAnonymous} />
       </Suspense>
