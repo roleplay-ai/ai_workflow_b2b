@@ -198,12 +198,16 @@ function CapabilityMenuTrigger({
       onToggle={onToggle}
       onClose={onToggle}
     >
-      {PROVIDER_TOOLS.map((tool) => (
-        <Link key={tool} href={`/capabilities/${slug}/${tool}`} onClick={onNavigate}>
-          <span className={styles.capabilityMenuIcon}><ToolIcon tool={tool} size={18} logos={toolLogos} /></span>
-          <span>{capabilityLabelForTool(slug, tool)}</span>
-        </Link>
-      ))}
+      {PROVIDER_TOOLS.map((tool) => {
+        const isNewChatGPTCapability = tool === "chatgpt" && (slug === "vibe-coding" || slug === "ai-agents");
+        return (
+          <Link key={tool} href={`/capabilities/${slug}/${tool}`} onClick={onNavigate}>
+            <span className={styles.capabilityMenuIcon}><ToolIcon tool={tool} size={18} logos={toolLogos} /></span>
+            <span>{capabilityLabelForTool(slug, tool)}</span>
+            {isNewChatGPTCapability ? <span className={styles.capabilityMenuNewBadge}>New</span> : null}
+          </Link>
+        );
+      })}
     </SidebarFlyout>
   );
 }
@@ -245,6 +249,7 @@ function ProviderMenuTrigger({
       <Link href={`/capabilities/tool/${tool}/insider-guide`} onClick={onNavigate}>
         <span className={styles.capabilityMenuIcon}>{INSIDER_GUIDE_ITEM.mark}</span>
         <span>{INSIDER_GUIDE_ITEM.label}</span>
+        {tool === "chatgpt" ? <span className={styles.capabilityMenuNewBadge}>Updated Jul 26</span> : null}
         {tool === "claude" ? <span className={styles.capabilityMenuNewBadge}>Updated July 26</span> : null}
       </Link>
     </SidebarFlyout>
@@ -489,6 +494,9 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
                 >
                   <span className={styles.filterMark}>{CAPABILITIES[slug].mark}</span>
                   <span>{capabilityLabelForTool(slug, selectedTool)}</span>
+                  {selectedTool === "chatgpt" && (slug === "vibe-coding" || slug === "ai-agents")
+                    ? <span className={styles.capabilityMenuNewBadge}>New</span>
+                    : null}
                 </Link>
               ) : (
                 <CapabilityMenuTrigger
@@ -532,6 +540,7 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
                 >
                   <span className={styles.filterMark}>{INSIDER_GUIDE_ITEM.mark}</span>
                   <span>{INSIDER_GUIDE_ITEM.label}</span>
+                  {selectedTool === "chatgpt" ? <span className={styles.capabilityMenuNewBadge}>Updated Jul 26</span> : null}
                   {selectedTool === "claude" ? <span className={styles.capabilityMenuNewBadge}>Updated July 26</span> : null}
                 </Link>
               </>
