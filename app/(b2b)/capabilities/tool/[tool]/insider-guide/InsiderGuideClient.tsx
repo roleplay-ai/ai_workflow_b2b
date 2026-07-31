@@ -4,6 +4,7 @@ import Link from "next/link";
 import { INSIDER_GUIDES, PROVIDERS, type ProviderTool } from "@/lib/capabilities";
 import B2BTopbar from "@/components/B2BTopbar";
 import ClaudeInsiderGuide from "./ClaudeInsiderGuide";
+import ChatGPTGuide from "../../../ChatGPTGuide";
 import styles from "../../../capabilities.module.css";
 
 type Props = {
@@ -19,6 +20,15 @@ export default function InsiderGuideClient({ tool }: Props) {
       <>
         <B2BTopbar />
         <ClaudeInsiderGuide />
+      </>
+    );
+  }
+
+  if (tool === "chatgpt") {
+    return (
+      <>
+        <B2BTopbar />
+        <ChatGPTGuide kind="insider" workflowsHref="/workflows?tool=chatgpt" />
       </>
     );
   }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ProviderFeatureDef, ProviderTool } from "@/lib/capabilities";
 import B2BTopbar from "@/components/B2BTopbar";
 import ClaudeCapabilityGuide from "../../../[slug]/[tool]/ClaudeCapabilityGuide";
+import ChatGPTGuide from "../../../ChatGPTGuide";
 import styles from "../../../capabilities.module.css";
 
 type Props = {
@@ -20,6 +21,16 @@ export default function ProviderFeatureClient({ tool, def }: Props) {
           slug={def.slug}
           workflowsHref={def.workflowsHref}
         />
+      </>
+    );
+  }
+
+  if (tool === "chatgpt" && (def.slug === "image-generation" || def.slug === "sites" || def.slug === "custom-gpts")) {
+    const kind = def.slug === "image-generation" ? "images" : def.slug;
+    return (
+      <>
+        <B2BTopbar />
+        <ChatGPTGuide kind={kind} workflowsHref={def.workflowsHref} />
       </>
     );
   }
