@@ -11,11 +11,13 @@ type ClaudeGuideSlug =
   | "vibe-coding"
   | "scheduled-actions"
   | "ai-agents"
-  | "coding-agents";
+  | "coding-agents"
+  | "design"
+  | "dispatch";
 
 type Props = {
   slug: ClaudeGuideSlug;
-  count: number;
+  count?: number;
   workflowsHref: string;
 };
 
@@ -263,6 +265,75 @@ const COWORK_STEPS: GuideStep[] = [
   },
 ];
 
+const DESIGN_STEPS: GuideStep[] = [
+  {
+    title: "Create a design system from uploaded files",
+    tabTitle: "Create a design system",
+    helper: "Claude Design → Design system",
+    description: "Start from uploaded brand files and strong existing examples.",
+    caption: "Start by selecting a design system and uploading real source material.",
+    src: "/claude-guides/design-step-1.png",
+    alt: "Claude Design home screen showing the Design system selector and visual output templates",
+    width: 1030,
+    height: 816,
+  },
+  {
+    title: "Review the generated design system",
+    tabTitle: "Review the output",
+    helper: "Design system → Canvas",
+    description: "Check the generated system before building on top of it.",
+    caption: "Review and correct the generated visual system before creating other outputs.",
+    src: "/claude-guides/design-step-2.png",
+    alt: "Claude Design canvas showing a generated carousel design system with slide layouts and the Tweaks panel",
+    width: 1471,
+    height: 817,
+  },
+  {
+    title: "Create a template on top of it",
+    tabTitle: "Create a template",
+    helper: "Design system → Template",
+    description: "Build recurring layouts on top of the design system.",
+    caption: "Use the approved design system as the foundation for recurring layouts.",
+    src: "/claude-guides/design-step-3.png",
+    alt: "Claude Design canvas showing a structured visual workflow created from a reusable design",
+    width: 1599,
+    height: 815,
+  },
+];
+
+const DISPATCH_STEPS: GuideStep[] = [
+  {
+    title: "Open Dispatch on your phone",
+    helper: "Claude mobile → Dispatch",
+    description: "Use the Claude mobile menu to enter Dispatch.",
+    caption: "Open the Claude mobile menu and select Dispatch to start or continue a remote task.",
+    src: "/claude-guides/dispatch-step-1.png",
+    alt: "Claude mobile menu showing the Dispatch option",
+    width: 317,
+    height: 671,
+  },
+  {
+    title: "Give and follow the task",
+    helper: "Dispatch conversation on mobile",
+    description: "Continue the same Dispatch conversation from your phone.",
+    caption: "Describe the task from your phone, answer Claude's questions, and follow the same conversation while it works.",
+    src: "/claude-guides/dispatch-step-2.png",
+    alt: "Claude Dispatch conversation on a phone showing access to a Cowork folder",
+    width: 327,
+    height: 678,
+  },
+  {
+    title: "See it on Desktop",
+    helper: "Claude Desktop → Dispatch",
+    description: "Manage access and follow the connected session on the Desktop app.",
+    caption: "The Desktop app shows the connected conversation, local settings, outputs, and the access controls available for the task.",
+    src: "/claude-guides/dispatch-step-3.png",
+    alt: "Claude Desktop showing Dispatch settings and the same connected conversation",
+    width: 1237,
+    height: 715,
+  },
+];
+
 const PROJECT_PROMPT = `You are a meeting follow-up assistant.
 
 This project will contain meeting transcripts and two instruction files:
@@ -291,6 +362,8 @@ Use a clean, professional design with clear labels and sensible colors.`;
 const SCHEDULED_PROMPT = "Check my email and calendar for anything pending that needs my attention today, and summarize it for me.";
 const CODE_PROMPT = "Find and fix any obvious bugs in this codebase, then explain what you changed.";
 const COWORK_GOAL = "Rename these files based on their date and category, and organize them into subfolders.";
+const DISPATCH_PROMPT = `In the Quarterly Reports folder, review Q4 Performance.xlsx. Create a self-contained HTML dashboard in the same folder with five KPI cards, department filters, and interactive charts. Do not modify the spreadsheet or any other files. Ask before using the browser or external connectors. Tell me the saved filename when finished.`;
+const DISPATCH_ACTIVITY_PROMPT = `In [folder name], review [file name]. Create a summary of the key numbers as a new text file in the same folder. Do not modify the original file. Tell me when it's done.`;
 
 function SectionHeading({
   number,
@@ -431,6 +504,18 @@ function ClaudeHeader({ slug }: { slug: ClaudeGuideSlug }) {
       title: "Claude Code",
       subtitle: "An agent that can work across an entire code project, run commands, test changes, and deliver working code.",
       chip: "Claude",
+    },
+    design: {
+      eyebrow: "Visual creation",
+      title: "Claude Design",
+      subtitle: "A conversational workspace for creating visual outputs.",
+      chip: "Claude",
+    },
+    dispatch: {
+      eyebrow: "COWORK · CLAUDE",
+      title: "Claude Dispatch",
+      subtitle: "Send computer-based tasks from your phone and let Claude complete them through the connected Desktop app.",
+      chip: "Claude Cowork",
     },
   };
   const pageHeader = header[slug];
@@ -989,6 +1074,228 @@ function ClaudeCoworkGuide({ count, workflowsHref }: Pick<Props, "count" | "work
   );
 }
 
+function ClaudeDesignGuide({ count, workflowsHref }: Pick<Props, "count" | "workflowsHref">) {
+  return (
+    <>
+      <section className={styles.claudeIntro}>
+        <div className={styles.claudeIntroCopy}>
+          <span className={styles.claudeIntroIcon}>✎</span>
+          <div>
+            <span className={styles.claudeKicker}>1 · WHAT IT IS</span>
+            <h2>Create and refine visual outputs through conversation</h2>
+            <p>A conversational workspace for creating visual outputs — presentations, prototypes, landing pages, wireframes, one-pagers, and marketing assets. You describe what you need, review it on a canvas, then refine through chat, inline comments, or direct editing.</p>
+          </div>
+        </div>
+        <aside className={styles.claudeComparisonNote}>
+          <span>Visual outputs</span>
+          <strong>Presentations, prototypes, landing pages, wireframes, one-pagers, and marketing assets.</strong>
+        </aside>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="2" kicker="WHY IT MATTERS" title="What it solves" />
+        <div className={styles.claudeCompare}>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWithout}`}>
+            <strong>WITHOUT A DESIGN SYSTEM</strong>
+            <div><i>×</i><p>Every output starts from scratch, and Claude has to guess at your visual style each time.</p></div>
+          </article>
+          <span className={styles.claudeCompareArrow}>→</span>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWith}`}>
+            <strong>WITH A DESIGN SYSTEM</strong>
+            <div><i>✓</i><p>Claude has your colors, fonts, spacing, and components saved once, and every new output starts from that same foundation instead of a blank page.</p></div>
+          </article>
+        </div>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="3" tone="purple" kicker="BUILT IN ORDER" title="What goes inside" />
+        <p className={styles.claudeSectionCopy}>Three layers, built up in order:</p>
+        <div className={styles.claudeRequirements}>
+          <article><span>1</span><div><strong>Design system</strong><p>Colors, fonts, spacing, components, logos, and the overall visual style.</p></div></article>
+          <article><span>2</span><div><strong>Template</strong><p>Recurring layouts for a specific output, like title slides or two-column slides.</p></div></article>
+          <article><span>3</span><div><strong>Project instructions</strong><p>Preferences learned from your feedback that carry into future work.</p></div></article>
+        </div>
+      </section>
+
+      <section className={`${styles.claudeSection} ${styles.claudeGuideSection}`}>
+        <SectionHeading number="4" tone="blue" kicker="SETUP WALKTHROUGH" title="Where to find and create one" />
+        <p className={styles.claudeSectionCopy}>Start by uploading source material — brand guidelines, two or three strong existing designs, your logo, fonts, and writing or voice principles. Claude builds a design system from these, which you then review and correct before building anything else on top of it.</p>
+        <StepGuide steps={DESIGN_STEPS} label="Claude Design setup screenshots" />
+      </section>
+
+      <div className={styles.claudeDetailGrid}>
+        <section className={styles.claudeSection}>
+          <SectionHeading number="5" tone="green" kicker="CHOOSE THE RIGHT METHOD" title="How to edit" />
+          <p className={styles.claudeSectionCopy}>Different edits call for different methods:</p>
+          <div className={styles.claudeDesignMethodGrid}>
+            <article><span>C</span><div><strong>Chat</strong><p>Structural or design-wide changes.</p></div></article>
+            <article><span>I</span><div><strong>Inline comments</strong><p>Feedback on specific elements.</p></div></article>
+            <article><span>D</span><div><strong>Direct editing</strong><p>Quick text, size, or alignment changes.</p></div></article>
+            <article><span>T</span><div><strong>Tweaks</strong><p>Controls that affect the whole design, like showing logos or slide numbers.</p></div></article>
+          </div>
+        </section>
+
+        <section className={styles.claudeSection}>
+          <SectionHeading number="6" kicker="WHAT IT DOES WELL" title="Strengths" />
+          <div className={styles.claudeDesignStrengthGrid}>
+            <article className={styles.claudeDesignStrengthWide}><span>↻</span><div><strong>Reusable design context</strong><p>Later outputs get better and more consistent instead of starting over.</p></div></article>
+            <article><span>↓</span><div><strong>Exports</strong><p>Export to PPTX, PDF, standalone HTML, Canva, or Claude Code.</p></div></article>
+            <article><span>+</span><div><strong>Project-level instructions</strong><p>Claude learns your recurring feedback as project-level instructions.</p></div></article>
+          </div>
+        </section>
+      </div>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="7" tone="purple" kicker="PRACTICAL GUIDANCE" title="How to get better results" />
+        <div className={styles.claudeDesignTips}>
+          <article><span>1</span><p>Upload finished examples, not just a color palette — Claude reads visual style better from real pages or decks than from a list of hex codes.</p></article>
+          <article><span>2</span><p>Ask for two or three directions before polishing one.</p></article>
+          <article><span>3</span><p>Give specific feedback such as “32px headings” or “reduce card padding to 20px” rather than “make it look better.”</p></article>
+          <article><span>4</span><p>Fix the design system itself before fixing the same thing slide by slide.</p></article>
+        </div>
+      </section>
+
+      <section className={styles.claudeDesignTryCard}>
+        <span className={styles.claudeTryIcon}>→</span>
+        <div>
+          <span className={styles.claudeKicker}>8 · TRY IT YOURSELF</span>
+          <h2>Build a small design system and test it</h2>
+          <p>Upload two or three of your best existing slides or a one-pager, and ask Claude to build a design system from them. Once it is ready, ask it to turn a rough outline into a two-slide title and agenda deck, then see how closely it matches your style before giving corrections.</p>
+        </div>
+      </section>
+
+      <ClaudeCta
+        count={count}
+        workflowsHref={workflowsHref}
+        heading="Explore Claude Design workflows"
+        description="Open guided workflows for setting up brand rules, creating reusable templates, generating decks, and refining visual output."
+      />
+    </>
+  );
+}
+
+function ClaudeDispatchGuide({ count, workflowsHref }: Pick<Props, "count" | "workflowsHref">) {
+  const [copyState, setCopyState] = useState<"idle" | "main" | "activity" | "failed-main" | "failed-activity">("idle");
+
+  async function copyPrompt(prompt: string, target: "main" | "activity") {
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopyState(target);
+    } catch {
+      setCopyState(`failed-${target}`);
+    }
+    window.setTimeout(() => setCopyState("idle"), 1800);
+  }
+
+  function copyLabel(target: "main" | "activity") {
+    if (copyState === target) return "Copied";
+    if (copyState === `failed-${target}`) return "Select and copy";
+    return "Copy prompt";
+  }
+
+  return (
+    <>
+      <section className={styles.claudeIntro}>
+        <div className={styles.claudeIntroCopy}>
+          <span className={styles.claudeIntroIcon}>↗</span>
+          <div>
+            <span className={styles.claudeKicker}>1 · WHAT IT IS</span>
+            <h2>Remote control for Claude Cowork</h2>
+            <p>A remote-control feature inside Claude Cowork. You assign a task from your phone, and Claude works through it on your Desktop app using approved local folders, browser access, connectors, plugins, and desktop applications. You can monitor progress and continue the same conversation from either device.</p>
+          </div>
+        </div>
+        <aside className={styles.claudeComparisonNote}>
+          <span>The key idea</span>
+          <strong>Your phone sends the task. Claude Desktop does the computer-based work.</strong>
+        </aside>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="2" kicker="WHAT IT SOLVES" title="Computer-based work no longer has to wait" />
+        <div className={styles.claudeCompare}>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWithout}`}>
+            <strong>WITHOUT DISPATCH</strong>
+            <div><i>!</i><p>Computer-based work waits until you are back at your desk.</p></div>
+            <div><i>⌂</i><p>You need to be at the computer to start the task.</p></div>
+          </article>
+          <span className={styles.claudeCompareArrow}>→</span>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWith}`}>
+            <strong>WITH DISPATCH</strong>
+            <div><i>✓</i><p>Send the task from your phone while you are away.</p></div>
+            <div><i>✓</i><p>Review the finished spreadsheet analysis, report, or dashboard when you get back.</p></div>
+          </article>
+        </div>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="3" tone="purple" kicker="HOW IT WORKS" title="One task, one continuous conversation" />
+        <div className={styles.claudeDispatchFlow}>
+          <article><b>1</b><h3>Send the task</h3><p>You send a task from your phone and name the files or folders Claude should use.</p></article>
+          <article><b>2</b><h3>Claude works on desktop</h3><p>Claude uses the approved files and tools through the Desktop app.</p></article>
+          <article><b>3</b><h3>Follow the progress</h3><p>Progress appears on your phone, and the output is saved or returned once done.</p></article>
+        </div>
+      </section>
+
+      <div className={styles.claudeDetailGrid}>
+        <section className={styles.claudeSection}>
+          <SectionHeading number="4" tone="green" kicker="WHERE TO FIND AND SET IT UP" title="Connect the two apps" />
+          <div className={styles.claudeDispatchSetup}>
+            <article><span>1</span><p>In Cowork, select <strong>Dispatch</strong>.</p></article>
+            <article><span>2</span><p>Sign in to the same account on your phone and computer, then pair the two apps.</p></article>
+            <article><span>3</span><p>Choose which folders, connectors, and browser actions Claude can access.</p></article>
+            <article><span>4</span><p>Turn on <strong>Keep computer awake</strong> for local tasks.</p></article>
+          </div>
+        </section>
+
+        <section className={styles.claudeSection}>
+          <SectionHeading number="5" tone="yellow" kicker="IMPORTANT LIMITATIONS" title="Know what keeps working" />
+          <div className={styles.claudeDispatchLimits}>
+            <article><span>!</span><p><strong>Local Dispatch tasks:</strong> Your computer needs to stay awake with Claude Desktop open. It is not running remotely on its own.</p></article>
+            <article><span>↗</span><p><strong>Cloud-based Cowork sessions:</strong> Newer sessions can keep going while your computer is offline, but they lose access to local files once the Desktop app disconnects.</p></article>
+          </div>
+        </section>
+      </div>
+
+      <section className={`${styles.claudeSection} ${styles.claudeGuideSection}`}>
+        <SectionHeading number="↳" tone="blue" kicker="SEE THE CONNECTION" title="From phone to desktop" />
+        <StepGuide steps={DISPATCH_STEPS} label="Claude Dispatch screenshots" />
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="6" tone="purple" kicker="HOW TO PROMPT IT WELL" title="Give Claude a precise operating brief" />
+        <p className={styles.claudeSectionCopy}>Name the exact folder, file, expected output, and restrictions.</p>
+        <div className={styles.claudePromptCard}>
+          <div><strong>Example Dispatch prompt</strong><button type="button" onClick={() => void copyPrompt(DISPATCH_PROMPT, "main")}>{copyLabel("main")}</button></div>
+          <pre>{DISPATCH_PROMPT}</pre>
+        </div>
+        <p className={styles.claudeDispatchPromptReason}>This is stronger than “build a dashboard from my spreadsheet” because Claude knows exactly where to look and what it is allowed to touch.</p>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="7" tone="yellow" kicker="TRY IT YOURSELF" title="Run a low-risk first Dispatch task" />
+        <div className={styles.claudeDispatchActivity}>
+          <span>▣</span>
+          <div>
+            <h3>Create one folder and use one spreadsheet</h3>
+            <p>Create a new folder, put one spreadsheet in it, and give Dispatch access to that folder only. Send the prompt from your phone, then check the result from your desktop once it reports back.</p>
+            <div className={styles.claudePromptCard}>
+              <div><strong>Your activity prompt</strong><button type="button" onClick={() => void copyPrompt(DISPATCH_ACTIVITY_PROMPT, "activity")}>{copyLabel("activity")}</button></div>
+              <pre>{DISPATCH_ACTIVITY_PROMPT}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <ClaudeCta
+        count={count}
+        workflowsHref={workflowsHref}
+        heading="Use Dispatch for reports, dashboards, and file-based work"
+        description="Practice with small, clearly scoped tasks before using it for sensitive or external actions."
+      />
+    </>
+  );
+}
+
 function ClaudeProjectsGuide({ count, workflowsHref }: Pick<Props, "count" | "workflowsHref">) {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
 
@@ -1085,7 +1392,9 @@ function ClaudeCta({
     <section className={styles.claudeCta}>
       <span>→</span>
       <div><small>RECOMMENDED NEXT STEP</small><h3>{heading}</h3><p>{description}</p></div>
-      <Link href={workflowsHref}>Explore workflows → ({count})</Link>
+      <Link href={workflowsHref}>
+        Explore workflows →{typeof count === "number" ? ` (${count})` : ""}
+      </Link>
     </section>
   );
 }
@@ -1104,8 +1413,12 @@ export default function ClaudeCapabilityGuide({ slug, count, workflowsHref }: Pr
         <ClaudeScheduledGuide count={count} workflowsHref={workflowsHref} />
       ) : slug === "ai-agents" ? (
         <ClaudeCoworkGuide count={count} workflowsHref={workflowsHref} />
-      ) : (
+      ) : slug === "coding-agents" ? (
         <ClaudeCodeGuide count={count} workflowsHref={workflowsHref} />
+      ) : slug === "design" ? (
+        <ClaudeDesignGuide count={count} workflowsHref={workflowsHref} />
+      ) : (
+        <ClaudeDispatchGuide count={count} workflowsHref={workflowsHref} />
       )}
     </main>
   );

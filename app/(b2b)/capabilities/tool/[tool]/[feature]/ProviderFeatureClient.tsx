@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ProviderFeatureDef, ProviderTool } from "@/lib/capabilities";
 import B2BTopbar from "@/components/B2BTopbar";
+import ClaudeCapabilityGuide from "../../../[slug]/[tool]/ClaudeCapabilityGuide";
 import styles from "../../../capabilities.module.css";
 
 type Props = {
@@ -11,6 +12,18 @@ type Props = {
 };
 
 export default function ProviderFeatureClient({ tool, def }: Props) {
+  if (tool === "claude" && (def.slug === "design" || def.slug === "dispatch")) {
+    return (
+      <>
+        <B2BTopbar />
+        <ClaudeCapabilityGuide
+          slug={def.slug}
+          workflowsHref={def.workflowsHref}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <B2BTopbar />
