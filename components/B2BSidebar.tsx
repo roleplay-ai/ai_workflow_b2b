@@ -245,6 +245,7 @@ function ProviderMenuTrigger({
       <Link href={`/capabilities/tool/${tool}/insider-guide`} onClick={onNavigate}>
         <span className={styles.capabilityMenuIcon}>{INSIDER_GUIDE_ITEM.mark}</span>
         <span>{INSIDER_GUIDE_ITEM.label}</span>
+        {tool === "claude" ? <span className={styles.capabilityMenuNewBadge}>Updated July 26</span> : null}
       </Link>
     </SidebarFlyout>
   );
@@ -531,6 +532,7 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
                 >
                   <span className={styles.filterMark}>{INSIDER_GUIDE_ITEM.mark}</span>
                   <span>{INSIDER_GUIDE_ITEM.label}</span>
+                  {selectedTool === "claude" ? <span className={styles.capabilityMenuNewBadge}>Updated July 26</span> : null}
                 </Link>
               </>
             ) : (

@@ -1212,63 +1212,6 @@ export const PROVIDER_FEATURES: Record<ProviderTool, ProviderFeatureDef[]> = {
       },
       workflowsHref: "/workflows?tool=claude",
     },
-    {
-      slug: "tag",
-      label: "Tag",
-      isNew: true,
-      mark: "#",
-      title: "Claude Tag",
-      eyebrow: "Claude Feature",
-      subtitle: "Bring Claude into Slack as a shared, channel-aware teammate for collaborative and asynchronous work.",
-      badge: "New",
-      cards: [
-        {
-          icon: "#",
-          heading: "What is Claude Tag",
-          body: "Claude Tag brings Claude directly into Slack as a team member, rather than keeping it inside a personal chat.",
-          list: [
-            "Multiplayer: works inside Slack channels, so everyone sees the same thread and collaborates with Claude together.",
-            "Channel-aware: builds context from the channels it is added to, and can learn from other approved channels or data sources when permitted.",
-            "Scoped memory: retains useful context over time only within the channels and permissions admins allow, rather than creating company-wide memory.",
-            "Asynchronous: lets you delegate work that can continue over hours or days, including scheduled follow-ups while the team moves on.",
-          ],
-        },
-        {
-          icon: "⚙",
-          heading: "How to Set It Up",
-          list: [
-            "Requires Claude Owner and Slack Admin access on a Team or Enterprise plan.",
-            "Enable it in settings, then link Slack using the /claude connect pairing code.",
-            "Set access bundles for connected tools such as Google Drive or Notion.",
-            "Admins can set monthly spending limits, restrict guest access and configure custom system prompts for each channel.",
-          ],
-        },
-      ],
-      cta: {
-        heading: "Explore Claude Tag Workflows",
-        description: "Open guided workflows for adding Claude to team channels, setting permissions, connecting approved knowledge and delegating asynchronous work safely.",
-      },
-      workflowsHref: "/workflows?category=Organize%20Knowledge%20in%20One%20Place&tool=claude",
-    },
-    {
-      slug: "plugins",
-      label: "Plugins",
-      mark: "⌘",
-      title: "Claude Plugins",
-      eyebrow: "Claude Feature",
-      subtitle: "Connect specialist tools that extend what Claude can do.",
-      badge: "Extend AI",
-      cards: [
-        { icon: "▤", heading: "Installed Plugins", body: "See the plugins currently available in your workspace." },
-        { icon: "＋", heading: "Browse Plugins", body: "Discover tools for travel, design, productivity and more." },
-        { icon: "⚙", heading: "Manage Access", body: "Connect, disconnect or review plugin permissions." },
-      ],
-      cta: {
-        heading: "Learn how to use Plugins",
-        description: "Explore guided workflows for choosing, connecting and using plugins safely.",
-      },
-      workflowsHref: "/workflows?tool=claude",
-    },
   ],
   gemini: [
     {

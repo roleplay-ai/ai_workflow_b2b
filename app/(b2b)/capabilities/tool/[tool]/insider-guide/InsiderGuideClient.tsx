@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { INSIDER_GUIDES, PROVIDERS, type ProviderTool } from "@/lib/capabilities";
 import B2BTopbar from "@/components/B2BTopbar";
+import ClaudeInsiderGuide from "./ClaudeInsiderGuide";
 import styles from "../../../capabilities.module.css";
 
 type Props = {
@@ -12,6 +13,15 @@ type Props = {
 export default function InsiderGuideClient({ tool }: Props) {
   const guide = INSIDER_GUIDES[tool];
   const provider = PROVIDERS[tool];
+
+  if (tool === "claude") {
+    return (
+      <>
+        <B2BTopbar />
+        <ClaudeInsiderGuide />
+      </>
+    );
+  }
 
   return (
     <>
