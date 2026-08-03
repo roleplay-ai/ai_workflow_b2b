@@ -23,15 +23,20 @@ export default async function B2BLayout({ children }: { children: React.ReactNod
 
   if (!user) redirect("/login");
 
+  // Anonymous browse sessions have auth.users but intentionally no profiles row.
+  const isAnonymous = user.is_anonymous === true;
+
   const [profileResult, { data: toolLogoRows }] = await Promise.all([
-    supabase.from("profiles").select("full_name, email, preferred_ai_tool").eq("id", user.id).single(),
+    isAnonymous
+      ? Promise.resolve({ data: null, error: null })
+      : supabase.from("profiles").select("full_name, email, preferred_ai_tool").eq("id", user.id).maybeSingle(),
     supabase.from("tool_logos").select("tool, logo_url"),
   ]);
   let profile: { full_name: string | null; email: string | null } | null = profileResult.data;
   let defaultAiTool: PreferredAiTool | null = null;
-  if (profileResult.error) {
-    profile = (await supabase.from("profiles").select("full_name, email").eq("id", user.id).single()).data;
-  } else {
+  if (!isAnonymous && profileResult.error) {
+    profile = (await supabase.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle()).data;
+  } else if (!isAnonymous) {
     defaultAiTool = profileResult.data?.preferred_ai_tool as PreferredAiTool | null;
   }
 

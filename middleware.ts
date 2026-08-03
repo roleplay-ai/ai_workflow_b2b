@@ -40,7 +40,9 @@ export async function middleware(request: NextRequest) {
     // No account required to browse the app — give anonymous visitors a real
     // (is_anonymous) Supabase session so every existing auth.uid()-scoped RLS
     // policy and page-level `if (!user) redirect("/login")` check keeps working
-    // unmodified. Ask AI then caps *these* sessions at a handful of free questions.
+    // unmodified. Anonymous users intentionally have no profiles row; footfall
+    // is recorded in anonymous_visits. Ask AI caps these sessions at a handful
+    // of free questions.
     const { data: anonSignIn, error: anonSignInError } = await supabase.auth.signInAnonymously();
     if (anonSignInError) {
       const loginUrl = new URL("/login", request.url);
