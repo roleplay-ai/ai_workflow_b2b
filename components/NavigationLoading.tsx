@@ -4,8 +4,16 @@ import React from "react";
 import { flushSync } from "react-dom";
 import { usePathname } from "next/navigation";
 
+type StartNavigatingOptions = {
+  /**
+   * Use from React lifecycles (useEffect). Skips flushSync — calling flushSync
+   * inside a lifecycle warns and can prevent the overlay from painting.
+   */
+  defer?: boolean;
+};
+
 type NavigationLoadingContextValue = {
-  startNavigating: (href?: string) => void;
+  startNavigating: (href?: string, options?: StartNavigatingOptions) => void;
 };
 
 const NavigationLoadingContext = React.createContext<NavigationLoadingContextValue>({
@@ -85,7 +93,7 @@ export default function NavigationLoadingProvider({
   const shownAtRef = React.useRef(0);
   const previousPathnameRef = React.useRef(pathname);
 
-  const startNavigating = React.useCallback((href?: string) => {
+  const startNavigating = React.useCallback((href?: string, options?: StartNavigatingOptions) => {
     let target: string | null = null;
     if (href) {
       try {
@@ -99,14 +107,29 @@ export default function NavigationLoadingProvider({
     if (target && target === pathname) return;
     if (pendingRef.current && targetRef.current === target) return;
 
+    // Set refs immediately so pathname-change fallback won't fight us,
+    // even if setState is deferred to the next microtask.
     targetRef.current = target;
     pendingRef.current = true;
-    // Link navigations run inside a React transition. Without flushSync the
-    // pending state is deferred until the route finishes — so the overlay never paints.
-    flushSync(() => {
-      shownAtRef.current = Date.now();
-      setPending(true);
-    });
+    shownAtRef.current = Date.now();
+
+    const paint = () => {
+      // Link clicks run inside a React transition — flushSync so the overlay
+      // paints before the transition finishes. Lifecycles must not call flushSync.
+      if (options?.defer) {
+        setPending(true);
+      } else {
+        flushSync(() => {
+          setPending(true);
+        });
+      }
+    };
+
+    if (options?.defer) {
+      queueMicrotask(paint);
+    } else {
+      paint();
+    }
   }, [pathname]);
 
   // Capture every normal internal link. This makes the animation automatic for
@@ -169,10 +192,12 @@ export default function NavigationLoadingProvider({
 
   // Fallback for programmatic router navigation and server redirects that did
   // not originate from a link or an explicit startNavigating call.
+  // Skip the home redirect bridge — RedirectWithLoading owns that animation.
   React.useEffect(() => {
     if (previousPathnameRef.current === pathname) return;
     previousPathnameRef.current = pathname;
     if (pendingRef.current) return;
+    if (pathname === "/" || pathname === "/apply") return;
 
     targetRef.current = pathname;
     pendingRef.current = true;

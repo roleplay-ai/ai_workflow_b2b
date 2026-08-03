@@ -19,8 +19,12 @@ export default function RedirectWithLoading({
   const { startNavigating } = useNavigationLoading();
 
   useEffect(() => {
-    startNavigating(href);
-    router.replace(href);
+    // defer: true avoids flushSync-inside-lifecycle (which breaks the overlay).
+    startNavigating(href, { defer: true });
+    const timer = window.setTimeout(() => {
+      router.replace(href);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [href, router, startNavigating]);
 
   return (
