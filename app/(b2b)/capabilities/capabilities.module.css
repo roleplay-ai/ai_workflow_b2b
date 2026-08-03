@@ -2817,6 +2817,39 @@
   color: #fff;
 }
 
+/* Gemini learning guides use the same responsive shell with Google's blue accent. */
+.geminiPage .claudeIntro {
+  border-color: #cfe2f8;
+  background: linear-gradient(135deg, #f7fbff 0%, #eef6ff 58%, #fff8f3 100%);
+}
+
+.geminiPage .claudeIntroIcon {
+  border-color: #c8ddf5;
+  background: #fff;
+  color: #1a73e8;
+}
+
+.geminiPage .claudeEyebrow,
+.geminiPage .claudeKicker,
+.geminiPage .claudeComparisonNote span {
+  color: #1967d2;
+}
+
+.geminiPage .claudeComparisonNote {
+  border-color: #cfe2f8;
+  background: #fff;
+}
+
+.geminiPage .claudeComparisonNote strong {
+  color: #25405f;
+}
+
+.geminiPage .claudeToolChip {
+  border-color: #1a73e8;
+  background: #1a73e8;
+  color: #fff;
+}
+
 .chatgptFeatureList {
   display: grid;
   gap: 7px;

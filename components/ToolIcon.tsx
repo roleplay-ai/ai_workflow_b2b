@@ -5,6 +5,7 @@ const TOOL_FALLBACK: Record<string, { bg: string; label: string }> = {
   chatgpt: { bg: "#10a37f", label: "C" },
   gemini: { bg: "linear-gradient(135deg,#4285f4,#a142f4)", label: "G" },
   copilot: { bg: "linear-gradient(135deg,#00a4ef,#7fba00)", label: "Co" },
+  ai: { bg: "#1f2937", label: "AI" },
   "agentic-workflows": { bg: "linear-gradient(135deg,#623CEA,#3699FC)", label: "AW" },
 };
 

@@ -322,9 +322,9 @@ export const CAPABILITY_TOOL_PAGES: Record<CapabilitySlug, Record<ProviderTool, 
       },
     },
     gemini: {
-      title: "Gemini Gems",
+      title: "Gemini Skills",
       eyebrow: "Skills · Gemini",
-      subtitle: "Create a customised Gemini assistant with a fixed role, method and response style.",
+      subtitle: "Save reusable instructions for recurring work in Gemini Spark.",
       badge: "Gemini",
       cards: [
         {
@@ -347,8 +347,8 @@ export const CAPABILITY_TOOL_PAGES: Record<CapabilitySlug, Record<ProviderTool, 
         },
       ],
       cta: {
-        heading: "Explore Gemini Gems workflows",
-        description: "Open guided workflows for creating and pressure-testing task-specific Gems.",
+        heading: "Explore Gemini Skills workflows",
+        description: "Open guided workflows for creating and testing reusable Spark Skills.",
       },
     },
     copilot: {
@@ -444,7 +444,7 @@ export const CAPABILITY_TOOL_PAGES: Record<CapabilitySlug, Record<ProviderTool, 
       },
     },
     gemini: {
-      title: "NotebookLM",
+      title: "Gemini Notebooks",
       eyebrow: "Projects · Gemini",
       subtitle: "Build a source-grounded notebook that answers and creates outputs from selected material.",
       badge: "Gemini",
@@ -688,7 +688,7 @@ export const CAPABILITY_TOOL_PAGES: Record<CapabilitySlug, Record<ProviderTool, 
       },
     },
     gemini: {
-      title: "Gemini Scheduled Actions",
+      title: "Gemini Schedules",
       eyebrow: "Scheduled actions · Gemini",
       subtitle: "Set Gemini to prepare recurring responses and summaries using the Google ecosystem.",
       badge: "Gemini",
@@ -1182,6 +1182,24 @@ export const PROVIDER_FEATURES: Record<ProviderTool, ProviderFeatureDef[]> = {
     },
   ],
   gemini: [
+    {
+      slug: "gems",
+      label: "Gems",
+      mark: "✦",
+      title: "Gemini Gems",
+      eyebrow: "Gemini Feature",
+      subtitle: "Save instructions and knowledge once, then reuse the same specialist chat whenever the task returns.",
+      badge: "Reusable AI",
+      cards: [
+        { icon: "✦", heading: "Reusable specialist", body: "Store instructions, prompts and knowledge files in a custom Gemini chat setup." },
+        { icon: "▤", heading: "Knowledge", body: "Use device files, Drive files or an eligible Notebook as a grounded knowledge source." },
+      ],
+      cta: {
+        heading: "Explore Gemini Gems workflows",
+        description: "Open guided workflows for building and testing reusable specialist Gems.",
+      },
+      workflowsHref: "/workflows?content_type=Skills&tool=gemini&tag=Gems",
+    },
     {
       slug: "video-generation",
       label: "Video generation",

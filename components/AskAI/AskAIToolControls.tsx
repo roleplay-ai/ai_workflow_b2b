@@ -9,14 +9,18 @@ import { PageLoadingIndicator } from "@/components/NavigationLoading";
 import {
   CHATBOT_FILTERS,
   CHATBOT_FILTER_LABELS,
+  WHATS_NEW_SOURCES,
+  WHATS_NEW_SOURCE_LABELS,
   isChatbotFilter,
   type ChatbotFilter,
+  type WhatsNewSource,
 } from "@/lib/chatbotFilter";
 import type { ToolLogoMap } from "@/lib/toolLogos";
 import type { PreferredAiTool, WhatsNewUpdate } from "@/lib/supabase/types";
 import styles from "./ask-ai-controls.module.css";
 
 type ToolChoice = ChatbotFilter | "all";
+type NewsFilter = WhatsNewSource | "all";
 
 type Props = {
   toolLogos: ToolLogoMap;
@@ -27,6 +31,10 @@ type Props = {
 
 function toolLabel(tool: ToolChoice): string {
   return tool === "all" ? "All AI tools" : CHATBOT_FILTER_LABELS[tool];
+}
+
+function newsSourceLabel(tool: NewsFilter): string {
+  return tool === "all" ? "All" : WHATS_NEW_SOURCE_LABELS[tool];
 }
 
 function formatPublishedDate(value: string): string {
@@ -50,7 +58,7 @@ function ToolMark({
   toolLogos,
   large = false,
 }: {
-  tool: ToolChoice;
+  tool: ToolChoice | WhatsNewSource;
   toolLogos: ToolLogoMap;
   large?: boolean;
 }) {
@@ -74,7 +82,7 @@ export default function AskAIToolControls({
   const [savingPreference, setSavingPreference] = useState(false);
   const [preferenceError, setPreferenceError] = useState<string | null>(null);
   const [newsOpen, setNewsOpen] = useState(false);
-  const [newsFilter, setNewsFilter] = useState<ToolChoice>(selectedTool);
+  const [newsFilter, setNewsFilter] = useState<NewsFilter>(selectedTool);
   const [portalReady, setPortalReady] = useState(false);
   const [filterNavigating, setFilterNavigating] = useState(false);
   const selectorRef = useRef<HTMLDivElement>(null);
@@ -203,7 +211,7 @@ export default function AskAIToolControls({
         <p className={styles.drawerIntro}>Recent features and improvements across the AI tools you use.</p>
 
         <div className={styles.newsFilters} role="group" aria-label="Filter updates by AI tool">
-          {(["all", ...CHATBOT_FILTERS] as ToolChoice[]).map((tool) => (
+          {(["all", ...WHATS_NEW_SOURCES] as NewsFilter[]).map((tool) => (
             <button
               type="button"
               key={tool}
@@ -212,7 +220,7 @@ export default function AskAIToolControls({
               onClick={() => setNewsFilter(tool)}
             >
               {tool !== "all" ? <ToolMark tool={tool} toolLogos={toolLogos} /> : null}
-              {tool === "all" ? "All" : toolLabel(tool)}
+              {newsSourceLabel(tool)}
             </button>
           ))}
         </div>
@@ -223,7 +231,7 @@ export default function AskAIToolControls({
               <div className={styles.updateMeta}>
                 <span>
                   <ToolMark tool={update.tool} toolLogos={toolLogos} />
-                  {CHATBOT_FILTER_LABELS[update.tool]}
+                  {WHATS_NEW_SOURCE_LABELS[update.tool]}
                 </span>
                 <time dateTime={update.published_at}>{formatPublishedDate(update.published_at)}</time>
               </div>
