@@ -61,7 +61,9 @@ function PageLoadingOverlay({ sidebarOffset }: { sidebarOffset: number }) {
   return (
     <div
       className="page-nav-loading"
-      style={{ paddingLeft: sidebarOffset > 0 ? sidebarOffset : undefined }}
+      // Always set explicitly so 0 overrides the CSS --sidebar-w default
+      // on routes without a sidebar (e.g. `/` during the home → ask-ai handoff).
+      style={{ paddingLeft: sidebarOffset }}
       role="status"
       aria-live="polite"
       aria-label="Loading your page"
