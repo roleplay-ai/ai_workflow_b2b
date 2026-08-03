@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "../../capabilities.module.css";
+import ClaudeReferenceGuides from "./ClaudeReferenceGuides";
 
 type ClaudeGuideSlug =
   | "skills"
@@ -1483,16 +1484,14 @@ function ClaudeCta({
 }
 
 export default function ClaudeCapabilityGuide({ slug, count, workflowsHref }: Props) {
+  if (slug === "skills" || slug === "projects" || slug === "vibe-coding") {
+    return <ClaudeReferenceGuides kind={slug} count={count} workflowsHref={workflowsHref} />;
+  }
+
   return (
     <main className={`${styles.page} ${styles.claudePage}`}>
       <ClaudeHeader slug={slug} />
-      {slug === "skills" ? (
-        <ClaudeSkillsGuide count={count} workflowsHref={workflowsHref} />
-      ) : slug === "projects" ? (
-        <ClaudeProjectsGuide count={count} workflowsHref={workflowsHref} />
-      ) : slug === "vibe-coding" ? (
-        <ClaudeArtifactsGuide count={count} workflowsHref={workflowsHref} />
-      ) : slug === "scheduled-actions" ? (
+      {slug === "scheduled-actions" ? (
         <ClaudeScheduledGuide count={count} workflowsHref={workflowsHref} />
       ) : slug === "ai-agents" ? (
         <ClaudeCoworkGuide count={count} workflowsHref={workflowsHref} />
