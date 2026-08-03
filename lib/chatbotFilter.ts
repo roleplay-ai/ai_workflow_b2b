@@ -11,8 +11,22 @@ export const CHATBOT_FILTER_LABELS: Record<ChatbotFilter, string> = {
   copilot: "Copilot",
 };
 
+/** What's New sources: the four AI tools plus general industry news. */
+export const WHATS_NEW_SOURCES = ["claude", "chatgpt", "gemini", "copilot", "ai"] as const;
+
+export type WhatsNewSource = (typeof WHATS_NEW_SOURCES)[number];
+
+export const WHATS_NEW_SOURCE_LABELS: Record<WhatsNewSource, string> = {
+  ...CHATBOT_FILTER_LABELS,
+  ai: "AI",
+};
+
 export function isChatbotFilter(value: unknown): value is ChatbotFilter {
   return typeof value === "string" && (CHATBOT_FILTERS as readonly string[]).includes(value);
+}
+
+export function isWhatsNewSource(value: unknown): value is WhatsNewSource {
+  return typeof value === "string" && (WHATS_NEW_SOURCES as readonly string[]).includes(value);
 }
 
 export function isAiAgentWorkflow(contentType: string | null | undefined): boolean {

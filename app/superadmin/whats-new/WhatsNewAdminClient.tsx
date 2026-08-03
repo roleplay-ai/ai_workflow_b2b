@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { CHATBOT_FILTERS, CHATBOT_FILTER_LABELS, type ChatbotFilter } from "@/lib/chatbotFilter";
+import { WHATS_NEW_SOURCES, WHATS_NEW_SOURCE_LABELS, type WhatsNewSource } from "@/lib/chatbotFilter";
 import type { WhatsNewUpdate } from "@/lib/supabase/types";
 import styles from "./whats-new.module.css";
 
@@ -14,7 +14,7 @@ type Props = {
 };
 
 type Draft = {
-  tool: ChatbotFilter;
+  tool: WhatsNewSource;
   title: string;
   summary: string;
   tag: string;
@@ -226,8 +226,8 @@ export default function WhatsNewAdminClient({ initialUpdates, userId, migrationR
           <div className={styles.formGrid}>
             <label>
               <span>AI tool</span>
-              <select value={draft.tool} onChange={(event) => patchDraft({ tool: event.target.value as ChatbotFilter })}>
-                {CHATBOT_FILTERS.map((tool) => <option value={tool} key={tool}>{CHATBOT_FILTER_LABELS[tool]}</option>)}
+              <select value={draft.tool} onChange={(event) => patchDraft({ tool: event.target.value as WhatsNewSource })}>
+                {WHATS_NEW_SOURCES.map((tool) => <option value={tool} key={tool}>{WHATS_NEW_SOURCE_LABELS[tool]}</option>)}
               </select>
             </label>
             <label>
@@ -281,7 +281,7 @@ export default function WhatsNewAdminClient({ initialUpdates, userId, migrationR
               <article className={styles.updateCard} key={update.id}>
                 <div className={styles.cardTop}>
                   <div className={styles.cardMeta}>
-                    <span className={styles.toolBadge}>{CHATBOT_FILTER_LABELS[update.tool]}</span>
+                    <span className={styles.toolBadge}>{WHATS_NEW_SOURCE_LABELS[update.tool]}</span>
                     <span className={update.is_published ? styles.publishedBadge : styles.draftBadge}>
                       {update.is_published ? "Published" : "Draft"}
                     </span>

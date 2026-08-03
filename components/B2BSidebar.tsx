@@ -251,6 +251,7 @@ function ProviderMenuTrigger({
         <span>{INSIDER_GUIDE_ITEM.label}</span>
         {tool === "chatgpt" ? <span className={styles.capabilityMenuNewBadge}>Updated Jul 26</span> : null}
         {tool === "claude" ? <span className={styles.capabilityMenuNewBadge}>Updated July 26</span> : null}
+        {tool === "gemini" ? <span className={styles.capabilityMenuNewBadge}>Updated Jul 26</span> : null}
       </Link>
     </SidebarFlyout>
   );
@@ -542,6 +543,7 @@ export default function B2BSidebar({ userId, userName, userEmail, userInitials, 
                   <span>{INSIDER_GUIDE_ITEM.label}</span>
                   {selectedTool === "chatgpt" ? <span className={styles.capabilityMenuNewBadge}>Updated Jul 26</span> : null}
                   {selectedTool === "claude" ? <span className={styles.capabilityMenuNewBadge}>Updated July 26</span> : null}
+                  {selectedTool === "gemini" ? <span className={styles.capabilityMenuNewBadge}>Updated Jul 26</span> : null}
                 </Link>
               </>
             ) : (

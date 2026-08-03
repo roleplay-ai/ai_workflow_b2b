@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "../../capabilities.module.css";
+import ClaudeReferenceGuides from "./ClaudeReferenceGuides";
 
 type ClaudeGuideSlug =
   | "skills"
@@ -35,121 +36,154 @@ type GuideStep = {
 
 const SKILL_STEPS: GuideStep[] = [
   {
-    title: "Find your saved Skills",
-    helper: "Settings → Skills",
-    description: "Open Claude settings and go to the area where your Skills are managed.",
-    caption: "Open Claude Settings and select Skills from the left menu to view the Skills already available to you.",
+    title: "Find and add Skills",
+    helper: "Settings → Skills → Add",
+    description: "Open Skills and choose how you want to add one.",
+    caption: "Open Claude Settings, select Skills, then use Add to create with Claude, write instructions, or upload a skill.",
     src: "/claude-guides/skills-step-1.png",
-    alt: "Claude Settings page showing the Skills section and a list of saved Skills",
-    width: 987,
-    height: 742,
+    alt: "Claude Settings Skills page with the Add menu open",
+    width: 975,
+    height: 736,
   },
   {
-    title: "Upload a new Skill",
-    helper: "Skills → Add → Upload skill",
-    description: "Choose the ZIP file containing the Skill and upload it to Claude.",
-    caption: "Select Add, choose Upload skill, and upload the ZIP or .skill file that contains the SKILL.md file.",
+    title: "Invoke a saved Skill",
+    helper: "Chat composer → /",
+    description: "Type / and choose a saved Skill.",
+    caption: "Type / in the composer and select a saved skill. Claude shows its description before you use it.",
     src: "/claude-guides/skills-step-2.png",
-    alt: "Claude Upload skill dialog with a drag and drop area and file requirements",
+    alt: "Claude chat composer showing saved skills and a skill description",
+    width: 727,
+    height: 487,
+  },
+  {
+    title: "Start skill-creator",
+    helper: "Chat composer → /skill-creator",
+    description: "Describe the repeatable task you want Claude to save.",
+    caption: "Invoke /skill-creator, then describe the task, inputs, rules, and output you want the skill to repeat.",
+    src: "/claude-guides/skills-step-3.png",
+    alt: "Claude chat composer with slash skill-creator entered",
+    width: 760,
+    height: 303,
+  },
+  {
+    title: "Enable file creation",
+    helper: "Settings → Capabilities",
+    description: "Allow Skills to run scripts and create files.",
+    caption: "Turn on Code execution and file creation before using a skill that needs to run scripts or produce files.",
+    src: "/claude-guides/skills-step-4.png",
+    alt: "Claude Settings Capabilities screen with code execution and file creation enabled",
     width: 979,
     height: 735,
   },
   {
-    title: "Use a Skill in chat",
-    tabTitle: "Use it in a chat",
-    helper: "Open the Skills menu in the chat box",
-    description: "Ask Claude for the task. Claude will load the matching Skill when it applies.",
-    caption: "Open the Skills menu inside a Claude chat and select the Skill you want to use. You can then describe the task as usual.",
-    src: "/claude-guides/skills-step-3.png",
-    alt: "Claude chat showing the Skills menu with several saved Skills available to select",
-    width: 758,
-    height: 475,
+    title: "Review the generated output",
+    helper: "Chat → Generated file preview",
+    description: "Check the output and update the Skill when needed.",
+    caption: "Open the generated file, check it against the reference, and ask Claude to update the skill when the same issue should be prevented next time.",
+    src: "/claude-guides/skills-step-5.png",
+    alt: "Claude conversation showing a generated branded PowerPoint file preview",
+    width: 1848,
+    height: 815,
   },
 ];
 
 const PROJECT_STEPS: GuideStep[] = [
   {
-    title: "Projects home page",
-    helper: "Left sidebar → Projects",
-    description: "Left sidebar → Projects",
-    caption: "Projects home page (Point 4)",
-    src: "/claude-guides/projects-step-1.png",
-    alt: "Claude Projects home page showing the Projects link in the left sidebar",
-    width: 2048,
-    height: 851,
-  },
-  {
-    title: "New Project creation screen",
+    title: "Create a Project",
     helper: "Projects → New Project",
-    description: "Projects → New Project",
-    caption: "“New Project” creation screen (Point 4)",
-    src: "/claude-guides/projects-step-2.png",
-    alt: "Claude New Project screen with fields for a project name and description",
-    width: 1114,
-    height: 762,
+    description: "Give the workspace a clear name and goal.",
+    caption: "Give the Project a clear name and describe what you want to achieve.",
+    src: "/claude-guides/projects-step-1.png",
+    alt: "Claude Create a project dialog with fields for the project name and goal",
+    width: 538,
+    height: 369,
   },
   {
-    title: "Project instructions",
+    title: "Set project instructions",
     helper: "Project → Instructions",
-    description: "Project → Instructions",
-    caption: "Project instructions screen",
+    description: "Save the recurring rules once.",
+    caption: "Save the recurring rules once so every new Project chat follows them.",
+    src: "/claude-guides/projects-step-2.png",
+    alt: "Claude Set project instructions dialog showing meeting follow-up email instructions",
+    width: 734,
+    height: 524,
+  },
+  {
+    title: "Add files to the knowledge base",
+    helper: "Project → Files → +",
+    description: "Upload files, paste text or connect a supported source.",
+    caption: "Upload documents, paste text or connect supported sources from the Files menu.",
     src: "/claude-guides/projects-step-3.png",
-    alt: "Claude Project instructions screen where persistent project guidance is entered",
-    width: 1464,
-    height: 1058,
+    alt: "Claude Project files area with the add menu for device, text, GitHub and Drive",
+    width: 432,
+    height: 369,
   },
   {
-    title: "Project workspace",
-    helper: "Files, instructions, memory and chats",
-    description: "Files, instructions, memory and chats",
-    caption: "Project workspace showing files, instructions, memory and chats",
+    title: "Work inside the Project",
+    helper: "Project workspace",
+    description: "Start separate chats with shared Project context.",
+    caption: "Start separate chats while the instructions and uploaded files remain available in the Project.",
     src: "/claude-guides/projects-step-4.png",
-    alt: "Claude Project workspace showing project files, instructions, memory, and chats",
-    width: 2048,
-    height: 1237,
+    alt: "Claude Meeting Action Items Project workspace with memory, instructions, files and recent chats",
+    width: 1248,
+    height: 674,
   },
   {
-    title: "Settings > Memory view",
-    helper: "Settings → Memory",
-    description: "Settings → Memory",
-    caption: "Settings > Memory view (Points 6 and 7)",
+    title: "Review Project memory",
+    helper: "Project → Memory",
+    description: "Review the purpose, context and working principles.",
+    caption: "Claude can summarise the purpose, context and useful working principles built from past Project chats.",
     src: "/claude-guides/projects-step-5.png",
-    alt: "Claude Settings Memory view showing project-specific memory controls",
-    width: 1580,
-    height: 1408,
+    alt: "Claude Manage project memory dialog showing purpose, context and key learnings",
+    width: 776,
+    height: 696,
   },
 ];
 
 const ARTIFACT_STEPS: GuideStep[] = [
   {
-    title: "Find your Artifacts",
-    helper: "Artifacts tab in the left sidebar",
-    description: "Open the Artifacts tab in the left sidebar to see everything you have made.",
-    caption: "Open Artifacts from the left sidebar, or go to claude.ai/artifacts, to see everything you have made.",
+    title: "Your Artifacts collection",
+    tabTitle: "Find your Artifacts collection",
+    helper: "Claude → Artifacts",
+    description: "Open your saved artifacts.",
+    caption: "Published artifacts stay together for quick reuse.",
     src: "/claude-guides/artifacts-step-1.png",
-    alt: "Claude Artifacts page showing the Artifacts tab in the left sidebar and saved Artifacts",
-    width: 2048,
-    height: 917,
+    alt: "Claude Artifacts page showing saved artifacts and a New artifact button",
+    width: 1128,
+    height: 613,
   },
   {
-    title: "Create an Artifact",
-    helper: "Artifact window next to a chat",
-    description: "Ask Claude to build something substantial and it appears beside the chat.",
-    caption: "When Claude builds something substantial, it renders in an Artifact window beside the conversation.",
+    title: "Start a new artifact",
+    tabTitle: "Create a new artifact",
+    helper: "Artifacts → New artifact",
+    description: "Start from chat or Cowork.",
+    caption: "Use New artifact to choose how you want to begin.",
     src: "/claude-guides/artifacts-step-2.png",
-    alt: "Claude chat with an Artifact rendered in a window on the right",
-    width: 2048,
-    height: 882,
+    alt: "Claude Artifacts page with chat and Cowork artifact creation options",
+    width: 1218,
+    height: 622,
   },
   {
-    title: "Publish an Artifact",
+    title: "Publish an artifact",
+    tabTitle: "Publish and copy the link",
     helper: "Publish → Copy link",
-    description: "Use Publish to create a shareable link.",
-    caption: "Click Publish to create a link that other people can open and use.",
+    description: "Publish and copy a link.",
+    caption: "Publishing creates a shareable link while keeping the chat private.",
     src: "/claude-guides/artifacts-step-3.png",
-    alt: "Claude Artifact published dialog showing a public link and Copy link option",
-    width: 1072,
-    height: 864,
+    alt: "Claude Artifact published dialog with Copy link and Unpublish options",
+    width: 1132,
+    height: 711,
+  },
+  {
+    title: "Published artifact in use",
+    tabTitle: "Open the published artifact",
+    helper: "Public artifact link",
+    description: "View it as a standalone page.",
+    caption: "The published artifact opens independently in the browser.",
+    src: "/claude-guides/artifacts-step-4.png",
+    alt: "Published Claude artifact showing an interactive org chart generator",
+    width: 1238,
+    height: 760,
   },
 ];
 
@@ -334,30 +368,48 @@ const DISPATCH_STEPS: GuideStep[] = [
   },
 ];
 
-const PROJECT_PROMPT = `You are a meeting follow-up assistant.
+const PROJECT_PROMPT = `Meeting Follow-up Email Instructions
+Using the latest uploaded meeting transcript, generate two ready-to-send emails.
+1. Leadership Email — for senior stakeholders. Include: status (on track/delayed/blocked), brief summary, decisions made, risks/blockers, and leadership support needed (approvals, sign-offs). Under 200 words.
+2. Participant Action Email — one consolidated email for all participants. Include: opening line with submission deadline (if any), action items grouped by participant name with timeline and dependency for each, open questions, and next meeting date. Under 250 words.
 
-This project will contain meeting transcripts and two instruction files:
-1. Leadership Meeting Summary Email Instructions
-2. Meeting Participant Action Item Instructions
+Rules for both:
+- Use only the latest transcript. Don't invent details, write "To be confirmed" for anything unclear or unstated.
+- Bullet points over paragraphs. No filler phrases, no meeting play-by-play.
+- Direct, professional tone.
+- Output only the two emails.`;
 
-Whenever I upload a meeting transcript, use the latest transcript and the two instruction files to create two ready-to-send emails:
+const ARTIFACT_PROMPT = "I've attached my LinkedIn profile as a PDF. Build me a single-page personal website as an HTML artifact. Use my actual name, headline, experience, and skills from the PDF, don't invent anything. Include a hero section with my name and headline, an About section based on my summary, a clean timeline of my experience, and a skills section. Keep the design minimal and modern, one accent color, good whitespace, mobile-responsive.";
 
-1. Leadership Email
-For senior stakeholders. Focus on project status, summary, decisions, risks, blockers, dependencies, owners, and leadership support needed.
+const SKILL_ACTIVITY_PROMPT = `Use /skill-creator to build a reusable skill called sales-dashboard-generator.
 
-2. Participant Action Email
-For meeting participants. Focus on participant-wise action items, owners, timelines, dependencies, and open questions. Design one consolidated email for all participants
+The skill should accept an uploaded Excel sales dataset and use the supplied Sales_MIS_May2026.pptx file as the visual and structural reference.
 
-Do not invent missing details. If something is unclear, write “To be confirmed.” Ensure that the emails are very brief.
+It must create an editable PowerPoint dashboard in the same four-slide format:
+1. Monthly Summary
+Show total revenue, units sold, total orders, average order value, average selling price, channel revenue, zone revenue, and one concise key insight.
+2. Weekly Sales Trend
+Show each week's revenue, units, orders, average order value, and one concise watch-out based on the data.
+3. Product Performance
+Show the top six product models by revenue with revenue, units, average selling price, revenue share, and one concise insight on what is working.
+4. People, Clients & Channels
+Show the top five clients by revenue, top five salespeople by revenue, channel mix, and one concise action needed.
 
-Output only the two emails. Keep them clear, professional, and easy to scan.`;
+Skill requirements:
+- Detect the reporting month and year from the uploaded data. Do not hardcode dates.
+- Identify the relevant worksheet and map equivalent fields even when column names vary.
+- Normalise mixed date formats.
+- If Revenue is missing, calculate it as Units_Sold × Unit_Price or Price.
+- Preserve the reference deck's slide size, layout, typography, spacing, colours, hierarchy, and visual density as closely as possible.
+- Replace every value, month label, ranking, chart, table, and insight using the uploaded dataset.
+- Use Indian number formatting, including ₹L and ₹K where appropriate.
+- Keep all PowerPoint elements editable.
+- Validate totals and rankings against the source data before saving.
+- If a required field cannot be identified safely, ask one concise clarification question instead of guessing.
+- Save the completed output as an editable .pptx file.
 
-const ARTIFACT_PROMPT = `Build me a simple expense tracker as a clean, single-page interactive app.
-Let me add an expense with a name, amount, category, and date.
-Show every expense in a table and let me edit or delete entries.
-Display a running total above the list and category-wise totals.
-Add filters for category and date, plus a button to clear all entries.
-Use a clean, professional design with clear labels and sensible colors.`;
+First build and test the skill using Sales Data - June 2026.xlsx with Sales_MIS_May2026.pptx as the reference.
+After the skill is saved, upload Sales_Dummy_Data_Test_Month (1).xlsx and run the skill again without re-explaining the dashboard format.`;
 
 const SCHEDULED_PROMPT = "Check my email and calendar for anything pending that needs my attention today, and summarize it for me.";
 const CODE_PROMPT = "Find and fix any obvious bugs in this codebase, then explain what you changed.";
@@ -470,21 +522,21 @@ function StepGuide({ steps, label }: { steps: GuideStep[]; label: string }) {
 function ClaudeHeader({ slug }: { slug: ClaudeGuideSlug }) {
   const header: Record<ClaudeGuideSlug, { eyebrow: string; title: string; subtitle: string; chip: string }> = {
     skills: {
-      eyebrow: "SKILLS · CLAUDE",
+      eyebrow: "CLAUDE GUIDE",
       title: "Claude Skills",
-      subtitle: "Saved instructions Claude can reuse whenever a matching task appears.",
+      subtitle: "Reusable instruction sets Claude loads to handle a specific task consistently across Claude.ai, Claude Code, and the API.",
       chip: "Claude",
     },
     projects: {
-      eyebrow: "PRODUCTS · CLAUDE",
+      eyebrow: "CLAUDE WORKSPACE GUIDE",
       title: "Claude Projects",
-      subtitle: "A practical guide to understanding, creating, and using Projects inside Claude.",
+      subtitle: "Keep files, instructions and related chats together so the context is available across the work.",
       chip: "Claude",
     },
     "vibe-coding": {
-      eyebrow: "ARTIFACTS · CLAUDE",
+      eyebrow: "CLAUDE WORKSPACE GUIDE",
       title: "Claude Artifacts",
-      subtitle: "Documents, code, webpages, diagrams and working apps rendered beside your conversation.",
+      subtitle: "Create, edit, publish, and reuse substantial work beside your chat.",
       chip: "Claude",
     },
     "scheduled-actions": {
@@ -536,58 +588,101 @@ function ClaudeHeader({ slug }: { slug: ClaudeGuideSlug }) {
 }
 
 function ClaudeSkillsGuide({ count, workflowsHref }: Pick<Props, "count" | "workflowsHref">) {
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(SKILL_ACTIVITY_PROMPT);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+    window.setTimeout(() => setCopyStatus("idle"), 1800);
+  }
+
   return (
     <>
       <section className={styles.claudeIntro}>
         <div className={styles.claudeIntroCopy}>
           <span className={styles.claudeIntroIcon}>📋</span>
-          <div><span className={styles.claudeKicker}>THE SIMPLE VERSION</span><h2>A Skill is a saved set of instructions for Claude</h2><p>It tells Claude how to handle a specific type of task and can be reused whenever that task comes up.</p></div>
+          <div><span className={styles.claudeKicker}>1 · WHAT IT IS</span><h2>A reusable instruction set for a specific task</h2><p>A Skill tells Claude how to handle a repeatable task consistently. Claude can load it in Claude.ai, Claude Code, and the API whenever that work comes up.</p></div>
         </div>
-        <aside className={styles.claudeComparisonNote}><span>Closest comparison</span><strong>A saved prompt that can also include reference files or scripts when needed.</strong></aside>
+        <aside className={styles.claudeComparisonNote}><span>The simple version</span><strong>Save the method once, then reuse it without explaining every requirement again.</strong></aside>
       </section>
 
       <section className={styles.claudeSection}>
-        <SectionHeading number="1" kicker="WHY IT MATTERS" title="The same task becomes easier to repeat" />
+        <SectionHeading number="2" kicker="WHY IT MATTERS" title="Repeat the same work with fewer misses" />
         <div className={styles.claudeCompare}>
-          <article className={`${styles.claudeCompareCard} ${styles.claudeWithout}`}><strong>WITHOUT A SKILL</strong><div><i>↻</i><p>Explain the requirements again</p></div><div><i>≈</i><p>Output can vary between users</p></div><div><i>!</i><p>Important details may be missed</p></div></article>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWithout}`}><strong>WITHOUT A SKILL</strong><div><i>↻</i><p>Explain the requirements every time</p></div><div><i>≈</i><p>Outputs vary between runs and users</p></div><div><i>!</i><p>Rules, checks, or formats can be missed</p></div></article>
           <span className={styles.claudeCompareArrow}>→</span>
-          <article className={`${styles.claudeCompareCard} ${styles.claudeWith}`}><strong>WITH A SKILL</strong><div><i>✓</i><p>Instructions are already available</p></div><div><i>✓</i><p>The same structure is followed</p></div><div><i>✓</i><p>Rules and examples guide the output</p></div></article>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWith}`}><strong>WITH A SKILL</strong><div><i>✓</i><p>Instructions load when the task needs them</p></div><div><i>✓</i><p>The same structure and checks are followed</p></div><div><i>✓</i><p>Files, references, and scripts can travel with it</p></div></article>
         </div>
       </section>
 
       <div className={styles.claudeDetailGrid}>
         <section className={styles.claudeSection}>
-          <SectionHeading number="2" tone="purple" kicker="WHAT IS INSIDE" title="Every Skill has a SKILL.md file" />
-          <div className={styles.claudeFileCard}>
-            <div className={styles.claudeFileTop}><span>▤</span><strong>SKILL.md</strong><em>Required</em></div>
-            <div className={styles.claudeFileLines}><p><span>Name</span><strong>Invoice Generator</strong></p><p><span>Description</span><strong>Creates Nudgeable invoices</strong></p><p><span>Instructions</span><strong>Steps, rules and examples</strong></p></div>
-          </div>
+          <SectionHeading number="3" tone="purple" kicker="BEFORE YOU START" title="Turn on file creation" />
+          <p className={styles.claudeSectionCopy}>Open <strong>Settings → Capabilities</strong> and enable <strong>Code execution and file creation</strong>. Skills that run scripts or create documents need this capability.</p>
+          <div className={styles.claudeNoteBox}>Only enable and run Skills you trust, especially when they use company data or downloaded code.</div>
         </section>
         <section className={styles.claudeSection}>
-          <SectionHeading number="3" tone="green" kicker="THREE SOURCES" title="Where Skills come from" />
-          <div className={styles.claudeTypes}>
-            <article><span>A</span><div><strong>Anthropic</strong><p>Pre-built Skills for Word, Excel, PowerPoint and PDF.</p></div></article>
-            <article><span>P</span><div><strong>Partners</strong><p>Skills from companies such as Notion, Figma and Atlassian.</p></div></article>
-            <article><span>✦</span><div><strong>Custom</strong><p>Skills created by you or your team for your own work.</p></div></article>
+          <SectionHeading number="4" tone="green" kicker="WHAT IS INSIDE" title="Every Skill starts with SKILL.md" />
+          <div className={styles.claudeFileCard}>
+            <div className={styles.claudeFileTop}><span>▤</span><strong>SKILL.md</strong><em>Required</em></div>
+            <div className={styles.claudeFileLines}><p><span>YAML</span><strong>Name and description</strong></p><p><span>Body</span><strong>Steps, rules, and examples</strong></p><p><span>Optional</span><strong>Scripts and reference files</strong></p></div>
           </div>
         </section>
       </div>
 
+      <section className={styles.claudeSection}>
+        <SectionHeading number="5" tone="purple" kicker="CREATE AND IMPROVE" title="Build a Skill with skill-creator" />
+        <p className={styles.claudeSectionCopy}>Type <strong>/skill-creator</strong> in a Claude chat and describe the job, inputs, rules, and desired output. After testing, tell Claude what failed and ask it to update the Skill so the improvement is available next time.</p>
+      </section>
+
       <section className={`${styles.claudeSection} ${styles.claudeGuideSection}`}>
-        <SectionHeading number="4" tone="blue" kicker="FIND AND USE THEM" title="Three steps inside Claude" />
+        <SectionHeading number="6" tone="blue" kicker="SETUP WALKTHROUGH" title="Create, use, and improve a Skill" />
         <StepGuide steps={SKILL_STEPS} label="Claude Skill steps" />
       </section>
 
       <div className={styles.claudeShareGrid}>
-        <article><span>↗</span><div><h3>Share with your team</h3><p>Send colleagues the Skill ZIP file. They can upload it to Claude and use the same instructions.</p></div></article>
-        <article><span>!</span><div><h3>Before using a downloaded Skill</h3><p>Check its instructions before allowing it to work with company information.</p></div></article>
+        <article><span>↗</span><div><h3>Share across your organization</h3><p>Team and Enterprise admins can enable a Skill for the organization. Members get a view-only version and automatically receive updates.</p></div></article>
+        <article><span>!</span><div><h3>Review external Skills first</h3><p>Agent Skills are an open format available through sources such as GitHub and agentskills.io. Read the instructions and scripts, and never place credentials inside a Skill.</p></div></article>
       </div>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="7" tone="green" kicker="ANOTHER WAY TO TEACH CLAUDE" title="Record a task from your screen" />
+        <p className={styles.claudeSectionCopy}>Claude can use screenshots from a recorded task to help create a Skill. The screenshots are kept as task context; the screen recording video itself is not retained.</p>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="8" tone="yellow" kicker="PRACTICE PATH" title="Build confidence in four levels" />
+        <div className={styles.claudeChecklist}>
+          <article><span>1</span><div><strong>Use an existing Skill</strong><p>Invoke a saved Skill with / and review how consistently it follows the instructions.</p></div></article>
+          <article><span>2</span><div><strong>Create a simple text Skill</strong><p>Save a repeatable writing or analysis method that does not need files or scripts.</p></div></article>
+          <article><span>3</span><div><strong>Add files and formatting</strong><p>Give the Skill a reference document, template, or example output to follow.</p></div></article>
+          <article><span>4</span><div><strong>Add validation and test again</strong><p>Run it with a second input, find what breaks, and update the Skill.</p></div></article>
+        </div>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="9" kicker="TEAM ACTIVITY" title="Create a reusable sales dashboard Skill" />
+        <p className={styles.claudeSectionCopy}>Download the source data, reference presentation, and test-month data. Build the Skill with the first two files, then prove it is reusable by running it with the test file without re-explaining the dashboard.</p>
+        <div className={styles.claudeAssets}>
+          <article><div><span>▤</span><div><h3>Sales Data - June 2026.xlsx</h3><p>First-run sales data</p></div></div><span className={styles.claudeFileTag}>XLSX</span><a download href="/claude-guides/Sales Data - June 2026.xlsx">Download</a></article>
+          <article><div><span>▤</span><div><h3>Sales_MIS_May2026.pptx</h3><p>Visual reference deck</p></div></div><span className={styles.claudeFileTag}>PPTX</span><a download href="/claude-guides/Sales_MIS_May2026.pptx">Download</a></article>
+          <article><div><span>▤</span><div><h3>Sales_Dummy_Data_Test_Month (1).xlsx</h3><p>Second-run test data</p></div></div><span className={styles.claudeFileTag}>XLSX</span><a download href="/claude-guides/Sales_Dummy_Data_Test_Month (1).xlsx">Download</a></article>
+        </div>
+        <div className={styles.claudePromptCard}>
+          <div><strong>Skill-creator prompt</strong><button type="button" onClick={copyPrompt}>{copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Copy failed" : "Copy prompt"}</button></div>
+          <pre>{SKILL_ACTIVITY_PROMPT}</pre>
+        </div>
+      </section>
 
       <ClaudeCta
         count={count}
         workflowsHref={workflowsHref}
-        heading="Practice creating your first Claude Skill"
-        description="Use guided workflows for writing, analysis and branded outputs."
+        heading="Explore Claude Skills workflows"
+        description="Practice creating, testing, and sharing repeatable instruction sets for real work."
       />
     </>
   );
@@ -613,82 +708,69 @@ function ClaudeArtifactsGuide({ count, workflowsHref }: Pick<Props, "count" | "w
           <span className={styles.claudeIntroIcon}>◫</span>
           <div>
             <span className={styles.claudeKicker}>1 · WHAT IT IS</span>
-            <h2>A dedicated window for substantial content</h2>
-            <p>A dedicated window where Claude renders substantial content it creates — a document, code, a webpage, a diagram, or a small working app — instead of leaving it as plain chat text.</p>
+            <h2>A dedicated canvas beside your chat</h2>
+            <p>Artifacts are substantial, self-contained work Claude creates beside the conversation—documents, code, websites, diagrams, and interactive apps that you can edit, publish, and reuse.</p>
           </div>
         </div>
         <aside className={styles.claudeComparisonNote}>
-          <span>Where it appears</span>
-          <strong>Right next to the conversation, ready to use or iterate on.</strong>
+          <span>Closest comparison</span>
+          <strong>An editable canvas with version history that stays connected to your conversation.</strong>
         </aside>
       </section>
 
       <section className={styles.claudeSection}>
-        <SectionHeading number="2" kicker="WHAT IT SOLVES" title="See and use what Claude creates" />
-        <div className={styles.claudeCompare}>
-          <article className={`${styles.claudeCompareCard} ${styles.claudeWithout}`}>
-            <strong>WITHOUT ARTIFACTS</strong>
-            <div><i>×</i><p>Everything Claude makes is buried in the chat as text.</p></div>
-            <div><i>↗</i><p>You copy-paste it elsewhere to actually see or use it.</p></div>
-          </article>
-          <span className={styles.claudeCompareArrow}>→</span>
-          <article className={`${styles.claudeCompareCard} ${styles.claudeWith}`}>
-            <strong>WITH ARTIFACTS</strong>
-            <div><i>✓</i><p>It renders live, right next to the conversation.</p></div>
-            <div><i>✓</i><p>It is ready to use or iterate on.</p></div>
-          </article>
+        <SectionHeading number="2" kicker="WHEN IT APPEARS" title="Claude creates one for substantial output" />
+        <p className={styles.claudeSectionCopy}>Claude often opens an Artifact when the output is substantial—typically more than about 15 lines—or when you ask for a document, code, HTML, SVG, diagram, React component, or another standalone deliverable.</p>
+      </section>
+
+      <div className={styles.claudeDetailGrid}>
+        <section className={styles.claudeSection}>
+          <SectionHeading number="3" tone="purple" kicker="TURN IT ON" title="Enable both required capabilities" />
+          <p className={styles.claudeSectionCopy}>In <strong>Settings → Capabilities</strong>, enable <strong>Code execution and file creation</strong> and the Artifacts capability available to your account.</p>
+        </section>
+        <section className={styles.claudeSection}>
+          <SectionHeading number="4" tone="green" kicker="WORK WITH IT" title="Edit through conversation" />
+          <p className={styles.claudeSectionCopy}>Ask Claude to revise a section, change the design, add functionality, or fix a problem. The Artifact updates beside the chat so you can inspect each iteration.</p>
+        </section>
+      </div>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="5" tone="purple" kicker="VIEW AND EXPORT" title="Use the rendered view or its source" />
+        <div className={styles.claudeTypes}>
+          <article><span>◫</span><div><strong>Preview</strong><p>Interact with the rendered result beside the conversation.</p></div></article>
+          <article><span>&lt;/&gt;</span><div><strong>Code</strong><p>Open the source when the Artifact is made from code.</p></div></article>
+          <article><span>↓</span><div><strong>Copy or download</strong><p>Export the content or file for use outside Claude.</p></div></article>
         </div>
       </section>
 
       <section className={`${styles.claudeSection} ${styles.claudeGuideSection}`}>
-        <SectionHeading number="3" tone="blue" kicker="WHERE TO FIND AND CREATE ONE" title="Artifacts inside Claude" />
-        <p className={styles.claudeSectionCopy}>Appears automatically on the right whenever Claude builds something substantial — just ask for what you want. See everything you&apos;ve made in the &quot;Artifacts&quot; tab in the left sidebar, or claude.ai/artifacts.</p>
+        <SectionHeading number="6" tone="blue" kicker="SETUP WALKTHROUGH" title="Create, publish, and open an Artifact" />
+        <p className={styles.claudeSectionCopy}>Open <strong>Artifacts</strong> from the Claude sidebar to see saved work, start a new Artifact, or reopen something you published earlier.</p>
         <StepGuide steps={ARTIFACT_STEPS} label="Claude Artifacts screenshots" />
       </section>
 
       <section className={styles.claudeSection}>
-        <SectionHeading number="4" tone="green" kicker="STRENGTHS AND LIMITATIONS" title="What Artifacts do well and what to know" />
-        <div className={styles.claudeComparisonTableWrap}>
-          <table className={styles.claudeComparisonTable}>
-            <thead>
-              <tr>
-                <th scope="col">What Artifacts do well</th>
-                <th scope="col">What to know before using one</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><div className={styles.claudeTableGood}><span>✓</span><div>Builds something real and usable in minutes with no separate dev tool.</div></div></td>
-                <td><div className={styles.claudeTableLimit}><span>!</span><div>Only runs while someone has it open, nothing happens in the background.</div></div></td>
-              </tr>
-              <tr>
-                <td><div className={styles.claudeTableGood}><span>✓</span><div>Can connect to live tools like Calendar or Slack.</div></div></td>
-                <td><div className={styles.claudeTableLimit}><span>!</span><div>Needs &quot;Code execution and file creation&quot; on in Settings.</div></div></td>
-              </tr>
-              <tr>
-                <td><div className={styles.claudeTableGood}><span>✓</span><div>Can remember data between visits once published.</div></div></td>
-                <td><div className={styles.claudeTableLimit}><span>!</span><div>No free internet access, only Claude&apos;s API and approved connectors.</div></div></td>
-              </tr>
-              <tr>
-                <td><div className={styles.claudeTableGood}><span>✓</span><div>Easy to iterate by just asking for changes.</div></div></td>
-                <td><div className={styles.claudeTableLimit}><span>!</span><div>Saved data only works once published, not while testing.</div></div></td>
-              </tr>
-              <tr>
-                <td className={styles.claudeTableEmpty} />
-                <td><div className={styles.claudeTableLimit}><span>!</span><div>Each user must connect their own tools separately.</div></div></td>
-              </tr>
-            </tbody>
-          </table>
+        <SectionHeading number="7" tone="green" kicker="AI-POWERED ARTIFACTS" title="Build an app that uses Claude" />
+        <p className={styles.claudeSectionCopy}>An Artifact can become a Claude-powered chat, coaching, or Q&amp;A app. People who open it sign in to Claude and use their own usage limits, so the creator can share it without paying for every visitor&apos;s model usage.</p>
+        <div className={styles.claudeNoteBox}>Publishing creates a shareable Artifact while keeping the original Claude conversation private.</div>
+      </section>
+
+      <section className={styles.claudeSection}>
+        <SectionHeading number="8" tone="purple" kicker="REGULAR VS LIVE" title="Choose where the Artifact should live" />
+        <div className={styles.claudeCompare}>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWithout}`}><strong>REGULAR ARTIFACT</strong><div><i>1</i><p>Created inside a Claude chat</p></div><div><i>2</i><p>Publish, copy, or download it</p></div><div><i>3</i><p>Runs as an independent result</p></div></article>
+          <span className={styles.claudeCompareArrow}>→</span>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWith}`}><strong>LIVE ARTIFACT IN COWORK</strong><div><i>✓</i><p>Saved in the Live artifacts tab</p></div><div><i>✓</i><p>Can refresh apps and local files with version history</p></div><div><i>✓</i><p>Stays local and is organization-only on Team and Enterprise</p></div></article>
         </div>
       </section>
 
       <section className={styles.claudeTryCard}>
         <span className={styles.claudeTryIcon}>→</span>
         <div>
-          <span className={styles.claudeKicker}>5 · TRY IT YOURSELF</span>
-          <h2>Build a simple expense tracker</h2>
+          <span className={styles.claudeKicker}>9 · TRY IT YOURSELF</span>
+          <h2>Turn your LinkedIn profile into a personal website</h2>
           <pre>{ARTIFACT_PROMPT}</pre>
-          <p>Then ask it to add a chart or change the colors.</p>
+          <p>Attach your LinkedIn profile PDF first, then publish or download the finished HTML Artifact.</p>
         </div>
         <button type="button" onClick={copyPrompt}>
           {copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Select prompt" : "Copy prompt"}
@@ -699,7 +781,7 @@ function ClaudeArtifactsGuide({ count, workflowsHref }: Pick<Props, "count" | "w
         count={count}
         workflowsHref={workflowsHref}
         heading="Explore Claude Artifacts workflows"
-        description="Build, test and publish guided interactive-app workflows with Artifacts."
+        description="Open guided workflows for creating, editing, publishing, and reusing substantial work with Artifacts."
       />
     </>
   );
@@ -1314,60 +1396,62 @@ function ClaudeProjectsGuide({ count, workflowsHref }: Pick<Props, "count" | "wo
       <section className={styles.claudeIntro}>
         <div className={styles.claudeIntroCopy}>
           <span className={styles.claudeIntroIcon}>🗂</span>
-          <div><span className={styles.claudeKicker}>1 · WHAT IT IS</span><h2>A Project is a workspace that keeps context together</h2><p>A project is a workspace that holds instructions, files, and chats together. Once set up, every new chat inside it carries that context automatically, no re-explaining.</p></div>
+          <div><span className={styles.claudeKicker}>1 · WHAT IT IS</span><h2>A dedicated workspace inside Claude</h2><p>A Project keeps files, instructions, and related chats together so the same context is available across the work instead of being rebuilt in every conversation.</p></div>
         </div>
-        <aside className={styles.claudeComparisonNote}><span>Closest comparison</span><strong>A reusable workspace where Claude already knows the instructions, files, and chat history linked to that work.</strong></aside>
+        <aside className={styles.claudeComparisonNote}><span>What carries forward</span><strong>Project instructions, uploaded knowledge, relevant memory, and the chats connected to that work.</strong></aside>
       </section>
 
       <section className={styles.claudeSection}>
-        <SectionHeading number="2" kicker="WHAT IT SOLVES" title="The same context does not need to be pasted again and again" />
+        <SectionHeading number="2" kicker="NORMAL CHAT VS PROJECT" title="Keep long-running work in one context" />
         <div className={styles.claudeCompare}>
-          <article className={`${styles.claudeCompareCard} ${styles.claudeWithout}`}><strong>WITHOUT A PROJECT</strong><div><i>×</i><p>Without a project, you paste the same background files and instructions into every new chat.</p></div></article>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWithout}`}><strong>NORMAL CHAT</strong><div><i>×</i><p>Files and instructions apply only to that conversation.</p></div><div><i>↻</i><p>New chats start without the same working context.</p></div></article>
           <span className={styles.claudeCompareArrow}>→</span>
-          <article className={`${styles.claudeCompareCard} ${styles.claudeWith}`}><strong>WITH A PROJECT</strong><div><i>✓</i><p>A project holds that context once, so every conversation inside it starts already knowing your work.</p></div></article>
+          <article className={`${styles.claudeCompareCard} ${styles.claudeWith}`}><strong>PROJECT</strong><div><i>✓</i><p>Files and instructions are available to every Project chat.</p></div><div><i>✓</i><p>Related work and useful context build over time.</p></div></article>
         </div>
       </section>
 
       <div className={styles.claudeDetailGrid}>
         <section className={styles.claudeSection}>
-          <SectionHeading number="3" tone="purple" kicker="WHAT GOES INSIDE" title="The core pieces inside a Project" />
-          <p className={styles.claudeSectionCopy}>Custom instructions (how Claude should behave), a knowledge base (your files), and a set of chats scoped to that project only.</p>
-          <div className={styles.claudeMiniGrid}><article><strong>Custom instructions</strong><p>How Claude should behave.</p></article><article><strong>Knowledge base</strong><p>Your files.</p></article><article><strong>Project chats</strong><p>A set of chats scoped to that project only.</p></article></div>
+          <SectionHeading number="3" tone="purple" kicker="FILES AND CONTEXT" title="Add the knowledge the work needs" />
+          <p className={styles.claudeSectionCopy}>A Project can contain unlimited files. Each file can be up to 30 MB, and paid plans provide roughly a 200,000-token combined context window.</p>
+          <div className={styles.claudeNoteBox}>When the Project grows beyond the available context, Claude automatically uses retrieval to find the most relevant snippets rather than loading every file in full.</div>
         </section>
         <section className={styles.claudeSection}>
-          <SectionHeading number="5" tone="green" kicker="SHARING" title="Can you share Projects" />
-          <div className={styles.claudeNoteBox}>Yes, on Team and Enterprise plans. Share with specific people or your whole org.</div>
+          <SectionHeading number="4" tone="green" kicker="SHARING" title="Invite people without exposing every chat" />
+          <p className={styles.claudeSectionCopy}>Team and Enterprise Projects can be shared with <strong>Can use</strong> or <strong>Can edit</strong> access. Project chats remain private unless someone explicitly shares a chat.</p>
         </section>
       </div>
 
       <section className={`${styles.claudeSection} ${styles.claudeGuideSection}`}>
-        <SectionHeading number="4" tone="blue" kicker="WHERE TO FIND AND CREATE ONE" title="Find Projects and create a new one inside Claude" />
-        <p className={styles.claudeSectionCopy}>Left sidebar on claude.ai, or go straight to claude.ai/projects. Click &quot;New Project,&quot; name it, add a description.</p>
+        <SectionHeading number="5" tone="blue" kicker="SETUP WALKTHROUGH" title="Create a Project and give it working context" />
+        <p className={styles.claudeSectionCopy}>Create and name the Project, add files or pasted text, save Project-level instructions, and start separate chats inside it. You can also move an existing chat into a Project when it belongs with the same work.</p>
         <StepGuide steps={PROJECT_STEPS} label="Claude Project steps" />
       </section>
 
       <section className={styles.claudeSection}>
-        <SectionHeading number="6–7" tone="yellow" kicker="PROJECT MEMORY" title="How memory works and how to update it" />
+        <SectionHeading number="6" tone="yellow" kicker="PROJECT MEMORY" title="The workspace becomes more useful over time" />
         <div className={styles.claudeMemoryGrid}>
-          <article><h3>How Claude writes memory in projects</h3><p>Each project has its own separate memory, not shared with other projects or general chats. Claude builds it automatically as you chat, no manual saving needed. Find it in Settings &gt; Memory.</p></article>
-          <article><h3>How to update project memory</h3><p>Just tell Claude directly in a project chat, e.g. &quot;remember that this client&apos;s fiscal year starts in April.&quot; Claude updates it in real time. You can also open Settings &gt; Memory to view and edit entries manually, or delete ones that are wrong.</p></article>
+          <article><h3>Separate from other work</h3><p>Each Project has its own memory. It is not mixed with unrelated Projects or regular chats.</p></article>
+          <article><h3>Review and correct it</h3><p>Open Project memory to inspect the purpose, context, and working principles Claude has built. Tell Claude what to remember, or edit and remove entries that are wrong.</p></article>
         </div>
       </section>
 
       <section className={styles.claudeSection}>
-        <SectionHeading number="8" kicker="TRY IT YOURSELF" title="Practice building one using files and a copy-ready prompt" />
-        <p className={styles.claudeSectionCopy}>3 downloadable dummy meeting notes files + one copy-ready prompt. Download all 3, upload into a new project&apos;s knowledge base, paste the prompt, get back summary emails for leadership on who owns what and by when.</p>
+        <SectionHeading number="7" kicker="TRY IT YOURSELF" title="Build a meeting follow-up Project" />
+        <p className={styles.claudeSectionCopy}>Use the first two meeting notes in the first run. Add the third later and run the same request in a new chat to see how the Project reuses its saved instructions with the latest context.</p>
         <div className={styles.claudeAssets}>
-          {[1, 2, 3].map((number) => (
-            <article key={number}>
-              <div><span>▤</span><div><h3>Dummy meeting notes {number}</h3><p>Meeting notes file</p></div></div>
-              <span className={styles.claudeFileTag}>DOCX</span>
-              <a download={`dummy_meeting_notes_${number}.docx`} href={`/claude-guides/dummy_meeting_notes_${number}.docx`}>Download</a>
-            </article>
-          ))}
+          <article><div><span>▤</span><div><h3>Meeting_Notes_1_June_6.docx</h3><p>Use in first run</p></div></div><span className={styles.claudeFileTag}>DOCX</span></article>
+          <article><div><span>▤</span><div><h3>Meeting_Notes_2_June_8.docx</h3><p>Upload with the first file</p></div></div><span className={styles.claudeFileTag}>DOCX</span></article>
+          <article><div><span>▤</span><div><h3>Meeting_Notes_3_June_12.docx</h3><p>Add later for the second run</p></div></div><span className={styles.claudeFileTag}>DOCX</span></article>
+        </div>
+        <div className={styles.claudeChecklist}>
+          <article><span>1</span><div><strong>Create the Project</strong><p>Add the first two meeting notes and save the prompt below as Project instructions.</p></div></article>
+          <article><span>2</span><div><strong>Run the first chat</strong><p>Start a new Project chat and ask: “Generate the two emails.”</p></div></article>
+          <article><span>3</span><div><strong>Add the latest notes</strong><p>Upload Meeting_Notes_3_June_12.docx after reviewing the first result.</p></div></article>
+          <article><span>4</span><div><strong>Run it again</strong><p>Start another new Project chat and ask the same question without pasting the instructions again.</p></div></article>
         </div>
         <div className={styles.claudePromptCard}>
-          <div><strong>Project prompt to copy</strong><button type="button" onClick={copyPrompt}>{copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Copy failed" : "Copy prompt"}</button></div>
+          <div><strong>Project instructions to copy</strong><button type="button" onClick={copyPrompt}>{copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Copy failed" : "Copy prompt"}</button></div>
           <pre>{PROJECT_PROMPT}</pre>
         </div>
       </section>
@@ -1376,7 +1460,7 @@ function ClaudeProjectsGuide({ count, workflowsHref }: Pick<Props, "count" | "wo
         count={count}
         workflowsHref={workflowsHref}
         heading="Explore Claude Project workflows"
-        description="Open guided workflows for organising files, context and repeatable work in Projects."
+        description="Open guided workflows for keeping files, instructions, and related chats together in Projects."
       />
     </>
   );
@@ -1400,16 +1484,14 @@ function ClaudeCta({
 }
 
 export default function ClaudeCapabilityGuide({ slug, count, workflowsHref }: Props) {
+  if (slug === "skills" || slug === "projects" || slug === "vibe-coding") {
+    return <ClaudeReferenceGuides kind={slug} count={count} workflowsHref={workflowsHref} />;
+  }
+
   return (
     <main className={`${styles.page} ${styles.claudePage}`}>
       <ClaudeHeader slug={slug} />
-      {slug === "skills" ? (
-        <ClaudeSkillsGuide count={count} workflowsHref={workflowsHref} />
-      ) : slug === "projects" ? (
-        <ClaudeProjectsGuide count={count} workflowsHref={workflowsHref} />
-      ) : slug === "vibe-coding" ? (
-        <ClaudeArtifactsGuide count={count} workflowsHref={workflowsHref} />
-      ) : slug === "scheduled-actions" ? (
+      {slug === "scheduled-actions" ? (
         <ClaudeScheduledGuide count={count} workflowsHref={workflowsHref} />
       ) : slug === "ai-agents" ? (
         <ClaudeCoworkGuide count={count} workflowsHref={workflowsHref} />

@@ -5,6 +5,7 @@ import { CAPABILITIES, getToolPageDef, type CapabilitySlug, type ProviderTool } 
 import B2BTopbar from "@/components/B2BTopbar";
 import ClaudeCapabilityGuide from "./ClaudeCapabilityGuide";
 import ChatGPTGuide from "../../ChatGPTGuide";
+import GeminiGuide from "../../GeminiGuide";
 import styles from "../../capabilities.module.css";
 
 type Props = {
@@ -61,6 +62,25 @@ export default function ToolCapabilityClient({ slug, tool, count }: Props) {
       <>
         <B2BTopbar />
         <ChatGPTGuide kind={kind} count={count} workflowsHref={workflowsHref} />
+      </>
+    );
+  }
+
+  if (
+    tool === "gemini"
+    && (slug === "skills" || slug === "projects" || slug === "scheduled-actions" || slug === "ai-agents")
+  ) {
+    const kind = slug === "projects"
+      ? "notebooks"
+      : slug === "scheduled-actions"
+        ? "schedules"
+        : slug === "ai-agents"
+          ? "spark"
+          : "skills";
+    return (
+      <>
+        <B2BTopbar />
+        <GeminiGuide kind={kind} count={count} workflowsHref={workflowsHref} />
       </>
     );
   }

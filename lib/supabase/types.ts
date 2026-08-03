@@ -130,7 +130,7 @@ export type ToolLogo = {
 
 export type WhatsNewUpdate = {
   id: string;
-  tool: "chatgpt" | "claude" | "gemini" | "copilot";
+  tool: "chatgpt" | "claude" | "gemini" | "copilot" | "ai";
   title: string;
   summary: string;
   tag: string;

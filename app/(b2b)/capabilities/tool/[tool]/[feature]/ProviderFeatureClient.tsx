@@ -5,6 +5,7 @@ import type { ProviderFeatureDef, ProviderTool } from "@/lib/capabilities";
 import B2BTopbar from "@/components/B2BTopbar";
 import ClaudeCapabilityGuide from "../../../[slug]/[tool]/ClaudeCapabilityGuide";
 import ChatGPTGuide from "../../../ChatGPTGuide";
+import GeminiGuide from "../../../GeminiGuide";
 import styles from "../../../capabilities.module.css";
 
 type Props = {
@@ -31,6 +32,16 @@ export default function ProviderFeatureClient({ tool, def }: Props) {
       <>
         <B2BTopbar />
         <ChatGPTGuide kind={kind} workflowsHref={def.workflowsHref} />
+      </>
+    );
+  }
+
+  if (tool === "gemini" && (def.slug === "gems" || def.slug === "image-generation" || def.slug === "video-generation")) {
+    const kind = def.slug === "image-generation" ? "images" : def.slug === "video-generation" ? "video" : "gems";
+    return (
+      <>
+        <B2BTopbar />
+        <GeminiGuide kind={kind} workflowsHref={def.workflowsHref} />
       </>
     );
   }
