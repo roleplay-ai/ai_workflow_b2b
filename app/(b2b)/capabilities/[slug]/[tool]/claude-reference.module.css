@@ -18,7 +18,7 @@
 
 .page * { box-sizing: border-box; }
 .skillsPage { background: #fffdf5; }
-.projectsPage { background: #f7f6f3; }
+.projectsPage { background: #fff; }
 .artifactsPage { background: #fffdfb; }
 
 .backButton {
