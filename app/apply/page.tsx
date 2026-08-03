@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import RedirectWithLoading from "@/components/RedirectWithLoading";
 
 export default function ApplyPage() {
-  redirect("/ask-ai");
+  return <RedirectWithLoading href="/ask-ai" />;
 }
