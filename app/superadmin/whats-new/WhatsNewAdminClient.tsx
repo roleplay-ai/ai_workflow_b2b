@@ -226,7 +226,7 @@ export default function WhatsNewAdminClient({ initialUpdates, userId, migrationR
           <div className={styles.formGrid}>
             <label>
               <span>AI tool</span>
-              <select value={draft.tool} onChange={(event) => patchDraft({ tool: event.target.value as ChatbotFilter })}>
+              <select value={draft.tool} onChange={(event) => patchDraft({ tool: event.target.value as WhatsNewSource })}>
                 {WHATS_NEW_SOURCES.map((tool) => <option value={tool} key={tool}>{WHATS_NEW_SOURCE_LABELS[tool]}</option>)}
               </select>
             </label>
