@@ -12,9 +12,16 @@ import {
   validateSessionId,
   validateWorkflowContext,
 } from "@/lib/ask/guardrails";
+import {
+  CHATBOT_FILTER_LABELS,
+  activityMatchesChatbotFilter,
+  isChatbotFilter,
+  type ChatbotFilter,
+} from "@/lib/chatbotFilter";
 
 const MATCH_COUNT = 6;
 const WORKFLOW_MATCH_COUNT = 4;
+const FILTERED_WORKFLOW_CANDIDATE_COUNT = 16;
 const IMAGES_BUCKET = "kb-extracted-images";
 
 type WorkflowContext = { title?: string; description?: string; tools?: string[] };
@@ -72,6 +79,7 @@ export async function POST(req: NextRequest) {
     question?: string;
     sessionId?: string;
     workflowContext?: WorkflowContext;
+    chatbot?: string | null;
   };
 
   if (!validateSessionId(body.sessionId)) {
@@ -90,6 +98,10 @@ export async function POST(req: NextRequest) {
     return jsonWithSessionCookies(sessionResponse, { error: workflowResult.error }, { status: workflowResult.status });
   }
   const workflowContext = workflowResult;
+  if (body.chatbot != null && !isChatbotFilter(body.chatbot)) {
+    return jsonWithSessionCookies(sessionResponse, { error: "Invalid chatbot filter" }, { status: 400 });
+  }
+  const chatbot: ChatbotFilter | null = body.chatbot ?? null;
 
   const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -227,6 +239,7 @@ export async function POST(req: NextRequest) {
     .map((h) => `Q: ${h.content}`)
     .join("\n");
   const queryText = [
+    chatbot ? `Chatbot focus: ${CHATBOT_FILTER_LABELS[chatbot]}` : null,
     workflowContext?.title ? `Workflow: ${workflowContext.title}. ${workflowContext.description ?? ""}` : null,
     historyForQuery || null,
     `Q: ${question}`,
@@ -250,9 +263,25 @@ export async function POST(req: NextRequest) {
   // recommend a relevant workflow with a clickable link alongside the knowledge-base answer.
   const { data: activityMatches } = await supabase.rpc("match_activities", {
     query_embedding: embedding,
-    match_count: WORKFLOW_MATCH_COUNT,
+    match_count: chatbot ? FILTERED_WORKFLOW_CANDIDATE_COUNT : WORKFLOW_MATCH_COUNT,
   });
-  const matchedActivities = (activityMatches ?? []) as MatchedActivity[];
+  const activityCandidates = (activityMatches ?? []) as MatchedActivity[];
+  let matchedActivities = activityCandidates.slice(0, WORKFLOW_MATCH_COUNT);
+  if (chatbot && activityCandidates.length > 0) {
+    const { data: activityFilterRows } = await supabase
+      .from("activities")
+      .select("id, tools, content_type")
+      .in("id", activityCandidates.map((activity) => activity.id));
+    const filterMetadataById = new Map(
+      (activityFilterRows ?? []).map((activity) => [activity.id, activity]),
+    );
+    matchedActivities = activityCandidates
+      .filter((activity) => {
+        const metadata = filterMetadataById.get(activity.id);
+        return metadata ? activityMatchesChatbotFilter(metadata, chatbot) : false;
+      })
+      .slice(0, WORKFLOW_MATCH_COUNT);
+  }
   const workflowsBlock = matchedActivities.length > 0
     ? matchedActivities.map((a, i) => `[${i + 1}] "${a.title}"${a.description ? ` — ${a.description}` : ""}`).join("\n")
     : "(no workflows in the catalog matched this question closely)";
@@ -293,6 +322,9 @@ export async function POST(req: NextRequest) {
     : "(no excerpts were retrieved for this question — the knowledge base may not cover this topic yet)";
 
   const systemPrompt = `You are Nudgie, an authoritative AI coach. Users ask whether they can build a specific workflow, or ask general questions. Speak like a confident human expert — direct, clear, no fluff.
+
+Chatbot filter: ${chatbot ? CHATBOT_FILTER_LABELS[chatbot] : "All chatbots"}.
+${chatbot ? `Focus the answer on ${CHATBOT_FILTER_LABELS[chatbot]}. Only discuss another chatbot when the user explicitly asks for a comparison. Suggested workflows are already filtered to ${CHATBOT_FILTER_LABELS[chatbot]}, except AI agent workflows which always remain available.` : "No chatbot-specific filter is active."}
 
 Tone — sound like a senior human expert giving a colleague a straight answer, never like a chatbot:
 - State things as fact. Say "Use X" not "You could maybe try X" or "I think X might work."

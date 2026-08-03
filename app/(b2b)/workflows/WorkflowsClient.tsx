@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { Activity } from "@/lib/supabase/types";
+import type { Activity, PreferredAiTool } from "@/lib/supabase/types";
 import { formatToolLabel, normalizeActivityTools, normalizeToolSlug } from "@/lib/tools";
+import { activityMatchesChatbotFilter, isChatbotFilter } from "@/lib/chatbotFilter";
 import type { ToolLogoMap } from "@/lib/toolLogos";
 import B2BTopbar from "@/components/B2BTopbar";
 import {
@@ -35,6 +36,7 @@ type Props = {
   savedWorkflowIds: string[];
   categoryMetadata: WorkflowCategoryMetadata[];
   continueProgress: ContinueWorkflowProgress | null;
+  defaultTool?: PreferredAiTool | null;
 };
 
 type CategorySummary = WorkflowCategoryMetadata & {
@@ -81,6 +83,7 @@ export default function WorkflowsClient({
   savedWorkflowIds,
   categoryMetadata,
   continueProgress,
+  defaultTool = null,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -88,7 +91,9 @@ export default function WorkflowsClient({
   const queryParam = searchParams.get("q") ?? "";
   const selectedTag = searchParams.get("tag");
   const contentTypeParam = searchParams.get("content_type");
-  const toolParam = searchParams.get("tool");
+  const queryToolParam = searchParams.get("tool");
+  const toolParam = queryToolParam
+    ?? (defaultTool && defaultTool !== "all" ? defaultTool : null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
   const [categorySearch, setCategorySearch] = useState("");
   const [workflowSearch, setWorkflowSearch] = useState(queryParam);
@@ -197,8 +202,12 @@ export default function WorkflowsClient({
       );
     }
     if (toolParam) {
-      const normalizedTool = normalizeToolSlug(toolParam);
-      result = result.filter((activity) => normalizeActivityTools(activity.tools).includes(normalizedTool));
+      if (isChatbotFilter(toolParam)) {
+        result = result.filter((activity) => activityMatchesChatbotFilter(activity, toolParam));
+      } else {
+        const normalizedTool = normalizeToolSlug(toolParam);
+        result = result.filter((activity) => normalizeActivityTools(activity.tools).includes(normalizedTool));
+      }
     }
     const query = workflowSearch.trim().toLowerCase();
     if (query) {
@@ -260,6 +269,7 @@ export default function WorkflowsClient({
         isSaved={savedIds.has(activity.id)}
         isSavePending={savePendingIds.has(activity.id)}
         onToggleSave={toggleSaveWorkflow}
+        activeToolFilter={toolParam}
       />
     );
   }
@@ -280,7 +290,7 @@ export default function WorkflowsClient({
 
   return (
     <>
-      <B2BTopbar />
+      <B2BTopbar defaultAiTool={defaultTool} />
       <main className={styles.workflowPage}>
         {!isResultView ? (
           <>

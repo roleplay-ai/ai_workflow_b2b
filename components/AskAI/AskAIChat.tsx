@@ -11,6 +11,11 @@ import AskAIThinking from "./AskAIThinking";
 import SlideZoom from "@/components/SlideZoom";
 import { useNavigationLoading } from "@/components/NavigationLoading";
 import { ASK_LIMITS } from "@/lib/ask/guardrails";
+import {
+  CHATBOT_FILTER_LABELS,
+  isChatbotFilter,
+  type ChatbotFilter,
+} from "@/lib/chatbotFilter";
 import styles from "./ask-ai.module.css";
 import "@/app/card-styles.css";
 
@@ -50,11 +55,49 @@ type Props = {
   isAnonymous?: boolean;
 };
 
-const POPULAR_QUESTIONS = [
-  "What can AI agents do?",
-  "Can AI analyze Excel files?",
-  "Is the paid plan worth it?",
-] as const;
+const POPULAR_QUESTIONS: Record<ChatbotFilter | "all", readonly string[]> = {
+  all: [
+    "What can AI agents do?",
+    "Can AI analyze Excel files?",
+    "Is the paid plan worth it?",
+  ],
+  chatgpt: [
+    "What is ChatGPT best at?",
+    "How do I use Custom GPTs?",
+    "Can ChatGPT analyze my files?",
+  ],
+  claude: [
+    "What is Claude best at?",
+    "How do Claude Projects work?",
+    "How large is Claude’s context window?",
+  ],
+  gemini: [
+    "What is Gemini best at?",
+    "How does Gemini work with Google Workspace?",
+    "Can Gemini analyze long documents?",
+  ],
+  copilot: [
+    "What is Microsoft Copilot best at?",
+    "How does Copilot work in Microsoft 365?",
+    "Can Copilot help with Excel?",
+  ],
+};
+
+const TOOL_CONTEXT: Record<ChatbotFilter | "all", { mark: string; label: string; color: string; background: string }> = {
+  all: { mark: "✦", label: "All AI tools", color: "#292823", background: "#fff6cf" },
+  chatgpt: { mark: "⌘", label: "ChatGPT", color: "#087d62", background: "#e9fff7" },
+  claude: { mark: "✺", label: "Claude", color: "#b55334", background: "#fff0ea" },
+  gemini: { mark: "✦", label: "Gemini", color: "#286bc2", background: "#eaf5ff" },
+  copilot: { mark: "◈", label: "Copilot", color: "#623cea", background: "#f1ecff" },
+};
+
+const LANDING_PLACEHOLDER: Record<ChatbotFilter | "all", string> = {
+  all: "How is Claude different from ChatGPT?",
+  chatgpt: "What can I do with ChatGPT?",
+  claude: "What can I do with Claude?",
+  gemini: "What can I do with Gemini?",
+  copilot: "What can I do with Copilot?",
+};
 
 const CATEGORY_ICONS = ["▧", "▥", "⌕", "◇", "▶", "◌", "✦"] as const;
 const MAX_COMPOSER_HEIGHT = 200;
@@ -101,6 +144,10 @@ export default function AskAIChat({ categories, userId, isAnonymous = false }: P
   const { startNavigating } = useNavigationLoading();
   const conversationParam = searchParams.get("conversation");
   const newParam = searchParams.get("new");
+  const toolParam = searchParams.get("tool");
+  const selectedChatbot = isChatbotFilter(toolParam) ? toolParam : null;
+  const selectedToolKey = selectedChatbot ?? "all";
+  const selectedToolContext = TOOL_CONTEXT[selectedToolKey];
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -237,7 +284,9 @@ export default function AskAIChat({ categories, userId, isAnonymous = false }: P
     const nextSessionId = crypto.randomUUID();
     locationKeyRef.current = `new:${nextSessionId}`;
     resetConversation(nextSessionId);
-    router.push(`/ask-ai?new=${nextSessionId}`, { scroll: false });
+    const params = new URLSearchParams({ new: nextSessionId });
+    if (selectedChatbot) params.set("tool", selectedChatbot);
+    router.push(`/ask-ai?${params.toString()}`, { scroll: false });
   }
 
   async function sendMessage(text?: string) {
@@ -254,7 +303,7 @@ export default function AskAIChat({ categories, userId, isAnonymous = false }: P
       const response = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, sessionId: requestSessionId }),
+        body: JSON.stringify({ question, sessionId: requestSessionId, chatbot: selectedChatbot }),
       });
       const body = await response.json().catch(() => ({}));
 
@@ -288,7 +337,9 @@ export default function AskAIChat({ categories, userId, isAnonymous = false }: P
       }
 
       locationKeyRef.current = `conversation:${requestSessionId}`;
-      router.replace(`/ask-ai?conversation=${requestSessionId}`, { scroll: false });
+      const params = new URLSearchParams({ conversation: requestSessionId });
+      if (selectedChatbot) params.set("tool", selectedChatbot);
+      router.replace(`/ask-ai?${params.toString()}`, { scroll: false });
       window.dispatchEvent(new CustomEvent("ask:conversations-changed"));
     } catch {
       if (activeSessionRef.current === requestSessionId) {
@@ -303,9 +354,11 @@ export default function AskAIChat({ categories, userId, isAnonymous = false }: P
   }
 
   function openCategory(category: string) {
-    const href = category
-      ? `/workflows?category=${encodeURIComponent(category)}`
-      : "/workflows?browse=all";
+    const params = new URLSearchParams();
+    if (category) params.set("category", category);
+    else params.set("browse", "all");
+    if (selectedChatbot) params.set("tool", selectedChatbot);
+    const href = `/workflows?${params.toString()}`;
     startNavigating(href);
     router.push(href);
   }
@@ -323,7 +376,7 @@ export default function AskAIChat({ categories, userId, isAnonymous = false }: P
             void sendMessage();
           }
         }}
-        placeholder={chatBlocked ? "Log in to keep chatting…" : landing ? "How is Claude different from ChatGPT?" : "Ask a follow-up…"}
+        placeholder={chatBlocked ? "Log in to keep chatting…" : landing ? LANDING_PLACEHOLDER[selectedToolKey] : "Ask a follow-up…"}
         rows={1}
         maxLength={ASK_LIMITS.maxQuestionChars}
         aria-label="Ask AI"
@@ -369,16 +422,29 @@ export default function AskAIChat({ categories, userId, isAnonymous = false }: P
       <main className={styles.landingPage}>
         <div className={styles.landingSpacer} aria-hidden="true" />
         <div className={styles.landingContent}>
-          <h1>Ask anything about AI tools</h1>
+          <div
+            className={styles.toolContext}
+            style={{ color: selectedToolContext.color, background: selectedToolContext.background }}
+          >
+            <span aria-hidden="true">{selectedToolContext.mark}</span>
+            Viewing {selectedToolContext.label}
+          </div>
+          <h1>
+            Ask anything about {selectedChatbot ? CHATBOT_FILTER_LABELS[selectedChatbot] : "AI tools"}
+          </h1>
 
           <div className={styles.landingComposer}>{composer(true)}</div>
-          <p className={styles.scopeLine}>Answers questions about AI tools and how to use them</p>
+          <p className={styles.scopeLine}>
+            {selectedChatbot
+              ? `Answers questions about ${CHATBOT_FILTER_LABELS[selectedChatbot]} and how to use it`
+              : "Answers questions about AI tools and how to use them"}
+          </p>
           {loadError ? <div className={styles.loadError}>{loadError}</div> : null}
 
           <section className={styles.landingSection} aria-labelledby="popular-questions">
             <h2 id="popular-questions">Popular questions</h2>
             <div className={styles.questionRow}>
-              {POPULAR_QUESTIONS.map((question) => (
+              {POPULAR_QUESTIONS[selectedToolKey].map((question) => (
                 <button type="button" key={question} onClick={() => void sendMessage(question)}>
                   {question}
                 </button>
@@ -387,9 +453,9 @@ export default function AskAIChat({ categories, userId, isAnonymous = false }: P
           </section>
 
           {categories.length > 0 ? (
-            <section className={`${styles.landingSection} ${styles.categorySection}`} aria-labelledby="compare-by-task">
+            <section className={`${styles.landingSection} ${styles.categorySection}`} aria-labelledby="explore-by-task">
               <div className={styles.sectionHeading}>
-                <h2 id="compare-by-task">Compare tools by task</h2>
+                <h2 id="explore-by-task">Explore by task</h2>
                 <button type="button" onClick={() => openCategory("")}>See all →</button>
               </div>
               <div className={styles.categoryGrid}>

@@ -262,7 +262,7 @@ export type ToolPageDef = {
 export const CAPABILITY_TOOL_PAGES: Record<CapabilitySlug, Record<ProviderTool, ToolPageDef>> = {
   skills: {
     chatgpt: {
-      title: "Custom GPTs",
+      title: "ChatGPT Skills",
       eyebrow: "Skills · ChatGPT",
       subtitle: "Build a reusable ChatGPT for a focused task, knowledge base or working style.",
       badge: "ChatGPT",
@@ -506,33 +506,33 @@ export const CAPABILITY_TOOL_PAGES: Record<CapabilitySlug, Record<ProviderTool, 
   },
   "vibe-coding": {
     chatgpt: {
-      title: "ChatGPT Canvas",
+      title: "ChatGPT Sites",
       eyebrow: "Vibe coding · ChatGPT",
-      subtitle: "Work beside ChatGPT in an editable canvas for code, documents and iterative improvements.",
+      subtitle: "Build, host and share lightweight websites and apps directly from ChatGPT.",
       badge: "ChatGPT",
       cards: [
         {
-          icon: "</>",
+          icon: "▦",
           heading: "What it does",
           list: [
-            "Places generated code or writing in an editable workspace beside the conversation.",
-            "Supports targeted revisions without regenerating the entire output.",
-            "Helps users review, debug and refine longer work visually.",
+            "Builds lightweight websites and apps from a description in chat.",
+            "Lets you preview and refine the site before publishing.",
+            "Hosts the finished site at a shareable live URL.",
           ],
         },
         {
           icon: "✓",
           heading: "Use it well",
           list: [
-            "Start with the smallest working version of the app or document.",
-            "Request one functional change at a time and test after each change.",
-            "Keep a copy of stable code before making structural revisions.",
+            "Define the audience, goal, pages and primary action before building.",
+            "Request one focused design or functional change at a time.",
+            "Test links, forms and responsive behaviour before publishing.",
           ],
         },
       ],
       cta: {
-        heading: "Explore ChatGPT building workflows",
-        description: "Open guided workflows for dashboards, interactive apps and AI-assisted coding.",
+        heading: "Explore ChatGPT Sites workflows",
+        description: "Open guided workflows for building, refining, publishing and sharing lightweight websites and apps.",
       },
     },
     claude: {
@@ -1065,59 +1065,6 @@ export const INSIDER_GUIDE_ITEM = { slug: "insider-guide", label: "Insider Guide
 export const PROVIDER_FEATURES: Record<ProviderTool, ProviderFeatureDef[]> = {
   chatgpt: [
     {
-      slug: "sites",
-      label: "Sites",
-      isNew: true,
-      mark: "▦",
-      title: "ChatGPT Sites",
-      eyebrow: "ChatGPT Feature",
-      subtitle: "Build, host and share lightweight websites and apps directly from ChatGPT. Launched July 9, 2026.",
-      badge: "Build",
-      cards: [
-        {
-          icon: "▦",
-          heading: "What it is",
-          body: "ChatGPT Sites lets you describe a website or app in chat, and ChatGPT builds, hosts and shares it at a live URL. No separate deployment is needed.",
-        },
-        {
-          icon: "✦",
-          heading: "What it's used for",
-          list: [
-            "Landing pages, dashboards, internal portals, trackers, prototypes, reports and lightweight apps.",
-            "Preview and refine the site inside ChatGPT before publishing.",
-            "Share the finished site through a URL, with custom domain support if you own the domain.",
-            "A fast path for non-developers or teams that want something live quickly.",
-          ],
-        },
-        {
-          icon: "!",
-          heading: "Limitations",
-          list: [
-            "Built for lightweight sites and apps, not full production platforms.",
-            "Not available on Free or Go plans, and not available in the EEA, Switzerland or UK at launch.",
-            "No support for payment data, health information or content aimed at children under 13.",
-            "Deleting a site is permanent, with no restore option.",
-            "Complex backends, advanced authentication or heavy integrations still need a full development stack.",
-          ],
-        },
-        {
-          icon: "↗",
-          heading: "Access and sharing",
-          list: [
-            "Rolling out first to Pro, Pro Lite, Enterprise and Edu, with Plus following.",
-            "Can be triggered in chat or with an @Sites mention, from ChatGPT Work or Codex surfaces.",
-            "Sites can be private drafts, shared by link or published publicly if your plan allows.",
-            "Enterprise workspaces have public publishing off by default until an admin enables it.",
-          ],
-        },
-      ],
-      cta: {
-        heading: "Explore ChatGPT Sites Workflows",
-        description: "Open guided workflows for building, refining, publishing and sharing lightweight websites and apps with ChatGPT Sites.",
-      },
-      workflowsHref: "/workflows?tool=chatgpt&tag=Sites",
-    },
-    {
       slug: "image-generation",
       label: "Image generation",
       mark: "◇",
@@ -1150,6 +1097,27 @@ export const PROVIDER_FEATURES: Record<ProviderTool, ProviderFeatureDef[]> = {
         description: "Open guided workflows for structured prompting, visual refinement and creating usable image assets.",
       },
       workflowsHref: "/workflows?category=Generate%20Images&tool=chatgpt",
+    },
+    {
+      slug: "custom-gpts",
+      label: "Custom GPTs",
+      mark: "◎",
+      title: "Custom GPTs",
+      eyebrow: "ChatGPT Feature",
+      subtitle: "Build a reusable ChatGPT assistant with its own instructions, knowledge and tools.",
+      badge: "Reusable assistant",
+      cards: [
+        {
+          icon: "◎",
+          heading: "What it is",
+          body: "A configured version of ChatGPT with a specific role, reusable instructions, uploaded knowledge and optional tools.",
+        },
+      ],
+      cta: {
+        heading: "Explore Custom GPT Workflows",
+        description: "Open guided workflows for building, testing and improving task-specific GPTs.",
+      },
+      workflowsHref: "/workflows?content_type=Skills&tool=chatgpt",
     },
   ],
   claude: [
@@ -1209,63 +1177,6 @@ export const PROVIDER_FEATURES: Record<ProviderTool, ProviderFeatureDef[]> = {
       cta: {
         heading: "Explore Claude Dispatch Workflows",
         description: "Open guided workflows for creating recurring updates, choosing sources and delivering reports automatically.",
-      },
-      workflowsHref: "/workflows?tool=claude",
-    },
-    {
-      slug: "tag",
-      label: "Tag",
-      isNew: true,
-      mark: "#",
-      title: "Claude Tag",
-      eyebrow: "Claude Feature",
-      subtitle: "Bring Claude into Slack as a shared, channel-aware teammate for collaborative and asynchronous work.",
-      badge: "New",
-      cards: [
-        {
-          icon: "#",
-          heading: "What is Claude Tag",
-          body: "Claude Tag brings Claude directly into Slack as a team member, rather than keeping it inside a personal chat.",
-          list: [
-            "Multiplayer: works inside Slack channels, so everyone sees the same thread and collaborates with Claude together.",
-            "Channel-aware: builds context from the channels it is added to, and can learn from other approved channels or data sources when permitted.",
-            "Scoped memory: retains useful context over time only within the channels and permissions admins allow, rather than creating company-wide memory.",
-            "Asynchronous: lets you delegate work that can continue over hours or days, including scheduled follow-ups while the team moves on.",
-          ],
-        },
-        {
-          icon: "⚙",
-          heading: "How to Set It Up",
-          list: [
-            "Requires Claude Owner and Slack Admin access on a Team or Enterprise plan.",
-            "Enable it in settings, then link Slack using the /claude connect pairing code.",
-            "Set access bundles for connected tools such as Google Drive or Notion.",
-            "Admins can set monthly spending limits, restrict guest access and configure custom system prompts for each channel.",
-          ],
-        },
-      ],
-      cta: {
-        heading: "Explore Claude Tag Workflows",
-        description: "Open guided workflows for adding Claude to team channels, setting permissions, connecting approved knowledge and delegating asynchronous work safely.",
-      },
-      workflowsHref: "/workflows?category=Organize%20Knowledge%20in%20One%20Place&tool=claude",
-    },
-    {
-      slug: "plugins",
-      label: "Plugins",
-      mark: "⌘",
-      title: "Claude Plugins",
-      eyebrow: "Claude Feature",
-      subtitle: "Connect specialist tools that extend what Claude can do.",
-      badge: "Extend AI",
-      cards: [
-        { icon: "▤", heading: "Installed Plugins", body: "See the plugins currently available in your workspace." },
-        { icon: "＋", heading: "Browse Plugins", body: "Discover tools for travel, design, productivity and more." },
-        { icon: "⚙", heading: "Manage Access", body: "Connect, disconnect or review plugin permissions." },
-      ],
-      cta: {
-        heading: "Learn how to use Plugins",
-        description: "Explore guided workflows for choosing, connecting and using plugins safely.",
       },
       workflowsHref: "/workflows?tool=claude",
     },

@@ -1,0 +1,16 @@
+NORTHWIND COFFEE CO. — CURRENT MENU (SAMPLE FILE 2 OF 3)
+
+SEASONAL DRINKS
+- Maple Oat Latte — oat milk, real maple syrup, cinnamon dust — $5.50
+- Spiced Pear Cold Brew — cold brew, pear syrup, cardamom — $5.75
+- Brown Butter Croissant — house-made, baked fresh daily — $4.25
+
+CORE MENU (year-round)
+- House Drip Coffee — $3.00
+- Cappuccino — $4.50
+- Cold Brew — $4.75
+
+NOTES
+- Maple Oat Latte and Spiced Pear Cold Brew launch this Friday
+- Brown Butter Croissant is limited to 40 per day, mornings only
+- All seasonal items are available at all three locations starting launch day

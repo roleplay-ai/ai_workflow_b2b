@@ -3,6 +3,8 @@
 import Link from "next/link";
 import type { ProviderFeatureDef, ProviderTool } from "@/lib/capabilities";
 import B2BTopbar from "@/components/B2BTopbar";
+import ClaudeCapabilityGuide from "../../../[slug]/[tool]/ClaudeCapabilityGuide";
+import ChatGPTGuide from "../../../ChatGPTGuide";
 import styles from "../../../capabilities.module.css";
 
 type Props = {
@@ -11,11 +13,33 @@ type Props = {
 };
 
 export default function ProviderFeatureClient({ tool, def }: Props) {
+  if (tool === "claude" && (def.slug === "design" || def.slug === "dispatch")) {
+    return (
+      <>
+        <B2BTopbar />
+        <ClaudeCapabilityGuide
+          slug={def.slug}
+          workflowsHref={def.workflowsHref}
+        />
+      </>
+    );
+  }
+
+  if (tool === "chatgpt" && (def.slug === "image-generation" || def.slug === "sites" || def.slug === "custom-gpts")) {
+    const kind = def.slug === "image-generation" ? "images" : def.slug;
+    return (
+      <>
+        <B2BTopbar />
+        <ChatGPTGuide kind={kind} workflowsHref={def.workflowsHref} />
+      </>
+    );
+  }
+
   return (
     <>
       <B2BTopbar />
       <main className={styles.page}>
-        <Link href={`/capabilities/tool/${tool}`} className={styles.backLink}>← Back</Link>
+        <Link href={`/ask-ai?tool=${tool}`} className={styles.backLink}>← Back to Ask AI</Link>
 
         <div className={styles.pageHeader}>
           <div>

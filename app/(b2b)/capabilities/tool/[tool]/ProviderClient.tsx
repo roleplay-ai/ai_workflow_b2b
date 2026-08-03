@@ -20,7 +20,7 @@ export default function ProviderClient({ tool, toolLogos }: Props) {
     <>
       <B2BTopbar />
       <main className={styles.page}>
-        <Link href="/workflows" className={styles.backLink}>← Back to Workflows</Link>
+        <Link href={`/ask-ai?tool=${tool}`} className={styles.backLink}>← Back to Ask AI</Link>
 
         <div className={styles.pageHeader}>
           <div>

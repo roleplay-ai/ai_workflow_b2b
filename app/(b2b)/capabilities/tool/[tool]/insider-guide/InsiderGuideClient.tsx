@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { INSIDER_GUIDES, PROVIDERS, type ProviderTool } from "@/lib/capabilities";
 import B2BTopbar from "@/components/B2BTopbar";
+import ClaudeInsiderGuide from "./ClaudeInsiderGuide";
+import ChatGPTGuide from "../../../ChatGPTGuide";
 import styles from "../../../capabilities.module.css";
 
 type Props = {
@@ -13,11 +15,29 @@ export default function InsiderGuideClient({ tool }: Props) {
   const guide = INSIDER_GUIDES[tool];
   const provider = PROVIDERS[tool];
 
+  if (tool === "claude") {
+    return (
+      <>
+        <B2BTopbar />
+        <ClaudeInsiderGuide />
+      </>
+    );
+  }
+
+  if (tool === "chatgpt") {
+    return (
+      <>
+        <B2BTopbar />
+        <ChatGPTGuide kind="insider" workflowsHref="/workflows?tool=chatgpt" />
+      </>
+    );
+  }
+
   return (
     <>
       <B2BTopbar />
       <main className={styles.page}>
-        <Link href={`/capabilities/tool/${tool}`} className={styles.backLink}>← Back to {provider.label}</Link>
+        <Link href={`/ask-ai?tool=${tool}`} className={styles.backLink}>← Back to Ask AI</Link>
 
         <div className={styles.pageHeader}>
           <div>

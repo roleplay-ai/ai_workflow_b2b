@@ -12,6 +12,7 @@ export default async function ProviderFeaturePage({
 }) {
   const { tool, feature } = await params;
   if (!isProviderTool(tool)) notFound();
+  if (tool === "chatgpt" && feature === "sites") redirect("/capabilities/vibe-coding/chatgpt");
   const def = getProviderFeature(tool as ProviderTool, feature);
   if (!def) notFound();
 

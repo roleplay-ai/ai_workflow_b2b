@@ -471,6 +471,39 @@
   font-weight: 700;
 }
 
+.toolLabelRotating {
+  display: inline-grid;
+  overflow: hidden;
+}
+
+.toolLabelItem {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: opacity .42s ease, transform .42s cubic-bezier(.22, 1, .36, 1);
+  white-space: nowrap;
+}
+
+.toolLabelItemActive {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.aiAgentToolMark {
+  width: 17px;
+  height: 17px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #221d23;
+  color: #ffce00;
+  font-size: 9px;
+  line-height: 1;
+}
+
 .workflowCard h3 {
   margin: 12px 0 0;
   color: #2c2b27;
@@ -821,5 +854,13 @@
 
   .cardSpinner {
     animation: none;
+  }
+
+  .toolLabelRotating {
+    overflow: visible;
+  }
+
+  .toolLabelItem {
+    transition: none;
   }
 }

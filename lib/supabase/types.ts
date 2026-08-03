@@ -1,4 +1,5 @@
 export type Role = "user" | "admin" | "superadmin";
+export type PreferredAiTool = "all" | "chatgpt" | "claude" | "gemini" | "copilot";
 
 export type Company = {
   id: string;
@@ -30,6 +31,7 @@ export type Profile = {
   onboarding_interests_other: string | null;
   onboarding_experience: string | null;
   workflows_confirmed_at: string | null;
+  preferred_ai_tool?: PreferredAiTool | null;
   /** Provisional plaintext for welcome emails only; service-role access. */
   initial_password: string | null;
   welcome_email_sent_at: string | null;
@@ -123,6 +125,20 @@ export type ActivityCompany = {
 export type ToolLogo = {
   tool: string;
   logo_url: string;
+  updated_at: string;
+};
+
+export type WhatsNewUpdate = {
+  id: string;
+  tool: "chatgpt" | "claude" | "gemini" | "copilot";
+  title: string;
+  summary: string;
+  tag: string;
+  link_url: string | null;
+  is_published: boolean;
+  published_at: string;
+  created_by: string | null;
+  created_at: string;
   updated_at: string;
 };
 
@@ -331,8 +347,8 @@ export type Database = {
       };
       profiles: {
         Row: Profile;
-        Insert: { id: string; email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean; onboarding_completed_at?: string | null; onboarding_tool?: string | null; onboarding_tool_tier?: string | null; onboarding_tool_other?: string | null; onboarding_function?: string | null; onboarding_function_other?: string | null; onboarding_interests?: string[]; onboarding_interests_other?: string | null; onboarding_experience?: string | null; workflows_confirmed_at?: string | null; initial_password?: string | null; welcome_email_sent_at?: string | null };
-        Update: { email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean; onboarding_completed_at?: string | null; onboarding_tool?: string | null; onboarding_tool_tier?: string | null; onboarding_tool_other?: string | null; onboarding_function?: string | null; onboarding_function_other?: string | null; onboarding_interests?: string[]; onboarding_interests_other?: string | null; onboarding_experience?: string | null; workflows_confirmed_at?: string | null; initial_password?: string | null; welcome_email_sent_at?: string | null };
+        Insert: { id: string; email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean; onboarding_completed_at?: string | null; onboarding_tool?: string | null; onboarding_tool_tier?: string | null; onboarding_tool_other?: string | null; onboarding_function?: string | null; onboarding_function_other?: string | null; onboarding_interests?: string[]; onboarding_interests_other?: string | null; onboarding_experience?: string | null; workflows_confirmed_at?: string | null; preferred_ai_tool?: PreferredAiTool | null; initial_password?: string | null; welcome_email_sent_at?: string | null };
+        Update: { email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean; onboarding_completed_at?: string | null; onboarding_tool?: string | null; onboarding_tool_tier?: string | null; onboarding_tool_other?: string | null; onboarding_function?: string | null; onboarding_function_other?: string | null; onboarding_interests?: string[]; onboarding_interests_other?: string | null; onboarding_experience?: string | null; workflows_confirmed_at?: string | null; preferred_ai_tool?: PreferredAiTool | null; initial_password?: string | null; welcome_email_sent_at?: string | null };
         Relationships: [];
       };
       activities: {
@@ -381,6 +397,22 @@ export type Database = {
         Row: ToolLogo;
         Insert: { tool: string; logo_url: string; updated_at?: string };
         Update: { logo_url?: string; updated_at?: string };
+        Relationships: [];
+      };
+      whats_new_updates: {
+        Row: WhatsNewUpdate;
+        Insert: {
+          tool: WhatsNewUpdate["tool"];
+          title: string;
+          summary: string;
+          tag: string;
+          link_url?: string | null;
+          is_published?: boolean;
+          published_at?: string;
+          created_by?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Omit<WhatsNewUpdate, "id" | "created_at">>;
         Relationships: [];
       };
       activity_content: {

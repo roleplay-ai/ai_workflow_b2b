@@ -71,7 +71,7 @@ export default function VideoModal({ src, activityTitle, alreadyWatched, onClose
             ) : isEmbed ? (
               <iframe src={toEmbedUrl(src, kind)} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen style={{ width: "100%", aspectRatio: "16/9", border: 0, display: "block" }} title={activityTitle} onLoad={() => setIsLoading(false)} />
             ) : (
-              <video ref={videoRef} src={src} controls controlsList="nodownload" preload="metadata" crossOrigin="anonymous" playsInline onCanPlay={() => setIsLoading(false)} onEnded={() => fire()} onError={handleError} style={{ width: "100%", display: "block", maxHeight: "70vh", outline: "none" }} />
+              <video ref={videoRef} src={src} controls controlsList="nodownload" preload="metadata" playsInline onCanPlay={() => setIsLoading(false)} onEnded={() => fire()} onError={handleError} style={{ width: "100%", display: "block", maxHeight: "70vh", outline: "none" }} />
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 4px" }}>

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import B2BSidebar from "@/components/B2BSidebar";
 import { rowsToToolLogoMap } from "@/lib/toolLogos";
+import type { PreferredAiTool } from "@/lib/supabase/types";
 import styles from "@/components/b2b-shell.module.css";
 
 function initials(name: string | null, email: string | null): string {
@@ -22,10 +23,17 @@ export default async function B2BLayout({ children }: { children: React.ReactNod
 
   if (!user) redirect("/login");
 
-  const [{ data: profile }, { data: toolLogoRows }] = await Promise.all([
-    supabase.from("profiles").select("full_name, email").eq("id", user.id).single(),
+  const [profileResult, { data: toolLogoRows }] = await Promise.all([
+    supabase.from("profiles").select("full_name, email, preferred_ai_tool").eq("id", user.id).single(),
     supabase.from("tool_logos").select("tool, logo_url"),
   ]);
+  let profile: { full_name: string | null; email: string | null } | null = profileResult.data;
+  let defaultAiTool: PreferredAiTool | null = null;
+  if (profileResult.error) {
+    profile = (await supabase.from("profiles").select("full_name, email").eq("id", user.id).single()).data;
+  } else {
+    defaultAiTool = profileResult.data?.preferred_ai_tool as PreferredAiTool | null;
+  }
 
   const userName = profile?.full_name ?? null;
   const userEmail = profile?.email ?? user.email ?? null;
@@ -38,6 +46,7 @@ export default async function B2BLayout({ children }: { children: React.ReactNod
         userEmail={userEmail}
         userInitials={initials(userName, userEmail)}
         toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
+        defaultTool={defaultAiTool}
       />
       <div className={styles.mainColumn}>{children}</div>
     </div>

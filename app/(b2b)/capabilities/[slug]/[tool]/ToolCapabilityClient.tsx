@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { CAPABILITIES, getToolPageDef, type CapabilitySlug, type ProviderTool } from "@/lib/capabilities";
 import B2BTopbar from "@/components/B2BTopbar";
+import ClaudeCapabilityGuide from "./ClaudeCapabilityGuide";
+import ChatGPTGuide from "../../ChatGPTGuide";
 import styles from "../../capabilities.module.css";
 
 type Props = {
@@ -16,11 +18,58 @@ export default function ToolCapabilityClient({ slug, tool, count }: Props) {
   const page = getToolPageDef(slug, tool);
   const workflowsHref = `/workflows?content_type=${encodeURIComponent(def.contentType)}&tool=${tool}`;
 
+  if (
+    tool === "claude"
+    && (
+      slug === "skills"
+      || slug === "projects"
+      || slug === "vibe-coding"
+      || slug === "scheduled-actions"
+      || slug === "ai-agents"
+      || slug === "coding-agents"
+    )
+  ) {
+    return (
+      <>
+        <B2BTopbar />
+        <ClaudeCapabilityGuide slug={slug} count={count} workflowsHref={workflowsHref} />
+      </>
+    );
+  }
+
+  if (
+    tool === "chatgpt"
+    && (
+      slug === "skills"
+      || slug === "projects"
+      || slug === "vibe-coding"
+      || slug === "scheduled-actions"
+      || slug === "ai-agents"
+      || slug === "coding-agents"
+    )
+  ) {
+    const kind = slug === "vibe-coding"
+      ? "sites"
+      : slug === "scheduled-actions"
+        ? "scheduled"
+      : slug === "ai-agents"
+        ? "work"
+        : slug === "coding-agents"
+          ? "codex"
+          : slug;
+    return (
+      <>
+        <B2BTopbar />
+        <ChatGPTGuide kind={kind} count={count} workflowsHref={workflowsHref} />
+      </>
+    );
+  }
+
   return (
     <>
       <B2BTopbar />
       <main className={styles.page}>
-        <Link href={`/capabilities/${slug}`} className={styles.backLink}>← Back to {def.contentType}</Link>
+        <Link href={`/ask-ai?tool=${tool}`} className={styles.backLink}>← Back to Ask AI</Link>
 
         <div className={styles.pageHeader}>
           <div>
