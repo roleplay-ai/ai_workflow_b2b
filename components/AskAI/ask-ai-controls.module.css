@@ -89,7 +89,9 @@
   z-index: 720;
   top: 49px;
   right: 0;
-  width: 370px;
+  width: min(370px, calc(100vw - 24px));
+  max-height: min(520px, calc(100dvh - var(--topbar-h, 64px) - 16px));
+  overflow: auto;
   padding: 18px;
   border: 1px solid #dedad4;
   border-radius: 18px;
@@ -520,13 +522,22 @@
   to { opacity: 1; transform: none; }
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1480px) {
   .newsLabel {
     display: none;
   }
 
   .newsButton {
     padding: 0 10px;
+  }
+
+  .selectorButton {
+    min-width: 0;
+    max-width: 148px;
+  }
+
+  .selectorCopy strong {
+    max-width: 86px;
   }
 }
 
