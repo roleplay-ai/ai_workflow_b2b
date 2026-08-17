@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TOTAL_MODULES } from "@/lib/ai-mastery-course";
+import type { WhatsNewUpdate } from "@/lib/supabase/types";
 import UpdatesClient from "./UpdatesClient";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export default async function UpdatesPage() {
   if (!user) redirect("/login");
 
   const [
-    { data: briefs },
+    { data: updates },
     { data: videos },
     { data: tools },
     { data: toolGuides },
@@ -24,11 +25,10 @@ export default async function UpdatesPage() {
     { data: masteryProfile },
   ] = await Promise.all([
     supabase
-      .from("fluency_briefs")
-      .select("*, fluency_brief_items(*)")
-      .eq("is_active", true)
-      .order("published_date", { ascending: false })
-      .limit(1),
+      .from("whats_new_updates")
+      .select("*")
+      .eq("is_published", true)
+      .order("published_at", { ascending: false }),
     supabase
       .from("apply_videos")
       .select("id, title, description, video_url, thumbnail_url, duration, group_name, category_tag")
@@ -86,7 +86,7 @@ export default async function UpdatesPage() {
 
   return (
     <UpdatesClient
-      brief={(briefs?.[0] ?? null) as any}
+      updates={(updates ?? []) as WhatsNewUpdate[]}
       videos={(videos ?? []) as any}
       tools={(tools ?? []) as any}
       toolGuides={(toolGuides ?? []) as any}
