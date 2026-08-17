@@ -265,6 +265,7 @@ export default function AskAIToolControls({
             className={`${styles.selectorButton} ${selectorOpen ? styles.selectorButtonOpen : ""}`}
             aria-haspopup="dialog"
             aria-expanded={selectorOpen}
+            aria-label={`Viewing ${toolLabel(selectedTool)}`}
             onClick={() => setSelectorOpen((current) => !current)}
           >
             <ToolMark tool={selectedTool} toolLogos={toolLogos} />
@@ -334,7 +335,7 @@ export default function AskAIToolControls({
           ) : null}
         </div>
 
-        <button type="button" className={styles.newsButton} onClick={openNews}>
+        <button type="button" className={styles.newsButton} onClick={openNews} aria-label="What’s new">
           <span aria-hidden="true">✦</span>
           <span className={styles.newsLabel}>What’s new</span>
           {updates.length > 0 ? <b>{updates.length}</b> : null}

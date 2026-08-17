@@ -22,12 +22,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { LabWelcomeEmail } from "../emails/LabWelcomeEmail";
 import {
-  makeBoltIconGif,
-  makeCoachIconGif,
-  makeFooterDotsGif,
-  makeLogoNudgeGif,
-  makeProgressIconGif,
-} from "./lib/email-assets";
+  LAB_URL,
+  buildLabWelcomeSubject as buildSubject,
+  buildLabWelcomeText as buildText,
+  getLabWelcomeAssets,
+} from "../lib/labWelcomeEmail";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
@@ -66,15 +65,8 @@ function getServiceClient() {
   });
 }
 
-const LAB_URL = "https://work.nudgeable.app/";
-const LOGO_PATH = path.join(root, "public", "nudgeable-logo.png");
 const FROM = "Team Nudgeable <team@nudgeable.app>";
 const REPLY_TO = "team@nudgeable.app";
-
-function buildSubject(firstName: string) {
-  const name = String(firstName || "there").trim() || "there";
-  return `Hi, ${name} — Welcome to the AI Practice Lab`;
-}
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
@@ -97,34 +89,6 @@ type Recipient = {
   email: string;
   password: string;
 };
-
-function buildText({ firstName, email, password }: { firstName: string; email: string; password: string }) {
-  return `Hi ${firstName},
-
-Welcome to the AI Practice Lab, a space designed to help you build practical AI skills through guided learning and regular practice.
-
-Your login details
-
-Lab URL: ${LAB_URL}
-Username: ${email}
-Password: ${password}
-
-Please use a laptop or desktop for the best experience.
-
-Inside the AI Practice Lab, you will find:
-
-* Practical AI workflows, an AI Mastery Course, and weekly curated AI updates
-* A trained AI Coach to guide you whenever you are stuck
-* A personal progress tracker with points, badges, streaks, and leaderboards
-
-For any login or technical issues, simply reply to this email and our team will assist you.
-
-Your access to the AI Practice Lab will remain active for the next three months.
-
-Regards,
-Team Nudgeable
-team@nudgeable.app`;
-}
 
 async function loadRecipientsByEmails(emails: string[]): Promise<Recipient[]> {
   const sb = getServiceClient();
@@ -312,33 +276,12 @@ async function loadRecipients(): Promise<Recipient[]> {
   return recipients;
 }
 
-if (!fs.existsSync(LOGO_PATH)) {
-  console.error("Missing logo at", LOGO_PATH);
-  process.exit(1);
-}
-
-async function buildAttachments() {
-  const logoPng = fs.readFileSync(LOGO_PATH);
-  const [logoNudge, bolt, coach, progress, dots] = await Promise.all([
-    makeLogoNudgeGif(logoPng, 56),
-    Promise.resolve(makeBoltIconGif(64)),
-    Promise.resolve(makeCoachIconGif(64)),
-    Promise.resolve(makeProgressIconGif(64)),
-    Promise.resolve(makeFooterDotsGif(72, 16)),
-  ]);
-
-  return [
-    { filename: "nudgeable-logo.png", content: logoPng, contentId: "nudgeable-logo" },
-    { filename: "logo-nudge.gif", content: logoNudge, contentId: "logo-nudge" },
-    { filename: "icon-bolt.gif", content: bolt, contentId: "icon-bolt" },
-    { filename: "icon-coach.gif", content: coach, contentId: "icon-coach" },
-    { filename: "icon-progress.gif", content: progress, contentId: "icon-progress" },
-    { filename: "footer-dots.gif", content: dots, contentId: "footer-dots" },
-  ];
-}
-
 async function main() {
-  const attachments = await buildAttachments();
+  const attachments = (await getLabWelcomeAssets()).map(({ filename, content, contentId }) => ({
+    filename,
+    content,
+    contentId,
+  }));
   const recipients = await loadRecipients();
   console.log(`${dryRun ? "[DRY RUN] " : ""}Preparing to send ${recipients.length} email(s) from ${FROM}`);
 

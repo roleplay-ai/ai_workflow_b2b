@@ -7,7 +7,16 @@ type BriefItem = { id: string; content: string; sort_order: number };
 type Brief = { id: string; title: string; published_date: string; is_active: boolean; fluency_brief_items: BriefItem[] };
 type Workflow = { id: string; title: string; description: string | null; created_at: string };
 
-type UserRow = { id: string; email: string | null; full_name: string | null; role: string; company_id: string | null; company_name: string | null };
+type UserRow = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  role: string;
+  company_id: string | null;
+  company_name: string | null;
+  can_receive_login_email?: boolean;
+  last_email_sent_at?: string | null;
+};
 type Company = { id: string; name: string };
 
 type Newsletter = {
@@ -57,7 +66,17 @@ function isRecent(createdAt: string): boolean {
 
 // ── Recipient picker ─────────────────────────────────────────────────────────
 
-function RecipientPicker({ selected, onChange }: { selected: string[]; onChange: (ids: string[]) => void }) {
+function RecipientPicker({
+  selected,
+  onChange,
+  mode = "newsletter",
+  refreshKey = 0,
+}: {
+  selected: string[];
+  onChange: (ids: string[]) => void;
+  mode?: "newsletter" | "workflow-reminder" | "login-email";
+  refreshKey?: number;
+}) {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [search, setSearch] = useState("");
@@ -71,6 +90,7 @@ function RecipientPicker({ selected, onChange }: { selected: string[]; onChange:
     if (search) params.set("search", search);
     if (companyFilter) params.set("company_id", companyFilter);
     if (roleFilter !== "all") params.set("role", roleFilter);
+    params.set("email_status_type", mode === "workflow-reminder" ? "workflow_reminder" : mode.replace("-", "_"));
     const res = await fetch(`/api/superadmin/users?${params}`);
     if (res.ok) {
       const data = await res.json();
@@ -78,7 +98,7 @@ function RecipientPicker({ selected, onChange }: { selected: string[]; onChange:
       setCompanies(data.companies);
     }
     setLoading(false);
-  }, [search, companyFilter, roleFilter]);
+  }, [search, companyFilter, roleFilter, mode, refreshKey]);
 
   useEffect(() => {
     const t = setTimeout(fetchUsers, 300);
@@ -86,14 +106,24 @@ function RecipientPicker({ selected, onChange }: { selected: string[]; onChange:
   }, [fetchUsers]);
 
   function toggle(id: string) {
+    const user = users.find(item => item.id === id);
+    if (mode === "login-email" && !user?.can_receive_login_email) return;
     onChange(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]);
   }
 
   function selectAllFiltered() {
     const ids = new Set(selected);
-    users.forEach(u => ids.add(u.id));
+    users.forEach(u => {
+      if (mode !== "login-email" || u.can_receive_login_email) ids.add(u.id);
+    });
     onChange(Array.from(ids));
   }
+
+  const emailTypeLabel = mode === "login-email"
+    ? "login email"
+    : mode === "workflow-reminder"
+      ? "workflow reminder"
+      : "newsletter";
 
   function clearFiltered() {
     const filteredIds = new Set(users.map(u => u.id));
@@ -130,15 +160,26 @@ function RecipientPicker({ selected, onChange }: { selected: string[]; onChange:
         ) : users.length === 0 ? (
           <div style={{ padding: 20, textAlign: "center", color: "#B0ABA5", fontSize: 13 }}>No users match</div>
         ) : (
-          users.map(u => (
-            <label key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderBottom: "1px solid #F0EEE8", cursor: "pointer" }}>
-              <input type="checkbox" checked={selected.includes(u.id)} onChange={() => toggle(u.id)} />
+          users.map(u => {
+            const disabled = mode === "login-email" && !u.can_receive_login_email;
+            return (
+            <label key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderBottom: "1px solid #F0EEE8", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? .55 : 1 }}>
+              <input type="checkbox" checked={selected.includes(u.id)} disabled={disabled} onChange={() => toggle(u.id)} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#221D23" }}>{u.full_name ?? u.email}</div>
-                <div style={{ fontSize: 11, color: "#9A9590" }}>{u.email} {u.company_name ? `· ${u.company_name}` : ""}</div>
+                <div style={{ fontSize: 11, color: "#9A9590" }}>
+                  {u.email} {u.company_name ? `· ${u.company_name}` : ""}
+                  {mode === "login-email" && !u.can_receive_login_email ? " · No saved password" : ""}
+                  {u.last_email_sent_at
+                    ? ` · Last ${emailTypeLabel} sent ${new Date(u.last_email_sent_at).toLocaleDateString()}`
+                    : mode !== "login-email" || u.can_receive_login_email
+                      ? ` · No ${emailTypeLabel} sent yet`
+                      : ""}
+                </div>
               </div>
             </label>
-          ))
+            );
+          })
         )}
       </div>
     </div>
@@ -353,7 +394,7 @@ function NewsletterTab({ briefs, workflows }: { briefs: Brief[]; workflows: Work
 
           <div style={{ marginBottom: 14 }}>
             <label style={lbl}>Recipients</label>
-            <RecipientPicker selected={recipientIds} onChange={setRecipientIds} />
+            <RecipientPicker selected={recipientIds} onChange={setRecipientIds} mode="newsletter" />
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
@@ -440,6 +481,134 @@ function NewsletterTab({ briefs, workflows }: { briefs: Brief[]; workflows: Work
   );
 }
 
+// ── Login emails tab ─────────────────────────────────────────────────────────
+
+function LoginEmailsTab() {
+  const [recipientIds, setRecipientIds] = useState<string[]>([]);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewSubject, setPreviewSubject] = useState("");
+  const [previewNote, setPreviewNote] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ sent: number; failed: number; skipped: number; total: number } | { error: string } | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  async function handlePreview() {
+    if (recipientIds.length === 0) {
+      alert("Select at least one user to preview");
+      return;
+    }
+
+    setPreviewLoading(true);
+    const res = await fetch("/api/superadmin/email-management/login-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "preview", preview_recipient_id: recipientIds[0] }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setPreviewHtml(data.html);
+      setPreviewSubject(data.subject ?? "");
+      setPreviewNote(data.note ?? "");
+    } else {
+      alert(data.error ?? "Failed to build preview");
+    }
+    setPreviewLoading(false);
+  }
+
+  async function handleSend() {
+    if (recipientIds.length === 0) {
+      alert("Select at least one user");
+      return;
+    }
+    if (!confirm(`Send the login email to ${recipientIds.length} selected user${recipientIds.length === 1 ? "" : "s"}? Users who received it before will receive it again.`)) return;
+
+    setSending(true);
+    setResult(null);
+    const res = await fetch("/api/superadmin/email-management/login-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "send", recipient_ids: recipientIds }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setResult(data);
+      setRecipientIds([]);
+      setRefreshKey(value => value + 1);
+    } else {
+      setResult({ error: data.error ?? "Failed to send login emails" });
+    }
+    setSending(false);
+  }
+
+  return (
+    <div>
+      <div style={{ ...card, padding: 20, marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 16 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 850 }}>Login email</h2>
+            <p style={{ margin: "4px 0 0", color: "#6B6B6B", fontSize: 12.5, lineHeight: 1.5 }}>
+              Send the AI Practice Lab welcome template with each user&apos;s saved username and initial password.
+            </p>
+          </div>
+          <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "5px 10px", borderRadius: 999, background: "#FFF6CC", color: "#725B00" }}>
+            Up to 100 per send
+          </span>
+        </div>
+
+        <div style={{ padding: 12, marginBottom: 16, borderRadius: 12, background: "#FAFAF8", border: "1px solid #E8E6DC", fontSize: 12, color: "#6B6B6B", lineHeight: 1.5 }}>
+          Only users with a stored initial password can be selected. Passwords stay on the server and are hidden in previews; the saved value is inserted only during sending.
+        </div>
+
+        <label style={lbl}>Recipients</label>
+        <RecipientPicker selected={recipientIds} onChange={setRecipientIds} mode="login-email" refreshKey={refreshKey} />
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, color: "#6B6B6B", fontWeight: 700 }}>{recipientIds.length} user{recipientIds.length === 1 ? "" : "s"} selected</span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={handlePreview} disabled={previewLoading || recipientIds.length === 0} style={{ ...btnGhost, opacity: previewLoading || recipientIds.length === 0 ? .55 : 1, borderColor: "rgba(54,150,252,.4)", color: "#1A7FD4" }}>
+              {previewLoading ? "Loading…" : "Preview email"}
+            </button>
+            <button onClick={handleSend} disabled={sending || recipientIds.length === 0 || recipientIds.length > 100} style={{ ...btnAmber, opacity: sending || recipientIds.length === 0 || recipientIds.length > 100 ? .55 : 1 }}>
+              {sending ? "Sending…" : "Send login email"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ ...card, padding: 14, background: "error" in result ? "#FDE9EB" : "#E8FBEE", borderColor: "error" in result ? "rgba(239,68,68,.3)" : "rgba(35,206,104,.3)" }}>
+          {"error" in result ? (
+            <span style={{ fontSize: 13, color: "#991B1B", fontWeight: 700 }}>{result.error}</span>
+          ) : (
+            <span style={{ fontSize: 13, color: "#166534", fontWeight: 700 }}>
+              Sent: {result.sent} · Failed: {result.failed} · Skipped: {result.skipped} · Selected: {result.total}
+            </span>
+          )}
+        </div>
+      )}
+
+      {previewHtml !== null && (
+        <div onClick={() => setPreviewHtml(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "white", borderRadius: 20, width: "min(680px, 100%)", maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid #E8E6DC" }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 14 }}>Login email preview</div>
+                <div style={{ marginTop: 2, color: "#6B6B6B", fontSize: 11.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Subject: {previewSubject}</div>
+              </div>
+              <button onClick={() => setPreviewHtml(null)} style={{ border: 0, background: "none", cursor: "pointer", fontSize: 20, lineHeight: 1, color: "#6B6B6B" }}>×</button>
+            </div>
+            <p style={{ margin: 0, padding: "8px 20px", fontSize: 11.5, color: "#725B00", background: "#FFF9DD", borderBottom: "1px solid #E8E6DC" }}>
+              {previewNote} Actual appearance can vary slightly by mail client.
+            </p>
+            <iframe title="Login email preview" srcDoc={previewHtml} style={{ flex: 1, border: 0, width: "100%", minHeight: 560 }} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Workflow Reminders tab ───────────────────────────────────────────────────
 
 function WorkflowRemindersTab() {
@@ -516,7 +685,7 @@ function WorkflowRemindersTab() {
 
           <div style={{ marginBottom: 14 }}>
             <label style={lbl}>Recipients</label>
-            <RecipientPicker selected={recipientIds} onChange={setRecipientIds} />
+            <RecipientPicker selected={recipientIds} onChange={setRecipientIds} mode="workflow-reminder" />
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
@@ -613,7 +782,7 @@ function StatusBadge({ status }: { status: string }) {
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function EmailManagementClient({ briefs, workflows }: Props) {
-  const [tab, setTab] = useState<"newsletter" | "reminders">("newsletter");
+  const [tab, setTab] = useState<"newsletter" | "reminders" | "login-email">("newsletter");
   const [running, setRunning] = useState(false);
   const [runResult, setRunResult] = useState<any>(null);
 
@@ -631,11 +800,13 @@ export default function EmailManagementClient({ briefs, workflows }: Props) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: "-.04em" }}>Email Management</h1>
-          <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 13 }}>Newsletters and workflow reminders, sent by the daily cron</p>
+          <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 13 }}>Preview, schedule, and send user communications</p>
         </div>
-        <button onClick={handleRunNow} disabled={running} style={{ ...btnGhost, opacity: running ? .6 : 1 }} title="Process anything due today, right now">
-          {running ? "Running…" : "▶ Run now"}
-        </button>
+        {tab !== "login-email" && (
+          <button onClick={handleRunNow} disabled={running} style={{ ...btnGhost, opacity: running ? .6 : 1 }} title="Process anything due today, right now">
+            {running ? "Running…" : "▶ Run now"}
+          </button>
+        )}
       </div>
 
       {runResult && (
@@ -652,7 +823,7 @@ export default function EmailManagementClient({ briefs, workflows }: Props) {
       )}
 
       <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
-        {([["newsletter", "Newsletter"], ["reminders", "Workflow Reminders"]] as const).map(([id, label]) => (
+        {([["newsletter", "Newsletter"], ["reminders", "Workflow Reminders"], ["login-email", "Login Email"]] as const).map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{
             padding: "9px 18px", borderRadius: 999, border: "1.5px solid",
             borderColor: tab === id ? "#221D23" : "#E8E6DC",
@@ -663,7 +834,9 @@ export default function EmailManagementClient({ briefs, workflows }: Props) {
         ))}
       </div>
 
-      {tab === "newsletter" ? <NewsletterTab briefs={briefs} workflows={workflows} /> : <WorkflowRemindersTab />}
+      {tab === "newsletter" && <NewsletterTab briefs={briefs} workflows={workflows} />}
+      {tab === "reminders" && <WorkflowRemindersTab />}
+      {tab === "login-email" && <LoginEmailsTab />}
     </div>
   );
 }

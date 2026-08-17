@@ -667,20 +667,21 @@
   top: 0;
   z-index: 400;
   min-height: 64px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: flex-end;
+  column-gap: 12px;
   padding: 0 22px;
+  overflow: visible;
   border-bottom: 1px solid #e9e9e5;
   background: rgba(255, 255, 255, .96);
   backdrop-filter: blur(12px);
 }
 
 .topbarCenter {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  grid-column: 2;
+  min-width: 0;
+  justify-self: center;
 }
 
 .modeSwitch {
@@ -722,9 +723,14 @@
 }
 
 .topbarActions {
+  grid-column: 3;
+  min-width: 0;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  justify-self: end;
   gap: 9px;
+  z-index: 1;
 }
 
 .progressLink,
@@ -781,10 +787,11 @@
 
 .mobileMenuButton {
   display: none;
+  grid-column: 1;
   width: 38px;
   height: 38px;
   place-items: center;
-  margin-right: auto;
+  justify-self: start;
   border: 1px solid #e2e2dd;
   border-radius: 10px;
   background: #fff;
@@ -813,6 +820,18 @@
 .historyMenu > button:focus-visible {
   outline: 3px solid rgba(255, 206, 0, .45);
   outline-offset: 1px;
+}
+
+@media (max-width: 1400px) {
+  .progressLink {
+    width: 34px;
+    min-height: 34px;
+    padding: 0;
+  }
+
+  .progressText {
+    display: none;
+  }
 }
 
 @media (max-width: 900px) {

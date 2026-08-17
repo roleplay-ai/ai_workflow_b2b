@@ -3,9 +3,12 @@
 import { useRef, useState, useMemo, useEffect } from "react";
 import B2BTopbar from "@/components/B2BTopbar";
 import ModuleHtmlModal from "@/components/ModuleHtmlModal";
-import { parseNewsContent, formatBriefNewsDate, safeExternalUrl } from "@/components/BriefNewsCard";
+import ToolIcon from "@/components/ToolIcon";
+import { safeExternalUrl } from "@/components/BriefNewsCard";
+import { WHATS_NEW_SOURCES, WHATS_NEW_SOURCE_LABELS, type WhatsNewSource } from "@/lib/chatbotFilter";
 import { normalizeToolSlug } from "@/lib/tools";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
+import type { WhatsNewUpdate } from "@/lib/supabase/types";
 import { trackFluencyView } from "@/lib/trackFluencyView";
 import { createClient } from "@/lib/supabase/client";
 import { COURSE_PARTS, getAllModules, type CourseModule } from "@/lib/ai-mastery-course";
@@ -13,8 +16,7 @@ import "./updates.css";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type BriefItem = { id: string; content: string; link_url: string | null; sort_order: number };
-type Brief = { id: string; title: string; published_date: string; fluency_brief_items: BriefItem[] };
+type NewsFilter = WhatsNewSource | "all";
 
 type Video = {
   id: string; title: string; description: string | null; video_url: string | null;
@@ -69,7 +71,7 @@ type FluencyModule = {
 };
 
 type Props = {
-  brief: Brief | null;
+  updates: WhatsNewUpdate[];
   videos: Video[];
   tools: Tool[];
   toolGuides: ToolGuide[];
@@ -200,6 +202,18 @@ function resolveGuideSlug(guide: ToolGuide): string {
 function extractYouTubeId(url: string): string | null {
   const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
   return m ? m[1] : null;
+}
+
+function formatNewsDate(value: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value)).toUpperCase();
+}
+
+function newsSourceLabel(tool: NewsFilter): string {
+  return tool === "all" ? "All" : WHATS_NEW_SOURCE_LABELS[tool];
 }
 
 // ── Section header (used for sub-sections nested inside a tab) ─────────────────
@@ -597,12 +611,18 @@ function VideoModal({ video, onClose }: { video: Video; onClose: () => void }) {
 
 // ── News tab ───────────────────────────────────────────────────────────────────
 
-function NewsPanel({ brief }: { brief: Brief | null }) {
-  const items = useMemo(
-    () => [...(brief?.fluency_brief_items ?? [])].sort((a, b) => a.sort_order - b.sort_order),
-    [brief],
+function NewsPanel({
+  updates,
+  toolLogos,
+}: {
+  updates: WhatsNewUpdate[];
+  toolLogos: ToolLogoMap;
+}) {
+  const [newsFilter, setNewsFilter] = useState<NewsFilter>("all");
+  const visibleUpdates = useMemo(
+    () => updates.filter((update) => newsFilter === "all" || update.tool === newsFilter),
+    [updates, newsFilter],
   );
-  const displayDate = formatBriefNewsDate(brief?.published_date);
 
   return (
     <section>
@@ -611,30 +631,55 @@ function NewsPanel({ brief }: { brief: Brief | null }) {
           <h2>News</h2>
           <p>Short, practical updates on AI products, capabilities, and ways of working.</p>
         </div>
-        <span className="upd-badge">Updated weekly</span>
+        <span className="upd-badge">{updates.length} {updates.length === 1 ? "update" : "updates"}</span>
       </div>
 
-      {items.length === 0 ? (
+      <div className="upd-news-filters" role="group" aria-label="Filter updates by AI tool">
+        {(["all", ...WHATS_NEW_SOURCES] as NewsFilter[]).map((tool) => (
+          <button
+            type="button"
+            key={tool}
+            className={`upd-news-filter ${newsFilter === tool ? "active" : ""}`}
+            aria-pressed={newsFilter === tool}
+            onClick={() => setNewsFilter(tool)}
+          >
+            {tool !== "all" ? <ToolIcon tool={tool} size={16} logos={toolLogos} /> : null}
+            {newsSourceLabel(tool)}
+          </button>
+        ))}
+      </div>
+
+      {visibleUpdates.length === 0 ? (
         <div className="upd-foundation-card" style={{ justifyContent: "center", color: "#746F78", cursor: "default" }}>No updates available yet.</div>
       ) : (
         <div className="upd-news-grid">
-          {items.map(item => {
-            const { title, description } = parseNewsContent(item.content);
-            const href = safeExternalUrl(item.link_url);
+          {visibleUpdates.map((update) => {
+            const href = safeExternalUrl(update.link_url);
             const inner = (
               <>
-                <div className="upd-news-date">{displayDate}</div>
-                <h3>{title}</h3>
-                <p>{description}</p>
-                <span className="upd-news-link">Read update →</span>
+                <div className="upd-news-meta">
+                  <span className="upd-news-source">
+                    <ToolIcon tool={update.tool} size={16} logos={toolLogos} />
+                    {WHATS_NEW_SOURCE_LABELS[update.tool]}
+                  </span>
+                  <time className="upd-news-date" dateTime={update.published_at}>
+                    {formatNewsDate(update.published_at)}
+                  </time>
+                </div>
+                <h3>{update.title}</h3>
+                <p>{update.summary}</p>
+                <div className="upd-news-footer">
+                  {update.tag ? <span className="upd-news-tag">{update.tag}</span> : null}
+                  {href ? <span className="upd-news-link">Explore update →</span> : null}
+                </div>
               </>
             );
             return href ? (
-              <a key={item.id} href={href} target="_blank" rel="noopener noreferrer" className="upd-news-card">
+              <a key={update.id} href={href} target="_blank" rel="noopener noreferrer" className="upd-news-card">
                 {inner}
               </a>
             ) : (
-              <article key={item.id} className="upd-news-card">{inner}</article>
+              <article key={update.id} className="upd-news-card">{inner}</article>
             );
           })}
         </div>
@@ -1038,7 +1083,7 @@ function CoursePanel({
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function UpdatesClient({
-  brief,
+  updates,
   videos,
   tools,
   toolGuides,
@@ -1097,7 +1142,7 @@ export default function UpdatesClient({
         </div>
 
         <main className="upd-main upd-tabpanel">
-          {activeTab === "news" && <NewsPanel brief={brief} />}
+          {activeTab === "news" && <NewsPanel updates={updates} toolLogos={toolLogos} />}
           {activeTab === "videos" && <VideosPanel videos={videos} />}
           {activeTab === "tools" && (
             <ToolsPanel tools={tools} toolGuides={toolGuides} toolLogos={toolLogos} deepDiveByTool={deepDiveByTool} />
