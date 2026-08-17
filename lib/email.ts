@@ -9,17 +9,34 @@ export type SendEmailArgs = {
   subject: string;
   react: React.ReactElement;
   replyTo?: string;
+  text?: string;
+  attachments?: { filename: string; content: Buffer; contentId?: string }[];
 };
 
 export type SendEmailResult = { success: true } | { success: false; error: string };
 
 /** Thin Resend wrapper — the first in-app (route handler) sender; scripts/send-lab-welcome.tsx predates this. */
-export async function sendEmail({ to, subject, react, replyTo = EMAIL_REPLY_TO }: SendEmailArgs): Promise<SendEmailResult> {
+export async function sendEmail({
+  to,
+  subject,
+  react,
+  replyTo = EMAIL_REPLY_TO,
+  text,
+  attachments,
+}: SendEmailArgs): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { success: false, error: "Missing RESEND_API_KEY" };
 
   const resend = new Resend(apiKey);
-  const { error } = await resend.emails.send({ from: EMAIL_FROM, to, replyTo, subject, react });
+  const { error } = await resend.emails.send({
+    from: EMAIL_FROM,
+    to,
+    replyTo,
+    subject,
+    react,
+    ...(text ? { text } : {}),
+    ...(attachments?.length ? { attachments } : {}),
+  });
 
   if (error) return { success: false, error: error.message };
   return { success: true };

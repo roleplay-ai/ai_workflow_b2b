@@ -23,6 +23,10 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get("search")?.toLowerCase();
   const companyId = searchParams.get("company_id");
   const role = searchParams.get("role");
+  const requestedEmailType = searchParams.get("email_status_type");
+  const emailStatusType = ["newsletter", "workflow_reminder", "login_email"].includes(requestedEmailType ?? "")
+    ? requestedEmailType as "newsletter" | "workflow_reminder" | "login_email"
+    : null;
 
   const { data: users } = await supabase
     .from("profiles")
@@ -52,10 +56,53 @@ export async function GET(req: NextRequest) {
   const companyMap: Record<string, string> = {};
   (companies ?? []).forEach((c: any) => { companyMap[c.id] = c.name; });
 
-  const enriched = filtered.map((u: any) => ({
-    ...u,
-    company_name: u.company_id ? (companyMap[u.company_id] ?? "Unknown") : null,
-  }));
+  const emailStatus = new Map<string, { available?: boolean; sentAt: string | null }>();
+  if (emailStatusType && filtered.length > 0) {
+    const service = createServiceClient();
+    const userIds = filtered.map((u: any) => u.id);
+
+    if (emailStatusType === "login_email") {
+      const { data: credentialRows } = await service
+        .from("profiles")
+        .select("id, initial_password, welcome_email_sent_at")
+        .in("id", userIds);
+
+      for (const row of credentialRows ?? []) {
+        emailStatus.set(row.id, {
+          available: Boolean(row.initial_password),
+          sentAt: row.welcome_email_sent_at ?? null,
+        });
+      }
+    } else {
+      const { data: sendRows } = await service
+        .from("email_sends")
+        .select("recipient_id, sent_at")
+        .eq("source_type", emailStatusType)
+        .eq("status", "sent")
+        .in("recipient_id", userIds)
+        .order("sent_at", { ascending: false });
+
+      for (const row of sendRows ?? []) {
+        if (row.recipient_id && !emailStatus.has(row.recipient_id)) {
+          emailStatus.set(row.recipient_id, { sentAt: row.sent_at });
+        }
+      }
+    }
+  }
+
+  const enriched = filtered.map((u: any) => {
+    const status = emailStatus.get(u.id);
+    return {
+      ...u,
+      company_name: u.company_id ? (companyMap[u.company_id] ?? "Unknown") : null,
+      ...(emailStatusType ? {
+        can_receive_login_email: emailStatusType === "login_email"
+          ? Boolean(u.email && status?.available)
+          : undefined,
+        last_email_sent_at: status?.sentAt ?? null,
+      } : {}),
+    };
+  });
 
   return NextResponse.json({ users: enriched, companies: companies ?? [] });
 }
